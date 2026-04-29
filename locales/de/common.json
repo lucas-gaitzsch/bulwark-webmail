@@ -132,6 +132,21 @@
     "add_app": "Apps",
     "shared": "Geteilt"
   },
+  "protocol_handlers": {
+    "title": "Protokoll-Handler",
+    "description": "Registrieren Sie Bulwark in unterstützten Browsern für E-Mail- und Kalender-Links.",
+    "unsupported": "Dieser Browser oder diese Verbindung unterstützt die manuelle Registrierung von Protokoll-Handlern nicht. Möglicherweise können Sie die installierte PWA trotzdem über Browser- oder Systemeinstellungen verwenden.",
+    "mailto_label": "E-Mail-Links",
+    "mailto_description": "Öffnet mailto:-Links in Bulwark mit vorausgefülltem Editor.",
+    "webcal_label": "Kalender-Links",
+    "webcal_description": "Öffnet webcal:-Links in Bulwark mit vorausgefülltem Kalender-Abo-Dialog.",
+    "register_mailto": "Als E-Mail-App registrieren",
+    "register_webcal": "Als Kalender-App registrieren",
+    "mailto_registered": "Registrierung als E-Mail-Handler angefordert",
+    "webcal_registered": "Registrierung als Kalender-Handler angefordert",
+    "registration_failed": "Protokoll-Handler konnte nicht registriert werden",
+    "browser_note": "Ihr Browser oder Betriebssystem kann eine Bestätigung verlangen. Eventuell muss Bulwark installiert sein, bevor es als Standard-App ausgewählt werden kann."
+  },
   "sidebar_apps": {
     "modal_title": "Sidebar-Apps",
     "add_new": "App hinzufügen",
@@ -670,6 +685,7 @@
       "encryption": "Verschlüsselung",
       "files": "Dateien",
       "contacts": "Kontakte",
+      "protocol_handlers": "Protokoll-Handler",
       "sidebar_apps": "Sidebar-Apps",
       "notifications": "Benachrichtigungen",
       "layout": "Layout",

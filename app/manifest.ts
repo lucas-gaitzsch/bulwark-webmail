@@ -2,7 +2,19 @@ import type { MetadataRoute } from "next";
 
 export const dynamic = "force-dynamic";
 
-export default function manifest(): MetadataRoute.Manifest {
+type WebAppProtocolHandler = {
+  protocol: string;
+  url: string;
+};
+
+type ExtendedManifest = MetadataRoute.Manifest & {
+  protocol_handlers?: WebAppProtocolHandler[];
+  launch_handler?: {
+    client_mode?: "navigate-existing" | "auto" | "focus-existing" | "navigate-new";
+  };
+};
+
+export default function manifest(): ExtendedManifest {
   const appName =
     process.env.APP_NAME ||
     process.env.NEXT_PUBLIC_APP_NAME ||
@@ -51,5 +63,12 @@ export default function manifest(): MetadataRoute.Manifest {
       { src: "/screenshot-540x720.png", sizes: "540x720", type: "image/png" },
       { src: "/screenshot-1280x720.png", sizes: "1280x720", type: "image/png" },
     ],
+    protocol_handlers: [
+      { protocol: "mailto", url: "protocol/mailto?url=%s" },
+      { protocol: "webcal", url: "protocol/webcal?url=%s" },
+    ],
+    launch_handler: {
+      client_mode: "navigate-existing",
+    },
   };
 }

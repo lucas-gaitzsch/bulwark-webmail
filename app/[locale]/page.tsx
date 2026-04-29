@@ -57,7 +57,8 @@ import { Button } from "@/components/ui/button";
 import { useConfig } from "@/hooks/use-config";
 import { usePluginStore } from "@/stores/plugin-store";
 import { useThemeStore } from "@/stores/theme-store";
-
+import { consumePendingMailto } from "@/lib/protocol-handlers/session";
+import { plainTextToComposerBody } from "@/lib/email-composer-utils";
 
 export default function Home() {
   const t = useTranslations();
@@ -561,6 +562,35 @@ export default function Home() {
       redirectToLogin();
     }
   }, [initialCheckDone, isAuthenticated, authLoading]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    const pending = consumePendingMailto();
+    if (!pending) return;
+
+    const body = useSettingsStore.getState().plainTextMode
+      ? pending.body
+      : plainTextToComposerBody(pending.body);
+
+    setComposerSessionId((id) => id + 1);
+    setPendingDraft({
+      to: pending.to.join(", "),
+      cc: pending.cc.join(", "),
+      bcc: pending.bcc.join(", "),
+      subject: pending.subject,
+      body,
+      showCc: pending.cc.length > 0,
+      showBcc: pending.bcc.length > 0,
+      selectedIdentityId: null,
+      subAddressTag: "",
+      mode: "compose",
+      draftId: null,
+    });
+    setComposerMode("compose");
+    setShowComposer(true);
+    if (isMobile) setActiveView("viewer");
+  }, [isAuthenticated, client, isMobile, setActiveView]);
 
   // Load mailboxes and emails when authenticated (only if not already loaded)
   useEffect(() => {

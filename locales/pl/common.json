@@ -132,6 +132,21 @@
     "add_app": "Aplikacje",
     "shared": "Udostępnione"
   },
+  "protocol_handlers": {
+    "title": "Protocol handlers",
+    "description": "Register Bulwark with supported browsers for email and calendar links.",
+    "unsupported": "This browser or connection does not support manual protocol-handler registration. You may still be able to use the installed PWA via browser or OS settings.",
+    "mailto_label": "Email links",
+    "mailto_description": "Open mailto: links in Bulwark with a prefilled composer.",
+    "webcal_label": "Calendar links",
+    "webcal_description": "Open webcal: links in Bulwark with a prefilled calendar subscription dialog.",
+    "register_mailto": "Register email app",
+    "register_webcal": "Register calendar app",
+    "mailto_registered": "Email handler registration requested",
+    "webcal_registered": "Calendar handler registration requested",
+    "registration_failed": "Protocol handler registration failed",
+    "browser_note": "Your browser or operating system may ask you to confirm this and may require Bulwark to be installed before it can be selected as the default app."
+  },
   "sidebar_apps": {
     "modal_title": "Aplikacje paska bocznego",
     "add_new": "Dodaj aplikację",
@@ -670,6 +685,7 @@
       "files": "Pliki",
       "contacts": "Kontakty",
       "encryption": "Szyfrowanie",
+      "protocol_handlers": "Protocol handlers",
       "sidebar_apps": "Aplikacje paska bocznego",
       "notifications": "Powiadomienia",
       "layout": "Układ",

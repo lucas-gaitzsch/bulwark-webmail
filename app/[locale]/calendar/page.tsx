@@ -56,6 +56,7 @@ import { CreateCalendarModal } from "@/components/calendar/create-calendar-modal
 import { getUserParticipantId } from "@/lib/calendar-participants";
 import { generateBirthdayEvents, createBirthdayCalendar, BIRTHDAY_CALENDAR_ID } from "@/lib/birthday-calendar";
 import { debug } from "@/lib/debug";
+import { consumePendingWebcal } from "@/lib/protocol-handlers/session";
 
 type PendingScopeAction =
   | { type: "edit"; event: CalendarEvent; updates: Partial<CalendarEvent>; sendScheduling?: boolean }
@@ -96,6 +97,7 @@ export default function CalendarPage() {
   const [showEventModal, setShowEventModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [pendingSubscription, setPendingSubscription] = useState<{ url: string; name: string } | null>(null);
   const [editingSubscription, setEditingSubscription] = useState<string | null>(null);
   const [sharingCalendarId, setSharingCalendarId] = useState<string | null>(null);
   const [defaultCalendarIdForCreate, setDefaultCalendarIdForCreate] = useState<string | undefined>(undefined);
@@ -166,6 +168,19 @@ export default function CalendarPage() {
       toast.error(error);
     }
   }, [error]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    const pending = consumePendingWebcal();
+    if (!pending) return;
+
+    setPendingSubscription({
+      url: pending.subscriptionUrl,
+      name: pending.suggestedName,
+    });
+    setShowSubscriptionModal(true);
+  }, [isAuthenticated, client]);
 
   useEffect(() => {
     if (client && !hasFetched.current) {
@@ -1385,7 +1400,12 @@ export default function CalendarPage() {
       {showSubscriptionModal && client && (
         <ICalSubscriptionModal
           client={client}
-          onClose={() => setShowSubscriptionModal(false)}
+          initialUrl={pendingSubscription?.url}
+          initialName={pendingSubscription?.name}
+          onClose={() => {
+            setShowSubscriptionModal(false);
+            setPendingSubscription(null);
+          }}
         />
       )}
 

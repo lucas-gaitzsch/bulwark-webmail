@@ -25,6 +25,7 @@ import {
   Bell,
   Puzzle,
   LayoutGrid,
+  Link as LinkIcon,
   BookOpen,
   PenLine,
   EyeOff,
@@ -60,6 +61,7 @@ import { SidebarAppsSettings } from '@/components/settings/sidebar-apps-settings
 import { NotificationSettings } from '@/components/settings/notification-settings';
 import { ThemesSettings } from '@/components/settings/themes-settings';
 import { PluginsSettings } from '@/components/settings/plugins-settings';
+import { ProtocolHandlerSettings } from '@/components/settings/protocol-handler-settings';
 import { useAuthStore, redirectToLogin } from '@/stores/auth-store';
 import { useEmailStore } from '@/stores/email-store';
 import { useIsDesktop } from '@/hooks/use-media-query';
@@ -92,6 +94,7 @@ type Tab =
   | 'calendar'
   | 'contacts'
   | 'files'
+  | 'protocol_handlers'
   | 'sidebar_apps'
   | 'about_data'
   | 'themes'
@@ -128,6 +131,7 @@ const tabIcons: Record<Tab, LucideIcon> = {
   calendar: Calendar,
   contacts: BookUser,
   files: HardDrive,
+  protocol_handlers: LinkIcon,
   sidebar_apps: PanelLeftClose,
   about_data: Info,
   themes: Palette,
@@ -251,6 +255,7 @@ export default function SettingsPage() {
     ...(supportsCalendar ? [{ id: 'calendar' as Tab, label: t('tabs.calendar'), icon: tabIcons.calendar, group: 'apps' as TabGroup }] : []),
     { id: 'contacts', label: t('tabs.contacts'), icon: tabIcons.contacts, group: 'apps' },
     ...(supportsFiles ? [{ id: 'files' as Tab, label: t('tabs.files'), icon: tabIcons.files, group: 'apps' as TabGroup }] : []),
+    { id: 'protocol_handlers', label: t('tabs.protocol_handlers'), icon: tabIcons.protocol_handlers, group: 'apps' },
     ...(isFeatureEnabled('sidebarAppsEnabled') ? [{ id: 'sidebar_apps' as Tab, label: t('tabs.sidebar_apps'), icon: tabIcons.sidebar_apps, group: 'apps' as TabGroup }] : []),
 
     // Advanced
@@ -304,6 +309,7 @@ export default function SettingsPage() {
       {effectiveActiveTab === 'calendar' && <><CalendarSettings /><div className="mt-8"><CalendarManagementSettings /></div></>}
       {effectiveActiveTab === 'contacts' && <><ContactsSettings /><div className="mt-8"><AddressBookManagementSettings /></div></>}
       {effectiveActiveTab === 'files' && <FilesSettingsComponent />}
+      {effectiveActiveTab === 'protocol_handlers' && <ProtocolHandlerSettings />}
       {effectiveActiveTab === 'sidebar_apps' && <SidebarAppsSettings />}
       {effectiveActiveTab === 'about_data' && <AboutDataSettings />}
       {effectiveActiveTab === 'themes' && <ThemesSettings />}
