@@ -6,7 +6,7 @@ import { isIP } from 'node:net';
 // URL; without this an attacker with a session (or a hostile admin in a
 // multi-tenant deploy) could redirect heartbeats at internal hosts.
 //
-// Set BULWARK_TELEMETRY_ALLOW_PRIVATE=1 to bypass — useful only for local
+// Set BULWARK_TELEMETRY_ALLOW_PRIVATE=1 to bypass - useful only for local
 // dev where the collector is on the loopback.
 
 const PRIVATE_V4: RegExp[] = [
@@ -106,7 +106,7 @@ export async function resolveEndpointAllowed(raw: string): Promise<EndpointCheck
     }
     return { ok: true };
   } catch {
-    // Don't block on transient DNS failures — fetch will fail loudly anyway,
+    // Don't block on transient DNS failures - fetch will fail loudly anyway,
     // and we don't want to lock admins out of their config when the resolver
     // is flaky. The literal-IP check above already covers the direct-attack
     // case.

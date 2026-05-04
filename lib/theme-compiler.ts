@@ -1,4 +1,4 @@
-// Advanced Theme API v2 — compiles structured manifest fields (tokens,
+// Advanced Theme API v2 - compiles structured manifest fields (tokens,
 // radii, typography, density, extends) into a single CSS string that the
 // existing `injectThemeCSS` pipeline can apply unchanged.
 
@@ -79,11 +79,11 @@ function emitTokens(
   for (const [rawKey, value] of Object.entries(expanded)) {
     if (typeof value !== 'string' || !value.trim()) continue;
     if (!isSafeTokenKey(rawKey)) {
-      warnings.push(`Token "${rawKey}" dropped — invalid key (only [a-z0-9-] allowed)`);
+      warnings.push(`Token "${rawKey}" dropped - invalid key (only [a-z0-9-] allowed)`);
       continue;
     }
     if (!isSafeTokenValue(value)) {
-      warnings.push(`Token "${rawKey}" dropped — value contains unsafe characters`);
+      warnings.push(`Token "${rawKey}" dropped - value contains unsafe characters`);
       continue;
     }
     lines.push(`  ${tokenName(rawKey)}: ${value.trim()};`);
@@ -170,7 +170,7 @@ export interface CompileOptions {
   /**
    * Resolves a `extends: <id>` chain to that base theme's compiled CSS.
    * Implementations should return null for unknown ids; circular refs are
-   * the caller's problem (we don't recurse — just one level of inheritance).
+   * the caller's problem (we don't recurse - just one level of inheritance).
    */
   resolveExtends?: (id: string) => string | null;
   /**
@@ -211,16 +211,16 @@ export function compileAdvancedTheme(
 
   const sections: string[] = [];
 
-  // 1. extends — prepend parent CSS verbatim
+  // 1. extends - prepend parent CSS verbatim
   if (manifest.extends && opts.resolveExtends) {
     const parentCSS = opts.resolveExtends(manifest.extends);
     if (parentCSS == null) {
-      warnings.push(`extends: parent theme "${manifest.extends}" not found — skipping`);
+      warnings.push(`extends: parent theme "${manifest.extends}" not found - skipping`);
     } else {
       sections.push(`/* inherited from ${manifest.extends} */\n${parentCSS}`);
     }
   } else if (manifest.extends) {
-    warnings.push(`extends: no resolver provided — "${manifest.extends}" ignored`);
+    warnings.push(`extends: no resolver provided - "${manifest.extends}" ignored`);
   }
 
   // 2. :root block (light + common + structural)
@@ -268,7 +268,7 @@ export function compileAdvancedTheme(
   }
 
   if (sections.length === 0) {
-    errors.push('Compiled theme is empty — no tokens, radii, typography, or density supplied');
+    errors.push('Compiled theme is empty - no tokens, radii, typography, or density supplied');
   }
 
   return {

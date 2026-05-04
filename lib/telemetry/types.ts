@@ -12,10 +12,8 @@ export interface TelemetryFeatures {
   contacts: boolean;
   files: boolean;
   extensions: boolean;
-  push_relay: boolean;
   oauth_enabled: boolean;
   smime_enabled: boolean;
-  webdav_enabled: boolean;
 }
 
 export interface TelemetryPayload {

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
 import { readFileEnv } from '@/lib/read-file-env';
-import { CONFIG_ENV_MAP, DEFAULT_POLICY, DEFAULT_THEME_POLICY, type SettingsPolicy } from './types';
+import { CONFIG_ENV_MAP, DEFAULT_FEATURE_GATES, DEFAULT_POLICY, DEFAULT_THEME_POLICY, type SettingsPolicy } from './types';
 
 function getAdminDir(): string {
   return process.env.ADMIN_DATA_DIR || path.join(process.cwd(), 'data', 'admin');
@@ -35,6 +35,7 @@ class ConfigManager {
       this.policyCache = {
         ...DEFAULT_POLICY,
         ...policy,
+        features: { ...DEFAULT_FEATURE_GATES, ...(policy.features || {}) },
         themePolicy: { ...DEFAULT_THEME_POLICY, ...(policy.themePolicy || {}) },
       };
     } else {
@@ -143,7 +144,12 @@ class ConfigManager {
    * Update the settings policy. Writes to disk.
    */
   async setPolicy(policy: SettingsPolicy): Promise<void> {
-    this.policyCache = { ...DEFAULT_POLICY, ...policy };
+    this.policyCache = {
+      ...DEFAULT_POLICY,
+      ...policy,
+      features: { ...DEFAULT_FEATURE_GATES, ...(policy.features || {}) },
+      themePolicy: { ...DEFAULT_THEME_POLICY, ...(policy.themePolicy || {}) },
+    };
     await this.writeJsonFile('policy.json', this.policyCache as unknown as Record<string, unknown>);
   }
 

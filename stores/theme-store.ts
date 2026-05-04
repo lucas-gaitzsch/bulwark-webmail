@@ -473,7 +473,7 @@ export const useThemeStore = create<ThemeState>()(
  *
  * Fires the `themeHooks.onThemeBeforeApply` transform hook so plugins can
  * post-process the CSS (e.g. inject extra `@font-face` rules or override
- * specific tokens). The hook is fire-and-forget — we inject the original
+ * specific tokens). The hook is fire-and-forget - we inject the original
  * CSS synchronously first to avoid a flash, then re-inject the transformed
  * version once handlers settle.
  *

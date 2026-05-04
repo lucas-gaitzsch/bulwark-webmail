@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "Sélectionner les e-mails",
       "select_all": "Tout sélectionner",
+      "selected_messages": "{count, plural, one {1 e-mail sélectionné} other {# e-mails sélectionnés}}",
       "mark_read": "Marquer comme lu",
       "mark_unread": "Marquer comme non lu",
       "delete": "Supprimer",
@@ -238,6 +239,11 @@
     "unstar": "Retirer des favoris",
     "mark_unread": "Marquer comme non lu",
     "mark_read": "Marquer comme lu",
+    "unread": "Non lu",
+    "read": "Lu",
+    "spam_short": "Spam",
+    "not_spam_short": "Non spam",
+    "move": "Déplacer",
     "print": "Imprimer",
     "view_source": "Voir la source",
     "export_email": "Exporter en .eml",
@@ -319,7 +325,20 @@
         "fail": "DMARC Échoué",
         "none": "Pas de DMARC"
       },
-      "spam_score": "Score de spam"
+      "spam_score": "Score de spam",
+      "tooltip_spf": "Sender Policy Framework : vérifie que le serveur d'envoi est autorisé à envoyer des e-mails au nom du domaine",
+      "tooltip_dkim": "DomainKeys Identified Mail : confirme que l'e-mail n'a pas été modifié en transit grâce à une signature cryptographique",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance : garantit l'alignement de SPF et DKIM avec le domaine de l'expéditeur et définit une politique en cas d'échec",
+      "policy": "Politique",
+      "result": {
+        "pass": "Validé",
+        "fail": "Échoué",
+        "softfail": "Échec partiel",
+        "neutral": "Neutre",
+        "permerror": "Erreur permanente",
+        "temperror": "Erreur temporaire",
+        "none": "Aucun"
+      }
     },
     "headers": {
       "routing": "Routage",
@@ -439,12 +458,39 @@
       "cancel_info": "L'organisateur a annulé cet événement.",
       "event_updated": "Mise à jour #{sequence}",
       "event_status_tentative": "Provisoire",
-      "event_status_cancelled": "Annulé"
+      "event_status_cancelled": "Annulé",
+      "collapse": "Masquer les détails",
+      "expand": "Afficher les détails"
     },
     "previous": "Précédent",
     "next": "Suivant",
     "send": "Envoyer",
-    "more": "plus"
+    "more": "plus",
+    "details": {
+      "recipients_routing": "Destinataires & routage",
+      "authentication_security": "Authentification & sécurité",
+      "identifiers_threading": "Identifiants & fil de discussion",
+      "mailing_list": "Liste de diffusion",
+      "message_properties": "Propriétés du message",
+      "sent": "Envoyé",
+      "received": "Reçu",
+      "delivery_time": "Délai de livraison",
+      "in_reply_to": "En-réponse-à",
+      "references": "Références",
+      "thread_id": "ID de fil",
+      "size": "Taille",
+      "mime_type": "Type MIME",
+      "attachments_summary": "{count} fichiers · {size}",
+      "list_id": "ID de liste",
+      "list_help": "Aide de liste",
+      "list_post": "Publication de liste",
+      "list_unsubscribe": "Se désinscrire",
+      "iprev": "DNS inversé",
+      "spam_status": "Statut spam",
+      "ai_verdict": "Verdict IA",
+      "account": "Compte",
+      "no_subject": "(sans objet)"
+    }
   },
   "email_composer": {
     "new_message": "Nouveau message",
@@ -523,7 +569,10 @@
       "message": "Votre message mentionne \"{keyword}\" mais aucun fichier n'est joint. Envoyer quand même ?",
       "send_anyway": "Envoyer quand même",
       "back": "Retour à l'édition"
-    }
+    },
+    "add_link": "Ajouter un lien",
+    "link_url_prompt": "Saisissez l'URL",
+    "sending": "Envoi..."
   },
   "confirm_dialog": {
     "confirm": "Confirmer",
@@ -817,6 +866,23 @@
         "sound_desc": "Jouer un son pour les rappels de calendrier",
         "invitation_parsing": "Analyser les invitations par e-mail",
         "invitation_parsing_desc": "Détecter les invitations de calendrier dans les pièces jointes et afficher les actions de calendrier"
+      },
+      "push": {
+        "confirm_disable_message": "Cet appareil cessera de recevoir des alertes lorsque le site est fermé.",
+        "confirm_disable_title": "Désactiver les notifications en arrière-plan ?",
+        "description": "Recevez des notifications système pour les nouveaux courriers quand ce site est fermé. Livré via le relais push Bulwark ; le relais ne voit jamais le contenu des courriers.",
+        "disable": "Désactiver",
+        "enable": "Activer",
+        "ios_hint": "Sur iOS, installez d'abord le site sur l'écran d'accueil – Safari ne livre Web Push qu'aux PWA installées.",
+        "reenable": "Réenregistrer",
+        "relay_desc": "Utilise par défaut le relais Bulwark hébergé. Ne le changez que si vous l'hébergez vous-même.",
+        "relay_label": "Relais push",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "Actif sur cet appareil",
+        "status_busy": "Traitement en cours…",
+        "status_inactive": "Non activé sur cet appareil",
+        "status_unsupported": "Ce navigateur ne prend pas en charge Web Push",
+        "title": "Notifications en arrière-plan"
       }
     },
     "language_region": {
@@ -899,6 +965,13 @@
       "auto_select_reply_identity": {
         "label": "Sélection automatique de l'adresse de réponse",
         "description": "Lors d'une réponse, bascule automatiquement l'adresse d'expédition vers l'identité qui a reçu le message d'origine"
+      },
+      "sub_address_delimiter": {
+        "label": "Délimiteur de sous-adresse",
+        "description": "Caractère séparant votre nom d'utilisateur de l'étiquette de sous-adresse. Utilisez le délimiteur configuré sur votre serveur de messagerie (par ex. utilisateur{delimiter}tag@domaine.com).",
+        "option": "{delimiter}  (utilisateur{delimiter}tag@domaine.com)",
+        "custom": "Personnalisé…",
+        "custom_input_label": "Caractère de délimiteur personnalisé"
       },
       "show_preview": {
         "label": "Afficher l'aperçu",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "Masquer les images intégrées des pièces jointes",
         "description": "Les images intégrées au corps du message ne sont pas listées comme pièces jointes séparées"
+      },
+      "attachment_image_previews": {
+        "label": "Afficher les aperçus d'images dans les pièces jointes",
+        "description": "Afficher les images jointes sous forme de vignettes plutôt qu'avec des icônes de fichier génériques"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "Aucun carnet d'adresses trouvé",
       "categories_title": "Catégories",
       "categories_description": "Renommer les catégories de contacts",
-      "no_categories": "Aucune catégorie trouvée"
+      "no_categories": "Aucune catégorie trouvée",
+      "group_by_letter_description": "Afficher des en-têtes alphabétiques dans la liste de contacts",
+      "group_by_letter_label": "Grouper par première lettre"
     },
     "filters": {
       "title": "Filtres de courrier",
@@ -1607,41 +1686,41 @@
     "edit_draft": "Modifier le brouillon"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "Marquer le dossier comme lu",
+    "mark_folder_tree_read": "Marquer le dossier et les sous-dossiers comme lus",
+    "mark_all_folders_read": "Marquer tous les dossiers comme lus",
+    "new_subfolder": "Nouveau sous-dossier...",
+    "new_folder": "Nouveau dossier...",
+    "rename": "Renommer...",
+    "empty_folder": "Vider le dossier",
+    "empty_folder_generic": "Vider le dossier",
+    "delete_folder": "Supprimer le dossier",
+    "refresh": "Actualiser",
+    "mark_all_confirm_title": "Marquer tous les dossiers comme lus",
+    "mark_all_confirm_message": "Marquer tous les messages non lus de votre compte personnel comme lus ?",
+    "delete_confirm_title": "Supprimer le dossier",
+    "delete_confirm_message": "Supprimer définitivement le dossier \"{name}\" ? Cette action est irréversible.",
+    "prompt_new_subfolder": "Entrez un nom pour le nouveau sous-dossier.",
+    "prompt_new_folder": "Entrez un nom pour le nouveau dossier.",
+    "prompt_rename": "Entrez un nouveau nom pour ce dossier.",
+    "toast_marked_read": "Dossier marqué comme lu",
+    "toast_marked_read_count": "{count, plural, one {1 message marqué} other {# messages marqués}} comme lu(s)",
+    "toast_already_read": "Aucun message non lu",
+    "toast_marked_all_read": "Tous les dossiers marqués comme lus",
+    "toast_emptied": "Dossier vidé",
+    "toast_folder_created": "Dossier créé",
+    "toast_folder_renamed": "Dossier renommé",
+    "toast_folder_deleted": "Dossier supprimé",
+    "toast_error_mark_read": "Échec du marquage comme lu",
+    "toast_error_empty": "Échec du vidage du dossier",
+    "toast_error_create": "Échec de la création du dossier",
+    "toast_error_rename": "Échec du renommage du dossier",
+    "toast_error_delete": "Échec de la suppression du dossier",
+    "toast_error_delete_has_children": "Le dossier contient des sous-dossiers. Supprimez-les d'abord.",
+    "toast_error_delete_has_email": "Le dossier n'est pas vide. Videz-le d'abord.",
+    "placeholder_folder_name": "Nom du dossier",
+    "create": "Créer",
+    "rename_confirm": "Renommer"
   },
   "shortcuts": {
     "title": "Raccourcis clavier",
@@ -1748,7 +1827,7 @@
       "use_address": "Utiliser cette adresse",
       "invalid_tag": "Le tag doit contenir uniquement des lettres, chiffres et tirets",
       "tag_too_long": "Le tag doit faire 30 caractères ou moins",
-      "help_text": "Les emails envoyés à utilisateur+tag@domaine.com arriveront dans votre boîte de réception",
+      "help_text": "Les emails envoyés à utilisateur{delimiter}tag@domaine.com arriveront dans votre boîte de réception",
       "validation": {
         "empty": "Le tag ne peut pas être vide",
         "too_long": "Le tag doit faire {max} caractères ou moins",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "Demain",
       "export_ics": "Exporter en .ics",
       "copy_title": "Copier le titre",
-      "copy_link": "Copier le lien de réunion"
+      "copy_link": "Copier le lien de réunion",
+      "go_to_today": "Aller à aujourd'hui",
+      "new_all_day_event": "Nouvel événement sur la journée",
+      "new_event": "Nouvel événement",
+      "new_task": "Nouvelle tâche"
     },
     "detail": {
       "add_note": "Ajouter une note...",
@@ -2276,6 +2359,20 @@
       "fri": "Ven",
       "sat": "Sam",
       "sun": "Dim"
+    },
+    "months": {
+      "jan": "janv.",
+      "feb": "févr.",
+      "mar": "mars",
+      "apr": "avr.",
+      "may": "mai",
+      "jun": "juin",
+      "jul": "juil.",
+      "aug": "août",
+      "sep": "sept.",
+      "oct": "oct.",
+      "nov": "nov.",
+      "dec": "déc."
     },
     "notifications": {
       "event_created": "Événement créé",

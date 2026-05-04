@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "メールを選択",
       "select_all": "すべて選択",
+      "selected_messages": "{count, plural, one {1} other {#}}通のメールが選択されました",
       "mark_read": "既読にする",
       "mark_unread": "未読にする",
       "delete": "削除",
@@ -238,6 +239,11 @@
     "unstar": "スターを外す",
     "mark_unread": "未読にする",
     "mark_read": "既読にする",
+    "unread": "未読",
+    "read": "既読",
+    "spam_short": "迷惑メール",
+    "not_spam_short": "迷惑メールでない",
+    "move": "移動",
     "print": "印刷",
     "view_source": "ソースを表示",
     "export_email": ".emlとしてエクスポート",
@@ -319,7 +325,20 @@
         "fail": "DMARC不合格",
         "none": "DMARCなし"
       },
-      "spam_score": "スパムスコア"
+      "spam_score": "スパムスコア",
+      "tooltip_spf": "Sender Policy Framework: 送信サーバーがそのドメインを代表してメールを送信する権限を持つことを確認します",
+      "tooltip_dkim": "DomainKeys Identified Mail: 暗号署名を用いて、メールが送信中に改ざんされていないことを確認します",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: SPF と DKIM が送信者のドメインと一致することを確認し、失敗時のポリシーを定めます",
+      "policy": "ポリシー",
+      "result": {
+        "pass": "合格",
+        "fail": "不合格",
+        "softfail": "ソフト失敗",
+        "neutral": "中立",
+        "permerror": "永続的エラー",
+        "temperror": "一時的エラー",
+        "none": "なし"
+      }
     },
     "headers": {
       "routing": "ルーティング",
@@ -439,12 +458,39 @@
       "cancel_info": "主催者がこのイベントをキャンセルしました。",
       "event_updated": "更新 #{sequence}",
       "event_status_tentative": "仮",
-      "event_status_cancelled": "キャンセル済み"
+      "event_status_cancelled": "キャンセル済み",
+      "collapse": "詳細を非表示",
+      "expand": "詳細を表示"
     },
     "previous": "前へ",
     "next": "次へ",
     "send": "送信",
-    "more": "他"
+    "more": "他",
+    "details": {
+      "recipients_routing": "宛先とルーティング",
+      "authentication_security": "認証とセキュリティ",
+      "identifiers_threading": "識別子とスレッド",
+      "mailing_list": "メーリングリスト",
+      "message_properties": "メッセージのプロパティ",
+      "sent": "送信日時",
+      "received": "受信日時",
+      "delivery_time": "配信時間",
+      "in_reply_to": "返信先",
+      "references": "参照",
+      "thread_id": "スレッドID",
+      "size": "サイズ",
+      "mime_type": "MIMEタイプ",
+      "attachments_summary": "{count} ファイル · {size}",
+      "list_id": "リストID",
+      "list_help": "リストヘルプ",
+      "list_post": "リスト投稿",
+      "list_unsubscribe": "購読解除",
+      "iprev": "逆引きDNS",
+      "spam_status": "スパム状態",
+      "ai_verdict": "AIの判定",
+      "account": "アカウント",
+      "no_subject": "(件名なし)"
+    }
   },
   "email_composer": {
     "new_message": "新規メッセージ",
@@ -523,7 +569,10 @@
       "message": "メッセージに「{keyword}」が含まれていますが、ファイルが添付されていません。このまま送信しますか？",
       "send_anyway": "そのまま送信",
       "back": "編集に戻る"
-    }
+    },
+    "add_link": "リンクを追加",
+    "link_url_prompt": "URLを入力してください",
+    "sending": "送信中..."
   },
   "confirm_dialog": {
     "confirm": "確認",
@@ -817,6 +866,23 @@
         "sound_desc": "カレンダーリマインダーの音を鳴らす",
         "invitation_parsing": "メール招待を解析",
         "invitation_parsing_desc": "メール添付ファイルのカレンダー招待を検出し、カレンダーアクションを表示"
+      },
+      "push": {
+        "confirm_disable_message": "このデバイスは、サイトが閉じているときに通知を受信しなくなります。",
+        "confirm_disable_title": "バックグラウンド通知を無効にしますか？",
+        "description": "このサイトが閉じているときに新着メールのシステム通知を受信します。Bulwark プッシュリレー経由で配信され、リレーがメール内容を見ることはありません。",
+        "disable": "無効化",
+        "enable": "有効化",
+        "ios_hint": "iOS では、最初にサイトをホーム画面にインストールしてください。Safari はインストールされた PWA にのみ Web Push を配信します。",
+        "reenable": "再登録",
+        "relay_desc": "デフォルトはホストされた Bulwark リレーです。セルフホストする場合のみ変更してください。",
+        "relay_label": "プッシュリレー",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "このデバイスで有効",
+        "status_busy": "処理中…",
+        "status_inactive": "このデバイスでは有効になっていません",
+        "status_unsupported": "このブラウザは Web Push をサポートしていません",
+        "title": "バックグラウンド通知"
       }
     },
     "language_region": {
@@ -899,6 +965,13 @@
       "auto_select_reply_identity": {
         "label": "返信元アドレスを自動選択",
         "description": "返信時に、元のメッセージを受信したIDへ差出人アドレスを自動的に切り替えます"
+      },
+      "sub_address_delimiter": {
+        "label": "サブアドレス区切り文字",
+        "description": "ユーザー名とサブアドレスタグを区切る文字です。お使いのメールサーバーが使用する区切り文字に合わせてください（例: user{delimiter}tag@domain.com）。",
+        "option": "{delimiter}  (user{delimiter}tag@domain.com)",
+        "custom": "カスタム…",
+        "custom_input_label": "カスタム区切り文字"
       },
       "show_preview": {
         "label": "プレビューテキストを表示",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "添付ファイル一覧からインライン画像を隠す",
         "description": "本文に埋め込まれた画像を個別の添付ファイルとして表示しません"
+      },
+      "attachment_image_previews": {
+        "label": "添付ファイル内の画像プレビューを表示",
+        "description": "画像の添付ファイルを汎用ファイルアイコンではなくサムネイルカードとして表示します"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "アドレス帳が見つかりません",
       "categories_title": "カテゴリ",
       "categories_description": "連絡先カテゴリの名前を変更",
-      "no_categories": "カテゴリが見つかりません"
+      "no_categories": "カテゴリが見つかりません",
+      "group_by_letter_description": "連絡先リストにアルファベット順のセクション見出しを表示",
+      "group_by_letter_label": "頭文字でグループ化"
     },
     "filters": {
       "title": "メールフィルター",
@@ -1607,41 +1686,41 @@
     "edit_draft": "下書きを編集"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "フォルダーを既読にする",
+    "mark_folder_tree_read": "フォルダーとサブフォルダーを既読にする",
+    "mark_all_folders_read": "すべてのフォルダーを既読にする",
+    "new_subfolder": "新しいサブフォルダー...",
+    "new_folder": "新しいフォルダー...",
+    "rename": "名前を変更...",
+    "empty_folder": "フォルダーを空にする",
+    "empty_folder_generic": "フォルダーを空にする",
+    "delete_folder": "フォルダーを削除",
+    "refresh": "更新",
+    "mark_all_confirm_title": "すべてのフォルダーを既読にする",
+    "mark_all_confirm_message": "個人アカウントのすべての未読メッセージを既読にしますか？",
+    "delete_confirm_title": "フォルダーを削除",
+    "delete_confirm_message": "フォルダー \"{name}\" を完全に削除しますか？この操作は元に戻せません。",
+    "prompt_new_subfolder": "新しいサブフォルダーの名前を入力してください。",
+    "prompt_new_folder": "新しいフォルダーの名前を入力してください。",
+    "prompt_rename": "このフォルダーの新しい名前を入力してください。",
+    "toast_marked_read": "フォルダーを既読にしました",
+    "toast_marked_read_count": "{count, plural, one {1件のメッセージ} other {#件のメッセージ}}を既読にしました",
+    "toast_already_read": "未読メッセージはありません",
+    "toast_marked_all_read": "すべてのフォルダーを既読にしました",
+    "toast_emptied": "フォルダーを空にしました",
+    "toast_folder_created": "フォルダーを作成しました",
+    "toast_folder_renamed": "フォルダー名を変更しました",
+    "toast_folder_deleted": "フォルダーを削除しました",
+    "toast_error_mark_read": "既読にできませんでした",
+    "toast_error_empty": "フォルダーを空にできませんでした",
+    "toast_error_create": "フォルダーを作成できませんでした",
+    "toast_error_rename": "フォルダー名を変更できませんでした",
+    "toast_error_delete": "フォルダーを削除できませんでした",
+    "toast_error_delete_has_children": "フォルダーにサブフォルダーがあります。先に削除してください。",
+    "toast_error_delete_has_email": "フォルダーが空ではありません。先に空にしてください。",
+    "placeholder_folder_name": "フォルダー名",
+    "create": "作成",
+    "rename_confirm": "名前を変更"
   },
   "shortcuts": {
     "title": "キーボードショートカット",
@@ -1748,7 +1827,7 @@
       "use_address": "このアドレスを使用",
       "invalid_tag": "タグは英数字とハイフンのみ使用できます",
       "tag_too_long": "タグは30文字以内にしてください",
-      "help_text": "user+tag@domain.comに送信されたメールは受信トレイに届きます",
+      "help_text": "user{delimiter}tag@domain.comに送信されたメールは受信トレイに届きます",
       "validation": {
         "empty": "タグは空にできません",
         "too_long": "タグは{max}文字以内にしてください",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "明日",
       "export_ics": ".icsとしてエクスポート",
       "copy_title": "タイトルをコピー",
-      "copy_link": "会議リンクをコピー"
+      "copy_link": "会議リンクをコピー",
+      "go_to_today": "今日に移動",
+      "new_all_day_event": "新しい終日イベント",
+      "new_event": "新しいイベント",
+      "new_task": "新しいタスク"
     },
     "detail": {
       "add_note": "メモを追加...",
@@ -2444,6 +2527,20 @@
       "due_today": "今日が期限",
       "due_tomorrow": "明日が期限",
       "overdue": "期限切れ"
+    },
+    "months": {
+      "jan": "1月",
+      "feb": "2月",
+      "mar": "3月",
+      "apr": "4月",
+      "may": "5月",
+      "jun": "6月",
+      "jul": "7月",
+      "aug": "8月",
+      "sep": "9月",
+      "oct": "10月",
+      "nov": "11月",
+      "dec": "12月"
     }
   },
   "advanced_search": {

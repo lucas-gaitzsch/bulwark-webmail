@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     // Pin the upstream URL to the configured JMAP server so an unauthenticated
     // caller cannot point this route at internal hosts. Only when no server
     // URL is configured (and the deployment explicitly allows custom JMAP
-    // endpoints) do we fall back to the user-supplied URL — and even then
+    // endpoints) do we fall back to the user-supplied URL - and even then
     // it must resolve to a public address.
     await configManager.ensureLoaded();
     const configuredServerUrl =

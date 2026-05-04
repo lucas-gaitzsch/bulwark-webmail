@@ -178,6 +178,14 @@ export function EmailList({
     setIsProcessing(true);
     try {
       await batchDelete(client, isInTrash);
+      const storeError = useEmailStore.getState().error;
+      if (storeError) {
+        const { toast } = await import('sonner');
+        toast.error(storeError);
+      }
+    } catch (err) {
+      const { toast } = await import('sonner');
+      toast.error(err instanceof Error ? err.message : 'Failed to delete emails');
     } finally {
       setTimeout(() => setIsProcessing(false), 500);
     }
@@ -275,7 +283,7 @@ export function EmailList({
         <div className="px-4 py-2 border-b bg-accent/30 border-border flex items-center justify-between">
           <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-3 duration-300">
             <span className="text-sm font-medium text-foreground">
-              {selectedEmailIds.size} {selectedEmailIds.size === 1 ? 'email' : 'emails'} selected
+              {t('batch_actions.selected_messages', { count: selectedEmailIds.size })}
             </span>
           </div>
           <div className="flex items-center gap-1 animate-in fade-in slide-in-from-right-3 duration-300">
@@ -330,7 +338,7 @@ export function EmailList({
               disabled={isProcessing}
               className="text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
             >
-              Cancel
+              {t('batch_actions.clear_selection')}
             </Button>
           </div>
         </div>

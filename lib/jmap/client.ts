@@ -1,4 +1,4 @@
-import type { Email, Mailbox, StateChange, AccountStates, Thread, Identity, EmailAddress, ContactCard, AddressBook, AddressBookRights, VacationResponse, Calendar, CalendarRights, CalendarEvent, CalendarEventFilter, CalendarTask, FileNode, FileNodeFilter, Principal } from "./types";
+import type { Email, Mailbox, StateChange, AccountStates, Thread, Identity, EmailAddress, ContactCard, AddressBook, AddressBookRights, VacationResponse, Calendar, CalendarRights, CalendarEvent, CalendarEventFilter, CalendarTask, FileNode, FileNodeFilter, Principal, PushSubscription } from "./types";
 import type { SieveScript, SieveCapabilities } from "./sieve-types";
 import type { IJMAPClient } from "./client-interface";
 import { toWildcardQuery } from "./search-utils";
@@ -292,6 +292,22 @@ function foldIcsLine(line: string): string {
     pos += MAX - 1;
   }
   return chunks.join('\r\n');
+}
+
+// JMAP RFC 8621 stores Message-IDs without angle brackets. Strip any that
+// snuck in (e.g. when echoing values that originated from RFC 5322 headers).
+function stripMessageIdBrackets(id: string): string {
+  return id.trim().replace(/^<+/, '').replace(/>+$/, '').trim();
+}
+
+// Some servers (notably Stalwart) return Identity.name in RFC 5322 mailbox
+// form: `Display Name <addr@example.com>`. Re-emitting that as the JMAP
+// from.name field produces a doubled From header (`"Name <addr>" <addr>`)
+// whose display-name is invalid per RFC 5322 §3.4 and gets rejected by the
+// submission validator — the email then sits forever in Drafts.
+function sanitizeIdentityDisplayName(name: string | undefined | null): string {
+  if (!name) return '';
+  return name.replace(/\s*<[^>]*>\s*$/, '').trim();
 }
 
 export class JMAPClient implements IJMAPClient {
@@ -1748,7 +1764,8 @@ export class JMAPClient implements IJMAPClient {
       ]);
 
       if (response.methodResponses?.[0]?.[0] === "Identity/get") {
-        return (response.methodResponses[0][1].list || []) as Identity[];
+        const list = (response.methodResponses[0][1].list || []) as Identity[];
+        return list.map((id) => ({ ...id, name: sanitizeIdentityDisplayName(id.name) }));
       }
 
       return [];
@@ -1933,7 +1950,8 @@ export class JMAPClient implements IJMAPClient {
     fromEmail?: string,
     draftId?: string,
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>,
-    fromName?: string
+    fromName?: string,
+    htmlBody?: string
   ): Promise<string> {
     const mailboxes = await this.getMailboxes();
     const draftsMailbox = mailboxes.find(mb => mb.role === 'drafts');
@@ -1952,20 +1970,27 @@ export class JMAPClient implements IJMAPClient {
       keywords: Record<string, boolean>;
       mailboxIds: Record<string, boolean>;
       bodyValues: Record<string, { value: string }>;
-      textBody: { partId: string }[];
+      textBody: { partId: string; type?: string }[];
+      htmlBody?: { partId: string; type: string }[];
       attachments?: { blobId: string; type: string; name: string; disposition: string; cid?: string }[];
     }
 
+    const sanitizedFromName = sanitizeIdentityDisplayName(fromName);
     const emailData: EmailDraft = {
-      from: [{ ...(fromName ? { name: fromName } : {}), email: fromEmail || this.username }],
+      from: [{ ...(sanitizedFromName ? { name: sanitizedFromName } : {}), email: fromEmail || this.username }],
       to: to.map(email => ({ email })),
       cc: cc?.map(email => ({ email })),
       bcc: bcc?.map(email => ({ email })),
       subject,
       keywords: { "$draft": true },
       mailboxIds: { [draftsMailbox.id]: true },
-      bodyValues: { "1": { value: body } },
-      textBody: [{ partId: "1" }],
+      bodyValues: htmlBody
+        ? { "text": { value: body }, "html": { value: htmlBody } }
+        : { "1": { value: body } },
+      textBody: htmlBody
+        ? [{ partId: "text", type: "text/plain" }]
+        : [{ partId: "1" }],
+      ...(htmlBody ? { htmlBody: [{ partId: "html", type: "text/html" }] } : {}),
     };
 
     if (attachments?.length) {
@@ -2027,7 +2052,9 @@ export class JMAPClient implements IJMAPClient {
     draftId?: string,
     fromName?: string,
     htmlBody?: string,
-    attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>
+    attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>,
+    inReplyTo?: string[],
+    references?: string[]
   ): Promise<void> {
     const emailId = `send-${Date.now()}`;
     const mailboxes = await this.getMailboxes();
@@ -2067,14 +2094,22 @@ export class JMAPClient implements IJMAPClient {
       }
     }
 
+    // Per RFC 8621 §4.1.2.3 inReplyTo/references are arrays of bare msg-ids
+    // (no angle brackets). Stalwart may return them either way, so normalize.
+    const normalizedInReplyTo = inReplyTo?.map(stripMessageIdBrackets).filter(Boolean);
+    const normalizedReferences = references?.map(stripMessageIdBrackets).filter(Boolean);
+
+    const sanitizedFromName = sanitizeIdentityDisplayName(fromName);
     // Always create a new email with the final body content
     const emailCreate: Record<string, unknown> = {
-      from: [{ ...(fromName ? { name: fromName } : {}), email: fromEmail || this.username }],
+      from: [{ ...(sanitizedFromName ? { name: sanitizedFromName } : {}), email: fromEmail || this.username }],
       replyTo: identityReplyTo?.length ? identityReplyTo : undefined,
       to: to.map(email => ({ email })),
       cc: cc?.map(email => ({ email })),
       bcc: bcc?.map(email => ({ email })),
       subject,
+      inReplyTo: normalizedInReplyTo?.length ? normalizedInReplyTo : undefined,
+      references: normalizedReferences?.length ? normalizedReferences : undefined,
       keywords: { "$seen": true, "$draft": true },
       mailboxIds: { [draftsMailbox.id]: true },
     };
@@ -3057,11 +3092,19 @@ export class JMAPClient implements IJMAPClient {
   }
 
   private contactUsing(): string[] {
-    return ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:contacts"];
+    const using = ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:contacts"];
+    if (this.hasCapability("urn:ietf:params:jmap:principals")) {
+      using.push("urn:ietf:params:jmap:principals:owner");
+    }
+    return using;
   }
 
   private calendarUsing(): string[] {
-    return ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:calendars"];
+    const using = ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:calendars"];
+    if (this.hasCapability("urn:ietf:params:jmap:principals")) {
+      using.push("urn:ietf:params:jmap:principals:owner");
+    }
+    return using;
   }
 
   private getCalendarCapableAccountIds(): string[] {
@@ -5290,5 +5333,81 @@ export class JMAPClient implements IJMAPClient {
         throw new Error(firstErr?.description || firstErr?.type || 'Failed to send raw email');
       }
     }
+  }
+
+  // ── PushSubscription (RFC 8620 §7.2) ──────────────────────────────
+  // Used by the PWA Web Push integration. The mobile app does the same dance
+  // through its own JMAP client - keep these in sync.
+
+  async listPushSubscriptions(): Promise<PushSubscription[]> {
+    const response = await this.request(
+      [['PushSubscription/get', { ids: null }, '0']],
+      ['urn:ietf:params:jmap:core'],
+    );
+    const [, body] = response.methodResponses[0] ?? [];
+    return ((body as { list?: PushSubscription[] } | undefined)?.list) ?? [];
+  }
+
+  async createPushSubscription(params: {
+    deviceClientId: string;
+    url: string;
+    types: string[];
+    expires?: string;
+  }): Promise<string> {
+    const created: Record<string, unknown> = {
+      deviceClientId: params.deviceClientId,
+      url: params.url,
+      types: params.types,
+    };
+    if (params.expires) created.expires = params.expires;
+
+    const response = await this.request(
+      [['PushSubscription/set', { create: { new: created } }, '0']],
+      ['urn:ietf:params:jmap:core'],
+    );
+    const [, body] = response.methodResponses[0] ?? [];
+    const result = (body as { created?: { new?: { id?: string } }; notCreated?: { new?: unknown } } | undefined);
+    const id = result?.created?.new?.id;
+    if (!id) {
+      throw new Error(
+        `PushSubscription/set create failed: ${JSON.stringify(result?.notCreated?.new ?? body)}`,
+      );
+    }
+    return id;
+  }
+
+  async verifyPushSubscription(id: string, verificationCode: string): Promise<void> {
+    const response = await this.request(
+      [['PushSubscription/set', { update: { [id]: { verificationCode } } }, '0']],
+      ['urn:ietf:params:jmap:core'],
+    );
+    const [, body] = response.methodResponses[0] ?? [];
+    const notUpdated = (body as { notUpdated?: Record<string, unknown> } | undefined)?.notUpdated?.[id];
+    if (notUpdated) {
+      throw new Error(`PushSubscription verification failed: ${JSON.stringify(notUpdated)}`);
+    }
+  }
+
+  // Returns false when the server rejects the update (e.g. the subscription
+  // was already destroyed) - the caller treats that as a signal to recreate.
+  async updatePushSubscription(
+    id: string,
+    patch: { expires?: string; types?: string[] },
+  ): Promise<boolean> {
+    const response = await this.request(
+      [['PushSubscription/set', { update: { [id]: patch } }, '0']],
+      ['urn:ietf:params:jmap:core'],
+    );
+    const [, body] = response.methodResponses[0] ?? [];
+    const r = body as { updated?: Record<string, unknown>; notUpdated?: Record<string, unknown> } | undefined;
+    if (r?.notUpdated?.[id]) return false;
+    return r?.updated?.[id] !== undefined;
+  }
+
+  async destroyPushSubscription(id: string): Promise<void> {
+    await this.request(
+      [['PushSubscription/set', { destroy: [id] }, '0']],
+      ['urn:ietf:params:jmap:core'],
+    );
   }
 }

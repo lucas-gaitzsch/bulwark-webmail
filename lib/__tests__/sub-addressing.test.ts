@@ -6,6 +6,10 @@ import {
   suggestTagsForDomain,
   isValidTag,
   getTagValidationError,
+  isSupportedSubAddressDelimiter,
+  isValidSubAddressDelimiter,
+  SUPPORTED_SUB_ADDRESS_DELIMITERS,
+  DEFAULT_SUB_ADDRESS_DELIMITER,
   MAX_TAG_LENGTH,
 } from '../sub-addressing';
 
@@ -352,5 +356,124 @@ describe('getTagValidationError', () => {
   it('should return INVALID_CHARS for unicode characters', () => {
     expect(getTagValidationError('café')).toBe('INVALID_CHARS');
     expect(getTagValidationError('日本語')).toBe('INVALID_CHARS');
+  });
+});
+
+describe('custom delimiter', () => {
+  describe('parseSubAddress with non-default delimiter', () => {
+    it('should parse with "-" delimiter', () => {
+      const result = parseSubAddress('user-shopping@example.com', '-');
+      expect(result.baseUser).toBe('user');
+      expect(result.tag).toBe('shopping');
+    });
+
+    it('should parse with "." delimiter', () => {
+      const result = parseSubAddress('user.shopping@example.com', '.');
+      expect(result.baseUser).toBe('user');
+      expect(result.tag).toBe('shopping');
+    });
+
+    it('should parse with "=" delimiter', () => {
+      const result = parseSubAddress('user=shopping@example.com', '=');
+      expect(result.baseUser).toBe('user');
+      expect(result.tag).toBe('shopping');
+    });
+
+    it('should ignore "+" when "-" is configured as the delimiter', () => {
+      const result = parseSubAddress('user+shopping@example.com', '-');
+      expect(result.baseUser).toBe('user+shopping');
+      expect(result.tag).toBeNull();
+    });
+
+    it('should split on first occurrence when delimiter appears multiple times', () => {
+      const result = parseSubAddress('alice-shop-orders@example.com', '-');
+      expect(result.baseUser).toBe('alice');
+      expect(result.tag).toBe('shop-orders');
+    });
+  });
+
+  describe('generateSubAddress with non-default delimiter', () => {
+    it('should generate using "-" delimiter', () => {
+      expect(generateSubAddress('user@example.com', 'shopping', '-')).toBe('user-shopping@example.com');
+    });
+
+    it('should generate using "." delimiter', () => {
+      expect(generateSubAddress('user@example.com', 'shopping', '.')).toBe('user.shopping@example.com');
+    });
+
+    it('should replace existing tag using the configured delimiter', () => {
+      expect(generateSubAddress('user-old@example.com', 'new', '-')).toBe('user-new@example.com');
+    });
+
+    it('should not strip a "+" sign in the local part when delimiter is "-"', () => {
+      // "+" is not the delimiter so it should remain part of the base user
+      expect(generateSubAddress('user+plus@example.com', 'tag', '-')).toBe('user+plus-tag@example.com');
+    });
+  });
+
+  describe('isSupportedSubAddressDelimiter', () => {
+    it('accepts every supported delimiter', () => {
+      for (const delim of SUPPORTED_SUB_ADDRESS_DELIMITERS) {
+        expect(isSupportedSubAddressDelimiter(delim)).toBe(true);
+      }
+    });
+
+    it('rejects unsupported characters', () => {
+      expect(isSupportedSubAddressDelimiter('_')).toBe(false);
+      expect(isSupportedSubAddressDelimiter('++')).toBe(false);
+      expect(isSupportedSubAddressDelimiter('')).toBe(false);
+    });
+
+    it('default delimiter is supported', () => {
+      expect(isSupportedSubAddressDelimiter(DEFAULT_SUB_ADDRESS_DELIMITER)).toBe(true);
+    });
+  });
+
+  describe('isValidSubAddressDelimiter', () => {
+    it('accepts every preset delimiter', () => {
+      for (const delim of SUPPORTED_SUB_ADDRESS_DELIMITERS) {
+        expect(isValidSubAddressDelimiter(delim)).toBe(true);
+      }
+    });
+
+    it('accepts atext special characters as custom delimiters', () => {
+      const customs = ['~', '!', '#', '$', '%', '&', "'", '*', '/', '?', '^', '_', '`', '{', '|', '}'];
+      for (const c of customs) {
+        expect(isValidSubAddressDelimiter(c)).toBe(true);
+      }
+    });
+
+    it('rejects alphanumeric characters', () => {
+      expect(isValidSubAddressDelimiter('a')).toBe(false);
+      expect(isValidSubAddressDelimiter('Z')).toBe(false);
+      expect(isValidSubAddressDelimiter('0')).toBe(false);
+    });
+
+    it('rejects "@", whitespace, and quotes', () => {
+      expect(isValidSubAddressDelimiter('@')).toBe(false);
+      expect(isValidSubAddressDelimiter(' ')).toBe(false);
+      expect(isValidSubAddressDelimiter('\t')).toBe(false);
+      expect(isValidSubAddressDelimiter('"')).toBe(false);
+    });
+
+    it('rejects multi-character strings', () => {
+      expect(isValidSubAddressDelimiter('++')).toBe(false);
+      expect(isValidSubAddressDelimiter('abc')).toBe(false);
+    });
+
+    it('rejects empty / non-string inputs', () => {
+      expect(isValidSubAddressDelimiter('')).toBe(false);
+      expect(isValidSubAddressDelimiter(null)).toBe(false);
+      expect(isValidSubAddressDelimiter(undefined)).toBe(false);
+      expect(isValidSubAddressDelimiter(1)).toBe(false);
+    });
+
+    it('round-trips through parse/generate with a custom "~" delimiter', () => {
+      const generated = generateSubAddress('user@example.com', 'shopping', '~');
+      expect(generated).toBe('user~shopping@example.com');
+      const parsed = parseSubAddress(generated, '~');
+      expect(parsed.baseUser).toBe('user');
+      expect(parsed.tag).toBe('shopping');
+    });
   });
 });

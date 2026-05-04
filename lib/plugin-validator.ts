@@ -24,7 +24,7 @@ export interface ThemeExtractionResult extends ValidationResult {
   manifest: ThemeManifest | null;
   css: string;
   /**
-   * Optional skin CSS — component-level overrides extracted from `skin.css`.
+   * Optional skin CSS - component-level overrides extracted from `skin.css`.
    * Only populated for Theme API v2 manifests; v1 themes ignore the file.
    */
   skin: string | null;
@@ -225,7 +225,7 @@ export async function extractTheme(file: File): Promise<ThemeExtractionResult> {
     return { valid: false, errors, warnings, manifest: null, css: '', skin: null, preview: null };
   }
 
-  // Read theme.css — required for v1 themes, optional when the manifest
+  // Read theme.css - required for v1 themes, optional when the manifest
   // declares Theme API v2 fields (tokens/extends/derive/density/radii/typography),
   // since the compiler can produce CSS purely from the manifest.
   const cssFile = zip.file(root + 'theme.css');
@@ -279,13 +279,13 @@ export async function extractTheme(file: File): Promise<ThemeExtractionResult> {
   }
 
   // Read skin.css if present (Theme API v2 only). Skins target real
-  // component selectors and bypass the strict :root/.dark selector check —
+  // component selectors and bypass the strict :root/.dark selector check -
   // they still go through the dangerous-pattern sanitizer.
   let skin: string | null = null;
   const skinFile = zip.file(root + 'skin.css');
   if (skinFile) {
     if (!isAdvanced) {
-      warnings.push('skin.css ignored — only Theme API v2 manifests can ship a skin');
+      warnings.push('skin.css ignored - only Theme API v2 manifests can ship a skin');
     } else {
       const rawSkin = await skinFile.async('string');
       if (rawSkin.length > MAX_THEME_SKIN_BYTES) {

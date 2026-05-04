@@ -10,6 +10,8 @@ import { cn, formatFileSize, formatDateTime, generateUUID } from "@/lib/utils";
 import { debug } from "@/lib/debug";
 import { toast } from "@/stores/toast-store";
 import { sanitizeEmailHtml } from "@/lib/email-sanitization";
+import { emailHooks, contactHooks } from "@/lib/plugin-hooks";
+import type { OutgoingEmail, RecipientSuggestion } from "@/lib/plugin-types";
 import { useAuthStore } from "@/stores/auth-store";
 import { useIdentityStore } from "@/stores/identity-store";
 import { useAccountStore } from "@/stores/account-store";
@@ -31,6 +33,7 @@ import { TemplateForm } from "@/components/templates/template-form";
 import type { EmailTemplate } from "@/lib/template-types";
 import { appendPlainTextSignature, getPlainTextSignature } from "@/lib/signature-utils";
 import { findReplyIdentityId } from "@/lib/reply-identity";
+import { computeReplyThreadingHeaders } from "@/lib/email-threading";
 import { RichTextEditor } from "@/components/email/rich-text-editor";
 
 /** Strip HTML tags and decode entities to get a plain-text version */
@@ -67,6 +70,8 @@ interface EmailComposerProps {
     fromName?: string;
     identityId?: string;
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>;
+    inReplyTo?: string[];
+    references?: string[];
   }) => void | Promise<void>;
   onClose?: () => void;
   onDiscardDraft?: (draftId: string) => void;
@@ -87,6 +92,11 @@ interface EmailComposerProps {
     receivedAt?: string;
     accountId?: string;
     attachments?: Array<{ blobId: string; name?: string; type: string; size: number; cid?: string; disposition?: string }>;
+    // Threading: parent's Message-ID and References, used to set RFC 5322
+    // In-Reply-To and References on outgoing replies. See #234.
+    messageId?: string;
+    inReplyTo?: string[];
+    references?: string[];
   };
 }
 
@@ -116,6 +126,7 @@ export function EmailComposer({
   const tCommon = useTranslations('common');
   const timeFormat = useSettingsStore((state) => state.timeFormat);
   const plainTextMode = useSettingsStore((state) => state.plainTextMode);
+  const subAddressDelimiter = useSettingsStore((state) => state.subAddressDelimiter);
   const autoSelectReplyIdentity = useSettingsStore((state) => state.autoSelectReplyIdentity);
   const attachmentReminderEnabled = useSettingsStore((state) => state.attachmentReminderEnabled);
   const attachmentReminderKeywords = useSettingsStore((state) => state.attachmentReminderKeywords);
@@ -317,6 +328,9 @@ export function EmailComposer({
       ? `<div>${getPlainTextSignature(currentIdentity).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>`
       : '';
   const getAutocomplete = useContactStore((s) => s.getAutocomplete);
+  const addToTrustedSendersBook = useContactStore((s) => s.addToTrustedSendersBook);
+  const addTrustedSender = useSettingsStore((s) => s.addTrustedSender);
+  const trustedSendersAddressBook = useSettingsStore((s) => s.trustedSendersAddressBook);
   const addTemplate = useTemplateStore((s) => s.addTemplate);
   const sendRawEmail = useEmailStore((s) => s.sendRawEmail);
   const smimeStore = useSmimeStore();
@@ -437,10 +451,13 @@ export function EmailComposer({
       return;
     }
 
-    autocompleteTimeoutRef.current = setTimeout(() => {
-      const results = getAutocomplete(lastPart);
-      setAutocompleteResults(results);
-      setActiveAutoField(results.length > 0 ? field : null);
+    autocompleteTimeoutRef.current = setTimeout(async () => {
+      const localResults = getAutocomplete(lastPart);
+      // Let plugins contribute extra suggestions (Slack handles, GitHub, CRM, …).
+      const initial: RecipientSuggestion[] = localResults.map(r => ({ name: r.name, email: r.email }));
+      const merged = await contactHooks.onProvideRecipientSuggestions.transform(initial, { query: lastPart });
+      setAutocompleteResults(merged.map(s => ({ name: s.name, email: s.email })));
+      setActiveAutoField(merged.length > 0 ? field : null);
       setAutoSelectedIndex(-1);
     }, 200);
   }, [getAutocomplete]);
@@ -550,6 +567,19 @@ export function EmailComposer({
   const addFiles = useCallback(async (files: File[]) => {
     if (!client || files.length === 0) return;
 
+    // Let plugins veto each upload before it's queued.
+    const allowedFiles: File[] = [];
+    for (const file of files) {
+      const ok = await emailHooks.onBeforeAttachmentUpload.intercept({
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+      });
+      if (ok) allowedFiles.push(file);
+    }
+    if (allowedFiles.length === 0) return;
+    files = allowedFiles;
+
     const newAttachments: ComposerAttachment[] = files.map(file => {
       const controller = new AbortController();
       return {
@@ -578,6 +608,12 @@ export function EmailComposer({
               : att
           )
         );
+        emailHooks.onAfterAttachmentUpload.emit({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          size: file.size,
+          blobId,
+        });
       } catch (error) {
         if (controller?.signal.aborted) continue;
         debug.error(`Failed to upload ${file.name}:`, error);
@@ -721,7 +757,7 @@ export function EmailComposer({
     // Generate sub-addressed email if tag is set
     const fromEmail = currentIdentity?.email
       ? subAddressTag
-        ? generateSubAddress(currentIdentity.email, subAddressTag)
+        ? generateSubAddress(currentIdentity.email, subAddressTag, subAddressDelimiter)
         : currentIdentity.email
       : undefined;
 
@@ -736,7 +772,8 @@ export function EmailComposer({
         fromEmail,
         draftId || undefined,
         uploadedAttachments,
-        currentIdentity?.name || undefined
+        currentIdentity?.name || undefined,
+        plainTextMode ? undefined : body
       );
 
       setDraftId(savedDraftId);
@@ -772,6 +809,19 @@ export function EmailComposer({
 
     // Set new timeout for auto-save (2 seconds after last change)
     saveTimeoutRef.current = setTimeout(() => {
+      // Plugin observers (AI assist, grammar, …) get a debounced snapshot here.
+      emailHooks.onDraftChange.emit({
+        to: to.split(',').map(s => s.trim()).filter(Boolean),
+        cc: cc.split(',').map(s => s.trim()).filter(Boolean),
+        bcc: bcc.split(',').map(s => s.trim()).filter(Boolean),
+        subject,
+        htmlBody: plainTextMode ? '' : body,
+        textBody: plainTextMode ? body : htmlToPlainText(body),
+        identityId: selectedIdentityId || '',
+        attachments: attachments
+          .filter(a => a.blobId && !a.uploading && !a.error)
+          .map(a => ({ name: a.name, type: a.type || 'application/octet-stream', size: a.size })),
+      });
       saveDraft();
     }, 2000);
 
@@ -812,19 +862,27 @@ export function EmailComposer({
     attachments: Array<{ blobId: string; name: string; type: string; size: number; disposition: 'inline'; cid: string }>;
   } => {
     const known = inlineImagesRef.current;
-    if (known.length === 0) return { html, attachments: [] };
-
     const doc = new DOMParser().parseFromString(`<body>${html}</body>`, 'text/html');
     const used = new Map<string, typeof known[number]>();
 
-    doc.querySelectorAll('img[data-cid]').forEach((img) => {
-      const cid = img.getAttribute('data-cid');
-      if (!cid) return;
-      const entry = known.find((e) => e.cid === cid);
-      if (!entry) return;
-      img.setAttribute('src', `cid:${cid}`);
-      img.removeAttribute('data-cid');
-      used.set(cid, entry);
+    if (known.length > 0) {
+      doc.querySelectorAll('img[data-cid]').forEach((img) => {
+        const cid = img.getAttribute('data-cid');
+        if (!cid) return;
+        const entry = known.find((e) => e.cid === cid);
+        if (!entry) return;
+        img.setAttribute('src', `cid:${cid}`);
+        img.removeAttribute('data-cid');
+        used.set(cid, entry);
+      });
+    }
+
+    // Recipient mail clients apply default <p> margins inside table cells,
+    // inflating row height. Tiptap wraps cell text in <p>, so force margin:0
+    // to match the composer's tight rows.
+    doc.querySelectorAll('td > p, th > p').forEach((p) => {
+      const existing = p.getAttribute('style') || '';
+      p.setAttribute('style', `margin:0;${existing}`);
     });
 
     return {
@@ -889,7 +947,7 @@ export function EmailComposer({
 
     const fromEmail = currentIdentity?.email
       ? subAddressTag
-        ? generateSubAddress(currentIdentity.email, subAddressTag)
+        ? generateSubAddress(currentIdentity.email, subAddressTag, subAddressDelimiter)
         : currentIdentity.email
       : undefined;
 
@@ -904,6 +962,11 @@ export function EmailComposer({
       }
       return '';
     };
+
+    // RFC 5322 §3.6.4 threading — only continues the chain on a reply, not a forward.
+    const threadingHeaders = (mode === 'reply' || mode === 'replyAll')
+      ? computeReplyThreadingHeaders(replyTo)
+      : null;
 
     // In plain text mode, send text/plain only (no HTML body)
     const finalBody = plainTextMode
@@ -968,12 +1031,22 @@ export function EmailComposer({
         }
 
         // 4. Build canonical MIME
+        // mime-builder takes inReplyTo as a single ref-form msg-id (with brackets);
+        // references stays an array. threadingHeaders contains bare msg-ids.
+        const mimeInReplyTo = threadingHeaders?.inReplyTo[0]
+          ? `<${threadingHeaders.inReplyTo[0]}>`
+          : undefined;
+        const mimeReferences = threadingHeaders?.references.length
+          ? threadingHeaders.references.map(id => `<${id}>`)
+          : undefined;
         const mimeBytes = buildMimeMessage({
           from: { name: currentIdentity.name || undefined, email: fromEmail || currentIdentity.email },
           to: toAddresses.map(e => ({ email: e })),
           cc: ccAddresses.length > 0 ? ccAddresses.map(e => ({ email: e })) : undefined,
           bcc: bccAddresses.length > 0 ? bccAddresses.map(e => ({ email: e })) : undefined,
           subject,
+          inReplyTo: mimeInReplyTo,
+          references: mimeReferences,
           textBody: finalBody,
           htmlBody: finalHtmlBody,
           attachments: mimeAttachments.length > 0 ? mimeAttachments : undefined,
@@ -986,6 +1059,8 @@ export function EmailComposer({
           to: toAddresses.map(e => ({ email: e })),
           cc: ccAddresses.length > 0 ? ccAddresses.map(e => ({ email: e })) : undefined,
           subject,
+          inReplyTo: mimeInReplyTo,
+          references: mimeReferences,
         };
 
         // 5. Sign if enabled
@@ -1030,19 +1105,48 @@ export function EmailComposer({
           .map(att => ({ blobId: att.blobId!, name: att.name, type: att.type || 'application/octet-stream', size: att.size }));
         uploadedAttachments.push(...inlineAttachments);
 
-        await onSend?.({
+        // Let plugins (signatures, link-rewriting, encryption, AI rewrite, …)
+        // transform the outgoing message immediately before submission.
+        const transformInput: OutgoingEmail = {
           to: toAddresses,
           cc: ccAddresses,
           bcc: bccAddresses,
           subject,
-          body: finalBody,
-          htmlBody: finalHtmlBody,
+          htmlBody: finalHtmlBody || '',
+          textBody: finalBody,
+          identityId: currentIdentity?.id || '',
+          attachments: uploadedAttachments.map(a => ({ name: a.name, type: a.type, size: a.size })),
+          inReplyTo: threadingHeaders?.inReplyTo?.[0],
+        };
+        const outgoing = await emailHooks.onTransformOutgoingEmail.transform(transformInput);
+
+        await onSend?.({
+          to: outgoing.to,
+          cc: outgoing.cc,
+          bcc: outgoing.bcc,
+          subject: outgoing.subject,
+          body: outgoing.textBody,
+          htmlBody: outgoing.htmlBody || undefined,
           draftId: finalDraftId || undefined,
           fromEmail,
           fromName: currentIdentity?.name || undefined,
-          identityId: currentIdentity?.id,
+          identityId: outgoing.identityId || currentIdentity?.id,
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
+          inReplyTo: threadingHeaders?.inReplyTo,
+          references: threadingHeaders?.references,
         });
+
+        if (mode === 'reply' || mode === 'replyAll') {
+          for (const recipient of [...outgoing.to, ...outgoing.cc].filter(Boolean)) {
+            if (trustedSendersAddressBook && client) {
+              addToTrustedSendersBook(client, recipient).catch(err => {
+                debug.error('Failed to add trusted sender to address book:', err);
+              });
+            } else {
+              addTrustedSender(recipient);
+            }
+          }
+        }
       }
 
       setTo("");
@@ -1179,7 +1283,7 @@ export function EmailComposer({
                 >
                   {identities.map((identity) => {
                     const displayEmail = subAddressTag
-                      ? generateSubAddress(identity.email, subAddressTag)
+                      ? generateSubAddress(identity.email, subAddressTag, subAddressDelimiter)
                       : identity.email;
                     return (
                       <option key={identity.id} value={identity.id}>
@@ -1192,7 +1296,7 @@ export function EmailComposer({
                 <span className="text-sm text-foreground flex-1 truncate">
                   {subAddressTag ? (
                     <span className="font-mono">
-                      {generateSubAddress(primaryIdentity?.email || '', subAddressTag)}
+                      {generateSubAddress(primaryIdentity?.email || '', subAddressTag, subAddressDelimiter)}
                     </span>
                   ) : (
                     <>

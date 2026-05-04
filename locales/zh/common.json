@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "选择邮件",
       "select_all": "全选",
+      "selected_messages": "已選取 {count, plural, one {1} other {#}} 封電子郵件",
       "mark_read": "标记为已读",
       "mark_unread": "标记为未读",
       "delete": "删除",
@@ -238,6 +239,11 @@
     "unstar": "取消星标",
     "mark_unread": "标记为未读",
     "mark_read": "标记为已读",
+    "unread": "未读",
+    "read": "已读",
+    "spam_short": "垃圾邮件",
+    "not_spam_short": "非垃圾邮件",
+    "move": "移动",
     "print": "打印",
     "view_source": "查看源码",
     "export_email": "导出为 .eml",
@@ -321,7 +327,20 @@
         "fail": "DMARC 失败",
         "none": "无 DMARC"
       },
-      "spam_score": "垃圾邮件评分"
+      "spam_score": "垃圾邮件评分",
+      "tooltip_spf": "Sender Policy Framework：验证发送服务器是否有权代表该域名发送邮件",
+      "tooltip_dkim": "DomainKeys Identified Mail：通过加密签名确认邮件在传输过程中未被篡改",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance：确保 SPF 与 DKIM 与发件人域名一致，并为失败设置处理策略",
+      "policy": "策略",
+      "result": {
+        "pass": "通过",
+        "fail": "失败",
+        "softfail": "软失败",
+        "neutral": "中立",
+        "permerror": "永久错误",
+        "temperror": "临时错误",
+        "none": "无"
+      }
     },
     "headers": {
       "routing": "路由",
@@ -441,10 +460,37 @@
       "cancel_info": "组织者已取消此活动。",
       "event_updated": "更新 #{sequence}",
       "event_status_tentative": "暂定",
-      "event_status_cancelled": "已取消"
+      "event_status_cancelled": "已取消",
+      "collapse": "隐藏详情",
+      "expand": "显示详情"
     },
     "send": "发送",
-    "more": "更多"
+    "more": "更多",
+    "details": {
+      "recipients_routing": "收件人与路由",
+      "authentication_security": "身份验证与安全",
+      "identifiers_threading": "标识符与会话",
+      "mailing_list": "邮件列表",
+      "message_properties": "邮件属性",
+      "sent": "发送时间",
+      "received": "接收时间",
+      "delivery_time": "送达耗时",
+      "in_reply_to": "回复对象",
+      "references": "引用",
+      "thread_id": "会话 ID",
+      "size": "大小",
+      "mime_type": "MIME 类型",
+      "attachments_summary": "{count} 个文件 · {size}",
+      "list_id": "列表 ID",
+      "list_help": "列表帮助",
+      "list_post": "列表投递",
+      "list_unsubscribe": "取消订阅",
+      "iprev": "反向 DNS",
+      "spam_status": "垃圾邮件状态",
+      "ai_verdict": "AI 判断",
+      "account": "账户",
+      "no_subject": "（无主题）"
+    }
   },
   "email_composer": {
     "new_message": "新邮件",
@@ -523,7 +569,10 @@
       "message": "您的消息中提到了“{keyword}”，但未附加任何文件。仍然发送吗？",
       "send_anyway": "仍然发送",
       "back": "返回编辑"
-    }
+    },
+    "add_link": "添加链接",
+    "link_url_prompt": "输入 URL",
+    "sending": "发送中..."
   },
   "confirm_dialog": {
     "confirm": "确认",
@@ -817,6 +866,23 @@
         "sound_desc": "播放日历提醒的音频提醒",
         "invitation_parsing": "解析邮件邀请",
         "invitation_parsing_desc": "检测邮件附件中的日历邀请并显示日历操作"
+      },
+      "push": {
+        "confirm_disable_message": "当网站关闭时，此设备将停止接收提醒。",
+        "confirm_disable_title": "禁用后台通知？",
+        "description": "在此网站关闭时接收新邮件的系统通知。通过 Bulwark 推送中继传送；中继永远不会看到邮件内容。",
+        "disable": "禁用",
+        "enable": "启用",
+        "ios_hint": "在 iOS 上，请先将网站安装到主屏幕 – Safari 仅向已安装的 PWA 发送 Web Push。",
+        "reenable": "重新注册",
+        "relay_desc": "默认使用托管的 Bulwark 中继。仅当您自托管时才更改。",
+        "relay_label": "推送中继",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "在此设备上活动",
+        "status_busy": "工作中…",
+        "status_inactive": "在此设备上未启用",
+        "status_unsupported": "此浏览器不支持 Web Push",
+        "title": "后台通知"
       }
     },
     "language_region": {
@@ -904,6 +970,13 @@
       "auto_select_reply_identity": {
         "label": "自动选择回复地址",
         "description": "回复时自动将发件人地址切换为最初收到该邮件的身份"
+      },
+      "sub_address_delimiter": {
+        "label": "子地址分隔符",
+        "description": "用于分隔用户名和子地址标签的字符。请选择与您的邮件服务器一致的分隔符（例如 user{delimiter}tag@domain.com）。",
+        "option": "{delimiter}  (user{delimiter}tag@domain.com)",
+        "custom": "自定义…",
+        "custom_input_label": "自定义分隔字符"
       },
       "attachment_click_action": {
         "label": "附件单击操作",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "在附件列表中隐藏内嵌图片",
         "description": "嵌入到邮件正文中的图片不会作为单独的附件显示"
+      },
+      "attachment_image_previews": {
+        "label": "在附件中显示图片预览",
+        "description": "将图片附件显示为缩略图卡片，而不是通用文件图标"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "未找到地址簿",
       "categories_title": "类别",
       "categories_description": "重命名联系人类别",
-      "no_categories": "未找到类别"
+      "no_categories": "未找到类别",
+      "group_by_letter_description": "在联系人列表中显示按字母顺序排列的分节标题",
+      "group_by_letter_label": "按首字母分组"
     },
     "filters": {
       "title": "邮件过滤器",
@@ -1607,41 +1686,41 @@
     "edit_draft": "编辑草稿"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "将文件夹标记为已读",
+    "mark_folder_tree_read": "将文件夹及子文件夹标记为已读",
+    "mark_all_folders_read": "将所有文件夹标记为已读",
+    "new_subfolder": "新建子文件夹...",
+    "new_folder": "新建文件夹...",
+    "rename": "重命名...",
+    "empty_folder": "清空文件夹",
+    "empty_folder_generic": "清空文件夹",
+    "delete_folder": "删除文件夹",
+    "refresh": "刷新",
+    "mark_all_confirm_title": "将所有文件夹标记为已读",
+    "mark_all_confirm_message": "将您个人账户中的所有未读邮件标记为已读？",
+    "delete_confirm_title": "删除文件夹",
+    "delete_confirm_message": "永久删除文件夹 \"{name}\"？此操作无法撤销。",
+    "prompt_new_subfolder": "请输入新子文件夹的名称。",
+    "prompt_new_folder": "请输入新文件夹的名称。",
+    "prompt_rename": "请输入此文件夹的新名称。",
+    "toast_marked_read": "文件夹已标记为已读",
+    "toast_marked_read_count": "已将 {count, plural, one {1 封邮件} other {# 封邮件}} 标记为已读",
+    "toast_already_read": "没有未读邮件",
+    "toast_marked_all_read": "所有文件夹已标记为已读",
+    "toast_emptied": "文件夹已清空",
+    "toast_folder_created": "文件夹已创建",
+    "toast_folder_renamed": "文件夹已重命名",
+    "toast_folder_deleted": "文件夹已删除",
+    "toast_error_mark_read": "标记为已读失败",
+    "toast_error_empty": "清空文件夹失败",
+    "toast_error_create": "创建文件夹失败",
+    "toast_error_rename": "重命名文件夹失败",
+    "toast_error_delete": "删除文件夹失败",
+    "toast_error_delete_has_children": "文件夹包含子文件夹，请先将其删除。",
+    "toast_error_delete_has_email": "文件夹不为空，请先清空它。",
+    "placeholder_folder_name": "文件夹名称",
+    "create": "创建",
+    "rename_confirm": "重命名"
   },
   "shortcuts": {
     "title": "键盘快捷键",
@@ -1748,7 +1827,7 @@
       "use_address": "使用此地址",
       "invalid_tag": "标签只能是字母数字和破折号",
       "tag_too_long": "标签不得超过 30 个字符",
-      "help_text": "发送到 user+tag@domain.com 的邮件将送达您的收件箱",
+      "help_text": "发送到 user{delimiter}tag@domain.com 的邮件将送达您的收件箱",
       "validation": {
         "empty": "标签不能为空",
         "too_long": "标签不得超过 {max} 个字符",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "明天",
       "export_ics": "导出为 .ics",
       "copy_title": "复制标题",
-      "copy_link": "复制会议链接"
+      "copy_link": "复制会议链接",
+      "go_to_today": "前往今天",
+      "new_all_day_event": "新建全天事件",
+      "new_event": "新建事件",
+      "new_task": "新建任务"
     },
     "detail": {
       "add_note": "添加注释...",
@@ -2444,6 +2527,20 @@
       "due_today": "今天",
       "due_tomorrow": "明天",
       "overdue": "逾期"
+    },
+    "months": {
+      "jan": "1月",
+      "feb": "2月",
+      "mar": "3月",
+      "apr": "4月",
+      "may": "5月",
+      "jun": "6月",
+      "jul": "7月",
+      "aug": "8月",
+      "sep": "9月",
+      "oct": "10月",
+      "nov": "11月",
+      "dec": "12月"
     }
   },
   "advanced_search": {

@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "Выбрать письма",
       "select_all": "Выбрать все",
+      "selected_messages": "Выбрано {count, plural, one {1 письмо} other {# письма}}",
       "mark_read": "Отметить прочитанными",
       "mark_unread": "Отметить непрочитанными",
       "delete": "Удалить",
@@ -238,6 +239,11 @@
     "unstar": "Снять пометку",
     "mark_unread": "Отметить непрочитанным",
     "mark_read": "Отметить прочитанным",
+    "unread": "Не прочитано",
+    "read": "Прочитано",
+    "spam_short": "Спам",
+    "not_spam_short": "Не спам",
+    "move": "Переместить",
     "print": "Распечатать",
     "view_source": "Просмотреть исходный код",
     "export_email": "Экспортировать как .eml",
@@ -321,7 +327,20 @@
         "fail": "DMARC не прошёл",
         "none": "DMARC отсутствует"
       },
-      "spam_score": "Оценка спама"
+      "spam_score": "Оценка спама",
+      "tooltip_spf": "Sender Policy Framework: проверяет, имеет ли отправляющий сервер право отправлять почту от имени домена",
+      "tooltip_dkim": "DomainKeys Identified Mail: подтверждает с помощью криптографической подписи, что письмо не было изменено при передаче",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: обеспечивает согласованность SPF и DKIM с доменом отправителя и устанавливает политику для сбоев",
+      "policy": "Политика",
+      "result": {
+        "pass": "Пройдено",
+        "fail": "Не пройдено",
+        "softfail": "Частичный сбой",
+        "neutral": "Нейтрально",
+        "permerror": "Постоянная ошибка",
+        "temperror": "Временная ошибка",
+        "none": "Нет"
+      }
     },
     "headers": {
       "routing": "Маршрутизация",
@@ -441,10 +460,37 @@
       "cancel_info": "Организатор отменил это событие.",
       "event_updated": "Обновление №{sequence}",
       "event_status_tentative": "Под вопросом",
-      "event_status_cancelled": "Отменено"
+      "event_status_cancelled": "Отменено",
+      "collapse": "Скрыть детали",
+      "expand": "Показать детали"
     },
     "send": "Отправить",
-    "more": "ещё"
+    "more": "ещё",
+    "details": {
+      "recipients_routing": "Получатели и маршрутизация",
+      "authentication_security": "Аутентификация и безопасность",
+      "identifiers_threading": "Идентификаторы и обсуждения",
+      "mailing_list": "Список рассылки",
+      "message_properties": "Свойства сообщения",
+      "sent": "Отправлено",
+      "received": "Получено",
+      "delivery_time": "Время доставки",
+      "in_reply_to": "В ответ на",
+      "references": "Ссылки",
+      "thread_id": "ID обсуждения",
+      "size": "Размер",
+      "mime_type": "MIME-тип",
+      "attachments_summary": "{count} файлов · {size}",
+      "list_id": "ID списка",
+      "list_help": "Справка списка",
+      "list_post": "Публикация в список",
+      "list_unsubscribe": "Отписаться",
+      "iprev": "Обратный DNS",
+      "spam_status": "Статус спама",
+      "ai_verdict": "Вердикт ИИ",
+      "account": "Аккаунт",
+      "no_subject": "(без темы)"
+    }
   },
   "email_composer": {
     "new_message": "Новое письмо",
@@ -523,7 +569,10 @@
       "message": "В вашем сообщении упоминается \"{keyword}\", но файл не прикреплён. Отправить всё равно?",
       "send_anyway": "Отправить всё равно",
       "back": "Вернуться к редактированию"
-    }
+    },
+    "add_link": "Добавить ссылку",
+    "link_url_prompt": "Введите URL",
+    "sending": "Отправка..."
   },
   "confirm_dialog": {
     "confirm": "Подтвердить",
@@ -817,6 +866,23 @@
         "sound_desc": "Воспроизводить звуковой сигнал для напоминаний календаря",
         "invitation_parsing": "Распознавать приглашения по почте",
         "invitation_parsing_desc": "Обнаруживать приглашения календаря во вложениях писем и показывать действия календаря"
+      },
+      "push": {
+        "confirm_disable_message": "Это устройство перестанет получать оповещения, когда сайт закрыт.",
+        "confirm_disable_title": "Отключить фоновые уведомления?",
+        "description": "Получайте системные уведомления о новых письмах, когда этот сайт закрыт. Доставляется через push-релей Bulwark; релей никогда не видит содержимое писем.",
+        "disable": "Отключить",
+        "enable": "Включить",
+        "ios_hint": "В iOS сначала установите сайт на главный экран – Safari доставляет Web Push только установленным PWA.",
+        "reenable": "Перерегистрировать",
+        "relay_desc": "По умолчанию используется размещённый релей Bulwark. Меняйте только если хостите самостоятельно.",
+        "relay_label": "Push-релей",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "Активно на этом устройстве",
+        "status_busy": "Выполняется…",
+        "status_inactive": "Не включено на этом устройстве",
+        "status_unsupported": "Этот браузер не поддерживает Web Push",
+        "title": "Фоновые уведомления"
       }
     },
     "language_region": {
@@ -899,6 +965,13 @@
       "auto_select_reply_identity": {
         "label": "Автоматически выбирать адрес для ответа",
         "description": "При ответе автоматически переключать адрес отправителя на ту учетную запись, которая получила исходное сообщение"
+      },
+      "sub_address_delimiter": {
+        "label": "Разделитель суб-адресов",
+        "description": "Символ, отделяющий имя пользователя от тега суб-адреса. Используйте разделитель, настроенный на вашем почтовом сервере (например, user{delimiter}tag@domain.com).",
+        "option": "{delimiter}  (user{delimiter}tag@domain.com)",
+        "custom": "Свой…",
+        "custom_input_label": "Свой символ-разделитель"
       },
       "show_preview": {
         "label": "Показывать текст предпросмотра",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "Скрывать встроенные изображения из вложений",
         "description": "Изображения, встроенные в тело сообщения, не отображаются как отдельные вложения"
+      },
+      "attachment_image_previews": {
+        "label": "Показывать миниатюры изображений во вложениях",
+        "description": "Отображать вложенные изображения в виде миниатюр вместо обычных значков файлов"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "Адресные книги не найдены",
       "categories_title": "Категории",
       "categories_description": "Переименование категорий контактов",
-      "no_categories": "Категории не найдены"
+      "no_categories": "Категории не найдены",
+      "group_by_letter_description": "Показывать алфавитные заголовки разделов в списке контактов",
+      "group_by_letter_label": "Группировать по первой букве"
     },
     "filters": {
       "title": "Фильтры почты",
@@ -1607,41 +1686,41 @@
     "edit_draft": "Редактировать черновик"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "Отметить папку как прочитанную",
+    "mark_folder_tree_read": "Отметить папку и вложенные папки как прочитанные",
+    "mark_all_folders_read": "Отметить все папки как прочитанные",
+    "new_subfolder": "Новая вложенная папка...",
+    "new_folder": "Новая папка...",
+    "rename": "Переименовать...",
+    "empty_folder": "Очистить папку",
+    "empty_folder_generic": "Очистить папку",
+    "delete_folder": "Удалить папку",
+    "refresh": "Обновить",
+    "mark_all_confirm_title": "Отметить все папки как прочитанные",
+    "mark_all_confirm_message": "Отметить все непрочитанные сообщения в вашем личном аккаунте как прочитанные?",
+    "delete_confirm_title": "Удалить папку",
+    "delete_confirm_message": "Безвозвратно удалить папку \"{name}\"? Это действие нельзя отменить.",
+    "prompt_new_subfolder": "Введите имя для новой вложенной папки.",
+    "prompt_new_folder": "Введите имя для новой папки.",
+    "prompt_rename": "Введите новое имя для этой папки.",
+    "toast_marked_read": "Папка отмечена как прочитанная",
+    "toast_marked_read_count": "Отмечено {count, plural, one {1 сообщение} few {# сообщения} other {# сообщений}} как прочитанные",
+    "toast_already_read": "Нет непрочитанных сообщений",
+    "toast_marked_all_read": "Все папки отмечены как прочитанные",
+    "toast_emptied": "Папка очищена",
+    "toast_folder_created": "Папка создана",
+    "toast_folder_renamed": "Папка переименована",
+    "toast_folder_deleted": "Папка удалена",
+    "toast_error_mark_read": "Не удалось отметить как прочитанное",
+    "toast_error_empty": "Не удалось очистить папку",
+    "toast_error_create": "Не удалось создать папку",
+    "toast_error_rename": "Не удалось переименовать папку",
+    "toast_error_delete": "Не удалось удалить папку",
+    "toast_error_delete_has_children": "Папка содержит вложенные папки. Сначала удалите их.",
+    "toast_error_delete_has_email": "Папка не пуста. Сначала очистите её.",
+    "placeholder_folder_name": "Имя папки",
+    "create": "Создать",
+    "rename_confirm": "Переименовать"
   },
   "shortcuts": {
     "title": "Сочетания клавиш",
@@ -1748,7 +1827,7 @@
       "use_address": "Использовать этот адрес",
       "invalid_tag": "Тег должен содержать только буквы, цифры и дефисы",
       "tag_too_long": "Тег не должен превышать 30 символов",
-      "help_text": "Письма на адрес user+tag@domain.com будут приходить в ваш ящик",
+      "help_text": "Письма на адрес user{delimiter}tag@domain.com будут приходить в ваш ящик",
       "validation": {
         "empty": "Тег не может быть пустым",
         "too_long": "Тег не должен превышать {max} символов",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "Завтра",
       "export_ics": "Экспорт в .ics",
       "copy_title": "Скопировать название",
-      "copy_link": "Скопировать ссылку встречи"
+      "copy_link": "Скопировать ссылку встречи",
+      "go_to_today": "Перейти к сегодня",
+      "new_all_day_event": "Новое событие на весь день",
+      "new_event": "Новое событие",
+      "new_task": "Новая задача"
     },
     "detail": {
       "add_note": "Добавить заметку...",
@@ -2444,6 +2527,20 @@
       "due_today": "Сегодня",
       "due_tomorrow": "Завтра",
       "overdue": "Просрочено"
+    },
+    "months": {
+      "jan": "янв.",
+      "feb": "февр.",
+      "mar": "март",
+      "apr": "апр.",
+      "may": "май",
+      "jun": "июнь",
+      "jul": "июль",
+      "aug": "авг.",
+      "sep": "сент.",
+      "oct": "окт.",
+      "nov": "нояб.",
+      "dec": "дек."
     }
   },
   "advanced_search": {

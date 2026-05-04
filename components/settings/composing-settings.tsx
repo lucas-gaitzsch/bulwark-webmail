@@ -4,8 +4,17 @@ import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { useConfig } from '@/hooks/use-config';
 import { useSettingsStore } from '@/stores/settings-store';
-import { SettingsSection, SettingItem, ToggleSwitch } from './settings-section';
+import { SettingsSection, SettingItem, Select, ToggleSwitch } from './settings-section';
 import { Mail, X } from 'lucide-react';
+import { getPathPrefix } from '@/lib/browser-navigation';
+import {
+  SUPPORTED_SUB_ADDRESS_DELIMITERS,
+  isSupportedSubAddressDelimiter,
+  isValidSubAddressDelimiter,
+} from '@/lib/sub-addressing';
+
+const CUSTOM_DELIMITER_SENTINEL = '__custom__';
+const DEFAULT_CUSTOM_DELIMITER = '~';
 
 export function ComposingSettings() {
   const t = useTranslations('settings.email_behavior');
@@ -17,13 +26,14 @@ export function ComposingSettings() {
     autoSelectReplyIdentity,
     attachmentReminderEnabled,
     attachmentReminderKeywords,
+    subAddressDelimiter,
     updateSetting,
   } = useSettingsStore();
 
   const handleSetDefaultMailProgram = useCallback(() => {
     try {
       if (typeof navigator !== 'undefined' && navigator.registerProtocolHandler) {
-        navigator.registerProtocolHandler('mailto', `${window.location.origin}/compose?mailto=%s`);
+        navigator.registerProtocolHandler('mailto', `${window.location.origin}${getPathPrefix()}/compose?mailto=%s`);
         setDefaultMailStatus('success');
       }
     } catch {
@@ -38,6 +48,49 @@ export function ComposingSettings() {
           checked={autoSelectReplyIdentity}
           onChange={(checked) => updateSetting('autoSelectReplyIdentity', checked)}
         />
+      </SettingItem>
+
+      <SettingItem
+        label={t('sub_address_delimiter.label')}
+        description={t('sub_address_delimiter.description', { delimiter: subAddressDelimiter })}
+      >
+        <div className="flex flex-col items-end gap-2">
+          <Select
+            value={isSupportedSubAddressDelimiter(subAddressDelimiter) ? subAddressDelimiter : CUSTOM_DELIMITER_SENTINEL}
+            onChange={(value) => {
+              if (value === CUSTOM_DELIMITER_SENTINEL) {
+                if (isSupportedSubAddressDelimiter(subAddressDelimiter)) {
+                  updateSetting('subAddressDelimiter', DEFAULT_CUSTOM_DELIMITER);
+                }
+              } else {
+                updateSetting('subAddressDelimiter', value);
+              }
+            }}
+            options={[
+              ...SUPPORTED_SUB_ADDRESS_DELIMITERS.map((delim) => ({
+                value: delim,
+                label: t('sub_address_delimiter.option', { delimiter: delim }),
+              })),
+              { value: CUSTOM_DELIMITER_SENTINEL, label: t('sub_address_delimiter.custom') },
+            ]}
+          />
+          {!isSupportedSubAddressDelimiter(subAddressDelimiter) && (
+            <input
+              type="text"
+              maxLength={1}
+              value={subAddressDelimiter}
+              onChange={(e) => {
+                const next = e.target.value.slice(0, 1);
+                if (next && isValidSubAddressDelimiter(next)) {
+                  updateSetting('subAddressDelimiter', next);
+                }
+              }}
+              aria-label={t('sub_address_delimiter.custom_input_label')}
+              placeholder={DEFAULT_CUSTOM_DELIMITER}
+              className="w-16 px-2 py-1 text-sm font-mono text-center bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          )}
+        </div>
       </SettingItem>
 
       <SettingItem label={t('attachment_reminder.label')} description={t('attachment_reminder.description')}>

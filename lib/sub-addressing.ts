@@ -1,11 +1,31 @@
 /**
- * Sub-addressing utilities for user+tag@domain.com format
+ * Sub-addressing utilities for user{delimiter}tag@domain.com format
  * Works server-side automatically - no JMAP API calls needed
+ *
+ * The delimiter character is configurable per server (RFC 5233). Common
+ * choices: "+" (Postfix, Stalwart default), "-" (qmail), ".", "=".
  */
 
 // Constants for tag validation
 const MAX_TAG_LENGTH = 30;
 const TAG_REGEX = /^[a-zA-Z0-9-]{1,30}$/;
+
+export const DEFAULT_SUB_ADDRESS_DELIMITER = '+';
+export const SUPPORTED_SUB_ADDRESS_DELIMITERS = ['+', '-', '.', '='] as const;
+export type SubAddressDelimiterPreset = (typeof SUPPORTED_SUB_ADDRESS_DELIMITERS)[number];
+
+export function isSupportedSubAddressDelimiter(value: string): value is SubAddressDelimiterPreset {
+  return (SUPPORTED_SUB_ADDRESS_DELIMITERS as readonly string[]).includes(value);
+}
+
+// RFC 5321 atext "special" characters, minus alphanumerics and "@". A custom
+// delimiter must be exactly one of these — they're safe to embed in a local
+// part and unambiguously separate the user from the tag.
+const VALID_DELIMITER_REGEX = /^[!#$%&'*+\-./=?^_`{|}~]$/;
+
+export function isValidSubAddressDelimiter(value: unknown): value is string {
+  return typeof value === 'string' && VALID_DELIMITER_REGEX.test(value);
+}
 
 export type TagValidationErrorCode =
   | 'EMPTY'
@@ -22,10 +42,14 @@ export interface ParsedAddress {
 }
 
 /**
- * Parse an email address to extract sub-address tag
- * Example: "user+shopping@example.com" -> { baseUser: "user", tag: "shopping" }
+ * Parse an email address to extract sub-address tag.
+ * The first occurrence of the delimiter in the local part separates the
+ * base user from the tag, matching the behavior of Postfix/qmail/Sieve.
  */
-export function parseSubAddress(email: string): ParsedAddress {
+export function parseSubAddress(
+  email: string,
+  delimiter: string = DEFAULT_SUB_ADDRESS_DELIMITER,
+): ParsedAddress {
   const [localPart, domain] = email.split('@');
 
   if (!localPart || !domain) {
@@ -38,9 +62,9 @@ export function parseSubAddress(email: string): ParsedAddress {
     };
   }
 
-  const plusIndex = localPart.indexOf('+');
+  const delimiterIndex = localPart.indexOf(delimiter);
 
-  if (plusIndex === -1) {
+  if (delimiterIndex === -1) {
     return {
       localPart,
       baseUser: localPart,
@@ -50,8 +74,8 @@ export function parseSubAddress(email: string): ParsedAddress {
     };
   }
 
-  const baseUser = localPart.substring(0, plusIndex);
-  const tag = localPart.substring(plusIndex + 1);
+  const baseUser = localPart.substring(0, delimiterIndex);
+  const tag = localPart.substring(delimiterIndex + delimiter.length);
 
   return {
     localPart,
@@ -63,18 +87,25 @@ export function parseSubAddress(email: string): ParsedAddress {
 }
 
 /**
- * Generate a sub-addressed email
- * Example: generateSubAddress("user@example.com", "shopping") -> "user+shopping@example.com"
+ * Generate a sub-addressed email.
+ * Example: generateSubAddress("user@example.com", "shopping", "+") -> "user+shopping@example.com"
  */
-export function generateSubAddress(baseEmail: string, tag: string): string {
+export function generateSubAddress(
+  baseEmail: string,
+  tag: string,
+  delimiter: string = DEFAULT_SUB_ADDRESS_DELIMITER,
+): string {
   const [localPart, domain] = baseEmail.split('@');
 
   if (!localPart || !domain || !tag) {
     return baseEmail;
   }
 
-  // Remove existing tag if present
-  const cleanLocal = localPart.split('+')[0];
+  // Strip an existing tag if one is already present
+  const existingDelimiterIndex = localPart.indexOf(delimiter);
+  const cleanLocal = existingDelimiterIndex === -1
+    ? localPart
+    : localPart.substring(0, existingDelimiterIndex);
 
   // Sanitize tag (alphanumeric and dash only)
   const cleanTag = tag.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
@@ -83,7 +114,7 @@ export function generateSubAddress(baseEmail: string, tag: string): string {
     return baseEmail;
   }
 
-  return `${cleanLocal}+${cleanTag}@${domain}`;
+  return `${cleanLocal}${delimiter}${cleanTag}@${domain}`;
 }
 
 /**

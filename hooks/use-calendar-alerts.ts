@@ -11,6 +11,7 @@ import { useCalendarNotificationStore } from '@/stores/calendar-notification-sto
 import { useToastStore } from '@/stores/toast-store';
 import { getPendingAlerts, getPendingTaskAlerts, buildAlertKey } from '@/lib/calendar-alerts';
 import { playNotificationSound } from '@/lib/notification-sound';
+import { getPathPrefix } from '@/lib/browser-navigation';
 import type { CalendarEvent } from '@/lib/jmap/types';
 
 const CHECK_INTERVAL_MS = 60 * 1000;
@@ -68,7 +69,7 @@ export function useCalendarAlerts() {
           message,
           duration: 15000,
           onClick: () => {
-            window.location.href = `/${locale}/calendar`;
+            window.location.href = `${getPathPrefix(locale)}/${locale}/calendar`;
           },
         });
       }
@@ -97,7 +98,7 @@ export function useCalendarAlerts() {
             message: taskMsg,
             duration: 15000,
             onClick: () => {
-              window.location.href = `/${locale}/calendar`;
+              window.location.href = `${getPathPrefix(locale)}/${locale}/calendar`;
             },
           });
         }

@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "Atlasīt vēstules",
       "select_all": "Atlasīt visas",
+      "selected_messages": "{count, plural, one {Izvēlēta 1 e-pasta vēstule} other {Izvēlētas # e-pasta vēstules}}",
       "mark_read": "Atzīmēt kā izlasītu",
       "mark_unread": "Atzīmēt kā nelasītu",
       "delete": "Dzēst",
@@ -238,6 +239,11 @@
     "unstar": "Noņemt zvaigznīti",
     "mark_unread": "Atzīmēt kā nelasītu",
     "mark_read": "Atzīmēt kā izlasītu",
+    "unread": "Nelasīts",
+    "read": "Lasīts",
+    "spam_short": "Spams",
+    "not_spam_short": "Nav spams",
+    "move": "Pārvietot",
     "print": "Drukāt",
     "view_source": "Skatīt avota kodu",
     "export_email": "Eksportēt kā .eml",
@@ -321,7 +327,20 @@
         "fail": "DMARC nav izturēts",
         "none": "DMARC nav atrasts"
       },
-      "spam_score": "Mēstuļu vērtējums"
+      "spam_score": "Mēstuļu vērtējums",
+      "tooltip_spf": "Sender Policy Framework: pārbauda, vai sūtošajam serverim ir tiesības sūtīt e-pastu domēna vārdā",
+      "tooltip_dkim": "DomainKeys Identified Mail: ar kriptogrāfisku parakstu apstiprina, ka vēstule pārsūtīšanas laikā nav grozīta",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: nodrošina, ka SPF un DKIM atbilst sūtītāja domēnam, un nosaka politiku kļūmju gadījumiem",
+      "policy": "Politika",
+      "result": {
+        "pass": "Izturēts",
+        "fail": "Nav izturēts",
+        "softfail": "Daļēja kļūme",
+        "neutral": "Neitrāli",
+        "permerror": "Pastāvīga kļūda",
+        "temperror": "Pagaidu kļūda",
+        "none": "Nav"
+      }
     },
     "headers": {
       "routing": "Maršrutēšana",
@@ -441,10 +460,37 @@
       "cancel_info": "Organizators atcēla šo pasākumu.",
       "event_updated": "Atjauninājums Nr. {sequence}",
       "event_status_tentative": "Pagaidām",
-      "event_status_cancelled": "Atcelts"
+      "event_status_cancelled": "Atcelts",
+      "collapse": "Paslēpt detaļas",
+      "expand": "Rādīt detaļas"
     },
     "send": "Sūtīt",
-    "more": "vairāk"
+    "more": "vairāk",
+    "details": {
+      "recipients_routing": "Adresāti un maršrutēšana",
+      "authentication_security": "Autentifikācija un drošība",
+      "identifiers_threading": "Identifikatori un sarakste",
+      "mailing_list": "Adresātu saraksts",
+      "message_properties": "Vēstules īpašības",
+      "sent": "Nosūtīts",
+      "received": "Saņemts",
+      "delivery_time": "Piegādes laiks",
+      "in_reply_to": "Atbildot uz",
+      "references": "Atsauces",
+      "thread_id": "Sarakstes ID",
+      "size": "Lielums",
+      "mime_type": "MIME tips",
+      "attachments_summary": "{count} faili · {size}",
+      "list_id": "Saraksta ID",
+      "list_help": "Saraksta palīdzība",
+      "list_post": "Sūtīšana sarakstam",
+      "list_unsubscribe": "Atteikties",
+      "iprev": "Apgrieztais DNS",
+      "spam_status": "Mēstuļu statuss",
+      "ai_verdict": "AI vērtējums",
+      "account": "Konts",
+      "no_subject": "(bez temata)"
+    }
   },
   "email_composer": {
     "new_message": "Jauns ziņojums",
@@ -523,7 +569,10 @@
       "message": "Jūsu ziņojumā minēts \"{keyword}\", bet nav pievienots neviens fails. Vai tomēr sūtīt?",
       "send_anyway": "Sūtīt tik un tā",
       "back": "Atpakaļ pie rediģēšanas"
-    }
+    },
+    "add_link": "Pievienot saiti",
+    "link_url_prompt": "Ievadiet URL",
+    "sending": "Sūta..."
   },
   "confirm_dialog": {
     "confirm": "Apstiprināt",
@@ -817,6 +866,23 @@
         "sound_desc": "Atskaņot skaņas signālu kalendāra atgādinājumiem",
         "invitation_parsing": "Atpazīt uzaicinājumus e-pastā",
         "invitation_parsing_desc": "Noteikt kalendāra uzaicinājumus pielikumos un rādīt kalendāra darbības"
+      },
+      "push": {
+        "confirm_disable_message": "Šī ierīce vairs nesaņems brīdinājumus, kad vietne būs aizvērta.",
+        "confirm_disable_title": "Atspējot fona paziņojumus?",
+        "description": "Saņem sistēmas paziņojumus par jaunu pastu, kad šī vietne ir aizvērta. Piegādāts caur Bulwark push releju; relejs nekad neredz pasta saturu.",
+        "disable": "Atspējot",
+        "enable": "Iespējot",
+        "ios_hint": "Operētājsistēmā iOS vispirms instalējiet vietni sākuma ekrānā – Safari piegādā Web Push tikai instalētajām PWA.",
+        "reenable": "Reģistrēt vēlreiz",
+        "relay_desc": "Pēc noklusējuma izmanto izmitināto Bulwark releju. Mainiet tikai tad, ja izmitināt pats.",
+        "relay_label": "Push relejs",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "Aktīvs šajā ierīcē",
+        "status_busy": "Notiek darbs…",
+        "status_inactive": "Nav iespējots šajā ierīcē",
+        "status_unsupported": "Šī pārlūkprogramma neatbalsta Web Push",
+        "title": "Fona paziņojumi"
       }
     },
     "language_region": {
@@ -899,6 +965,13 @@
       "auto_select_reply_identity": {
         "label": "Automātiski izvēlēties atbildes adresi",
         "description": "Atbildot automātiski izmantot to kontu, uz kuru vēstule tika saņemta"
+      },
+      "sub_address_delimiter": {
+        "label": "Apakšadreses atdalītājs",
+        "description": "Zīme, kas atdala lietotājvārdu no apakšadreses tagu. Izvēlieties atdalītāju, ko lieto jūsu pasta serveris (piem. lietotajs{delimiter}tags@domens.lv).",
+        "option": "{delimiter}  (lietotajs{delimiter}tags@domens.lv)",
+        "custom": "Pielāgots…",
+        "custom_input_label": "Pielāgota atdalītāja zīme"
       },
       "show_preview": {
         "label": "Rādīt priekšskatījuma tekstu",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "Slēpt iegultos attēlus no pielikumu saraksta",
         "description": "Ziņojuma pamattekstā iegultie attēli netiek rādīti kā atsevišķi pielikumi"
+      },
+      "attachment_image_previews": {
+        "label": "Rādīt attēlu priekšskatījumus pielikumos",
+        "description": "Rādīt attēlu pielikumus kā sīktēlu kartītes, nevis vispārīgas failu ikonas"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "Adrešu grāmatas nav atrastas",
       "categories_title": "Kategorijas",
       "categories_description": "Pārdēvēt kontaktu kategorijas",
-      "no_categories": "Kategorijas nav atrastas"
+      "no_categories": "Kategorijas nav atrastas",
+      "group_by_letter_description": "Rādīt alfabētiskos sadaļu virsrakstus kontaktu sarakstā",
+      "group_by_letter_label": "Grupēt pēc pirmā burta"
     },
     "filters": {
       "title": "Pasta filtri",
@@ -1607,41 +1686,41 @@
     "edit_draft": "Rediģēt melnrakstu"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "Atzīmēt mapi kā lasītu",
+    "mark_folder_tree_read": "Atzīmēt mapi un apakšmapes kā lasītas",
+    "mark_all_folders_read": "Atzīmēt visas mapes kā lasītas",
+    "new_subfolder": "Jauna apakšmape...",
+    "new_folder": "Jauna mape...",
+    "rename": "Pārsaukt...",
+    "empty_folder": "Iztukšot mapi",
+    "empty_folder_generic": "Iztukšot mapi",
+    "delete_folder": "Dzēst mapi",
+    "refresh": "Atjaunināt",
+    "mark_all_confirm_title": "Atzīmēt visas mapes kā lasītas",
+    "mark_all_confirm_message": "Atzīmēt visas nelasītās ziņas jūsu personīgajā kontā kā lasītas?",
+    "delete_confirm_title": "Dzēst mapi",
+    "delete_confirm_message": "Neatgriezeniski dzēst mapi \"{name}\"? Šo darbību nevar atsaukt.",
+    "prompt_new_subfolder": "Ievadiet nosaukumu jaunajai apakšmapei.",
+    "prompt_new_folder": "Ievadiet nosaukumu jaunajai mapei.",
+    "prompt_rename": "Ievadiet jaunu nosaukumu šai mapei.",
+    "toast_marked_read": "Mape atzīmēta kā lasīta",
+    "toast_marked_read_count": "{count, plural, one {1 ziņa atzīmēta} other {# ziņas atzīmētas}} kā lasītas",
+    "toast_already_read": "Nav nelasītu ziņu",
+    "toast_marked_all_read": "Visas mapes atzīmētas kā lasītas",
+    "toast_emptied": "Mape iztukšota",
+    "toast_folder_created": "Mape izveidota",
+    "toast_folder_renamed": "Mape pārsaukta",
+    "toast_folder_deleted": "Mape dzēsta",
+    "toast_error_mark_read": "Neizdevās atzīmēt kā lasītu",
+    "toast_error_empty": "Neizdevās iztukšot mapi",
+    "toast_error_create": "Neizdevās izveidot mapi",
+    "toast_error_rename": "Neizdevās pārsaukt mapi",
+    "toast_error_delete": "Neizdevās dzēst mapi",
+    "toast_error_delete_has_children": "Mapei ir apakšmapes. Vispirms noņemiet tās.",
+    "toast_error_delete_has_email": "Mape nav tukša. Vispirms iztukšojiet to.",
+    "placeholder_folder_name": "Mapes nosaukums",
+    "create": "Izveidot",
+    "rename_confirm": "Pārsaukt"
   },
   "shortcuts": {
     "title": "Īsinājumtaustiņi",
@@ -1748,7 +1827,7 @@
       "use_address": "Izmantot šo adresi",
       "invalid_tag": "Tags var saturēt tikai burtus, ciparus un domuzīmes",
       "tag_too_long": "Tags nedrīkst pārsniegt 30 rakstzīmes",
-      "help_text": "Vēstules uz lietotajs+tags@domens.lv nonāks jūsu pastkastē",
+      "help_text": "Vēstules uz lietotajs{delimiter}tags@domens.lv nonāks jūsu pastkastē",
       "validation": {
         "empty": "Tags nevar būt tukšs",
         "too_long": "Tags nedrīkst pārsniegt {max} rakstzīmes",
@@ -2144,7 +2223,11 @@
       "tomorrow_header": "Rīt",
       "export_ics": "Eksportēt kā .ics",
       "copy_title": "Kopēt nosaukumu",
-      "copy_link": "Kopēt sapulces saiti"
+      "copy_link": "Kopēt sapulces saiti",
+      "go_to_today": "Pāriet uz šodienu",
+      "new_all_day_event": "Jauns visas dienas notikums",
+      "new_event": "Jauns notikums",
+      "new_task": "Jauns uzdevums"
     },
     "detail": {
       "add_note": "Pievienot piezīmi...",
@@ -2444,7 +2527,21 @@
       "due_tomorrow": "Rīt",
       "overdue": "Kavēts"
     },
-    "birthday_calendar": "Dzimšanas dienas"
+    "birthday_calendar": "Dzimšanas dienas",
+    "months": {
+      "jan": "janv.",
+      "feb": "febr.",
+      "mar": "marts",
+      "apr": "apr.",
+      "may": "maijs",
+      "jun": "jūn.",
+      "jul": "jūl.",
+      "aug": "aug.",
+      "sep": "sept.",
+      "oct": "okt.",
+      "nov": "nov.",
+      "dec": "dec."
+    }
   },
   "advanced_search": {
     "title": "Izvērstā meklēšana",

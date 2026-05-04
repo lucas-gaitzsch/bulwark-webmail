@@ -207,6 +207,38 @@ export const emailHooks = {
   // Intercept hook - fired when a mailto: link is clicked.
   // Return false to prevent the browser from opening the system mail client.
   onMailtoIntercept: new HookBus(),
+  // Transform hook - fires after onBeforeEmailSend has not cancelled,
+  // immediately before the message is handed to the JMAP submission. Handlers
+  // receive an OutgoingEmail and return a modified copy (or undefined to pass
+  // through). Use to inject signatures, scrub tracking pixels from forwarded
+  // bodies, encrypt content, or rewrite links.
+  onTransformOutgoingEmail: new HookBus(),
+  // Intercept hooks fired when the user clicks Reply / Reply-All / Forward.
+  // Handler receives a ReplyContext; return false to cancel.
+  onBeforeReply: new HookBus(),
+  onBeforeReplyAll: new HookBus(),
+  onBeforeForward: new HookBus(),
+  // Intercept hook fired before a file is added to the composer as an
+  // attachment. Handler receives AttachmentInfo (size/type/name only - the
+  // raw file is not exposed). Return false to refuse the upload.
+  onBeforeAttachmentUpload: new HookBus(),
+  // Observer fired after an attachment has been uploaded and its blobId is
+  // available. Handler receives AttachmentInfo with `blobId` populated.
+  onAfterAttachmentUpload: new HookBus(),
+  // Observer fired when the user downloads an attachment from a message.
+  onAttachmentDownload: new HookBus(),
+  // Transform hook - lets plugins replace the preview URL or supply a custom
+  // renderer for an attachment. Initial value: AttachmentPreview, second
+  // argument: AttachmentInfo.
+  onAttachmentPreview: new HookBus(),
+  // Transform hook - lets plugins contribute additional results to the global
+  // search panel. Initial value: ExternalSearchResult[]. Second argument:
+  // { query: string, filters: SearchFilters }.
+  onProvideSearchResults: new HookBus(),
+  // Observer fired (debounced) when the composer draft body, subject, or
+  // recipients change. Handler receives a DraftView snapshot. Use for AI
+  // assistants, grammar checkers, etc.
+  onDraftChange: new HookBus(),
 };
 
 // §7.2 Calendar Hooks
@@ -227,6 +259,10 @@ export const calendarHooks = {
   onICalSubscriptionChange: new HookBus(),
   onCalendarAlert: new HookBus(),
   onCalendarAlertAcknowledge: new HookBus(),
+  // Transform hook - fires when the event form is open and start/end change.
+  // Initial value: ConflictWarning[], second argument: { event: CalendarEventFormView }.
+  // Plugins return an extended array; the form renders each warning inline.
+  onCheckEventConflicts: new HookBus(),
 };
 
 // §7.2b Calendar Form Hooks (UI integration)
@@ -249,6 +285,10 @@ export const contactHooks = {
   onContactGroupChange: new HookBus(),
   onContactGroupMemberChange: new HookBus(),
   onContactMove: new HookBus(),
+  // Transform hook - lets plugins contribute extra recipient suggestions to
+  // the composer's autocomplete. Initial value: RecipientSuggestion[],
+  // second argument: { query: string }.
+  onProvideRecipientSuggestions: new HookBus(),
 };
 
 // §7.4 File Hooks
@@ -358,6 +398,14 @@ export const uiHooks = {
   onColumnResize: new HookBus(),
   onMobileBack: new HookBus(),
   onMobileViewSwitch: new HookBus(),
+  // Intercept hook - fires when the user clicks an external link inside the
+  // app (typically inside an email body iframe). Handler receives
+  // ExternalLinkContext; return false to cancel the navigation. Mutate
+  // `href` in place to rewrite (e.g. strip UTM params, route via a proxy).
+  onBeforeExternalLink: new HookBus(),
+  // Observer (debounced) fired when the user changes the active text
+  // selection inside an app surface. Receives SelectionContext.
+  onTextSelectionChange: new HookBus(),
 };
 
 // §7.14 Theme Hooks
@@ -384,6 +432,10 @@ export const toastHooks = {
   onToastShow: new HookBus(),
   onToastDismiss: new HookBus(),
   onBrowserNotification: new HookBus(),
+  // Observer fired when the user clicks an OS-level browser notification
+  // dispatched by the host. Handler receives { tag: string, data?: unknown }
+  // matching the original notification options.
+  onNotificationClick: new HookBus(),
 };
 
 // §7.16 Drag & Drop Hooks
@@ -408,6 +460,14 @@ export const appLifecycleHooks = {
   onBeforeUnload: new HookBus(),
   onAppError: new HookBus(),
   onInterval: new HookBus(),
+  // Observer fired when the browser window receives focus / blur. Useful for
+  // refresh-on-focus behaviour (re-poll, recheck staleness, pause timers).
+  onWindowFocus: new HookBus(),
+  onWindowBlur: new HookBus(),
+  // Observer fired when network connectivity transitions. Mirrors the
+  // navigator online / offline events.
+  onOnline: new HookBus(),
+  onOffline: new HookBus(),
 };
 
 // §7.19 Account Security Hooks
@@ -433,6 +493,15 @@ export const avatarHooks = {
   onAvatarResolve: new HookBus(),
 };
 
+// §7.23 Router Hooks
+// Observers fired by the app router. Handlers receive a RouteContext; on
+// onNavigate the previous path is exposed via `from`.
+export const routerHooks = {
+  onNavigate: new HookBus(),
+  onRouteEnter: new HookBus(),
+  onRouteLeave: new HookBus(),
+};
+
 // §7.22 Render Hooks
 export const renderHooks = {
   // Transform hook - runs for each visible email list row.
@@ -451,7 +520,7 @@ const allHookGroups = [
   taskHooks, templateHooks, smimeHooks, vacationHooks,
   uiHooks, themeHooks, toastHooks, dragDropHooks,
   keyboardHooks, appLifecycleHooks, accountSecurityHooks, sidebarAppHooks,
-  avatarHooks, renderHooks,
+  avatarHooks, renderHooks, routerHooks,
 ];
 
 export function removeAllPluginHooks(pluginId: string): void {

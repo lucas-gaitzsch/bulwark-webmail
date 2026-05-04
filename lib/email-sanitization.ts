@@ -151,6 +151,7 @@ export function collapseBlockedImageContainers(html: string): string {
         const hasVisibleMedia = el.querySelector('img:not([data-blocked-src]), video, canvas');
         const hasLinks = el.querySelector('a[href]');
         if (!hasVisibleText && !hasVisibleMedia && !hasLinks) {
+          el.setAttribute('data-blocked-collapsed-style', el.style.cssText);
           el.style.display = 'none';
           el.style.height = '0';
           el.style.padding = '0';

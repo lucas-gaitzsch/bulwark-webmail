@@ -1,6 +1,8 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { configManager } from '@/lib/admin/config-manager';
+import { logger } from '@/lib/logger';
+import { resolveEndpointAllowed } from './endpoint-guard';
 import { getInstanceId } from './state';
 import { getLoginCounts } from './login-tracker';
 import type {
@@ -58,21 +60,65 @@ export function bucketCount(n: number): CountBucket {
 
 async function readFeatures(): Promise<TelemetryFeatures> {
   await configManager.ensureLoaded();
-  const policy = configManager.getPolicy();
-  const gates = policy.features ?? {};
+  const gates = configManager.getPolicy().features;
   const cfg = configManager.getAll();
   return {
     // Booleans only. We read whether a feature is enabled - never any
     // config value beyond a presence check.
-    calendar:       gates.calendarTasksEnabled !== false,
-    contacts:       true,
-    files:          gates.filesEnabled === true,
-    extensions:     gates.pluginsEnabled !== false,
-    push_relay:     !!cfg['pushRelayUrl'],
-    oauth_enabled:  !!cfg['oauthClientId'],
-    smime_enabled:  gates.smimeEnabled === true,
-    webdav_enabled: gates.filesEnabled === true,
+    calendar:      gates.calendarTasksEnabled === true,
+    contacts:      gates.contactsEnabled === true,
+    files:         gates.filesEnabled === true,
+    extensions:    gates.pluginsEnabled === true,
+    oauth_enabled: cfg['oauthEnabled'] === true,
+    smime_enabled: gates.smimeEnabled === true,
   };
+}
+
+const STALWART_VERSION_TTL_MS = 24 * 60 * 60 * 1000;
+let stalwartVersionCache: { version: string | null; fetchedAt: number } | null = null;
+
+// Stalwart returns the version in the Server response header
+// (e.g. "Stalwart Mail Server v0.16.0"). The /.well-known/jmap endpoint
+// requires auth, but the header is on the 401 response too, so an
+// unauthenticated GET is enough. Cached for a day to avoid hammering
+// the JMAP server on every payload preview.
+async function detectStalwartVersion(): Promise<string | null> {
+  if (process.env.STALWART_VERSION) return process.env.STALWART_VERSION;
+  if (stalwartVersionCache &&
+      Date.now() - stalwartVersionCache.fetchedAt < STALWART_VERSION_TTL_MS) {
+    return stalwartVersionCache.version;
+  }
+  await configManager.ensureLoaded();
+  const serverUrl = configManager.get<string>('jmapServerUrl', '').trim();
+  if (!serverUrl) {
+    stalwartVersionCache = { version: null, fetchedAt: Date.now() };
+    return null;
+  }
+  const wellKnown = `${serverUrl.replace(/\/+$/, '')}/.well-known/jmap`;
+  // Reuse the SSRF guard so a misconfigured JMAP_SERVER_URL pointing at an
+  // internal host doesn't get probed from telemetry context either.
+  const guard = await resolveEndpointAllowed(wellKnown);
+  if (!guard.ok) {
+    stalwartVersionCache = { version: null, fetchedAt: Date.now() };
+    return null;
+  }
+  try {
+    const res = await fetch(wellKnown, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000),
+    });
+    const server = res.headers.get('server') ?? '';
+    const m = server.match(/(\d+\.\d+\.\d+(?:-[\w.]+)?)/);
+    const version = m?.[1] ?? null;
+    stalwartVersionCache = { version, fetchedAt: Date.now() };
+    return version;
+  } catch (err) {
+    logger.debug?.('telemetry: stalwart version probe failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    stalwartVersionCache = { version: null, fetchedAt: Date.now() };
+    return null;
+  }
 }
 
 // Account counts come from the local login tracker, which records a per-
@@ -99,6 +145,7 @@ export async function buildPayload(): Promise<TelemetryPayload> {
   const features = await readFeatures();
   const accounts = await getLoginCounts();
   const exts = await countExtensions();
+  const stalwart_version = await detectStalwartVersion();
   const uptime_days = Math.min(
     365,
     Math.floor((Date.now() - processStartedAt) / 86_400_000),
@@ -113,7 +160,7 @@ export async function buildPayload(): Promise<TelemetryPayload> {
     platform: detectPlatform(),
     node_version: process.versions.node,
     os_family: detectOs(),
-    stalwart_version: process.env.STALWART_VERSION ?? null,
+    stalwart_version,
     features,
     counts: {
       accounts: bucketCount(accounts.total),

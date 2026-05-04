@@ -1,13 +1,32 @@
 "use client";
 
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useSettingsStore } from '@/stores/settings-store';
 import { SettingsSection, SettingItem, ToggleSwitch, Select } from './settings-section';
 import { playNotificationSound, NOTIFICATION_SOUNDS } from '@/lib/notification-sound';
 import type { NotificationSoundChoice } from '@/lib/notification-sound';
 import { Button } from '@/components/ui/button';
-import { Volume2 } from 'lucide-react';
+import { CheckCircle2, Volume2, XCircle } from 'lucide-react';
 import { usePolicyStore } from '@/stores/policy-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
+import {
+  DEFAULT_RELAY_BASE_URL,
+  WebPushUnsupportedError,
+  disableWebPush,
+  enableWebPush,
+  isWebPushEnabled,
+  isWebPushSupported,
+} from '@/lib/web-push';
+
+type PushStatus =
+  | { kind: 'idle' }
+  | { kind: 'busy' }
+  | { kind: 'enabled' }
+  | { kind: 'unsupported' }
+  | { kind: 'error'; message: string };
 
 export function NotificationSettings() {
   const t = useTranslations('settings.notifications');
@@ -21,6 +40,77 @@ export function NotificationSettings() {
     updateSetting,
   } = useSettingsStore();
   const { isSettingLocked, isSettingHidden } = usePolicyStore();
+  const client = useAuthStore((s) => s.client);
+  const username = useAuthStore((s) => s.username);
+  const { dialogProps: confirmDialogProps, confirm: confirmDialog } = useConfirmDialog();
+
+  const supported = typeof window !== 'undefined' && isWebPushSupported();
+  const [relayUrl, setRelayUrl] = useState(DEFAULT_RELAY_BASE_URL);
+  const [pushStatus, setPushStatus] = useState<PushStatus>(
+    supported ? { kind: 'idle' } : { kind: 'unsupported' },
+  );
+
+  useEffect(() => {
+    if (!supported) return;
+    void (async () => {
+      const enabled = await isWebPushEnabled();
+      if (enabled) setPushStatus({ kind: 'enabled' });
+    })();
+  }, [supported]);
+
+  const trimmedRelay = relayUrl.trim().replace(/\/+$/, '');
+  const isValidRelay = /^https?:\/\/.+/i.test(trimmedRelay);
+  const busy = pushStatus.kind === 'busy';
+
+  const handleEnablePush = async () => {
+    if (!client) {
+      setPushStatus({ kind: 'error', message: 'Sign in first' });
+      return;
+    }
+    if (!isValidRelay) {
+      setPushStatus({ kind: 'error', message: 'Enter a valid https:// URL' });
+      return;
+    }
+    setPushStatus({ kind: 'busy' });
+    try {
+      await enableWebPush({
+        client,
+        relayBaseUrl: trimmedRelay,
+        accountLabel: username ?? undefined,
+      });
+      setPushStatus({ kind: 'enabled' });
+    } catch (err) {
+      if (err instanceof WebPushUnsupportedError) {
+        setPushStatus({ kind: 'unsupported' });
+        return;
+      }
+      setPushStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to enable push',
+      });
+    }
+  };
+
+  const handleDisablePush = async () => {
+    if (!client) return;
+    const confirmed = await confirmDialog({
+      title: t('push.confirm_disable_title'),
+      message: t('push.confirm_disable_message'),
+      confirmText: t('push.disable'),
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    setPushStatus({ kind: 'busy' });
+    try {
+      await disableWebPush({ client, relayBaseUrl: trimmedRelay });
+      setPushStatus({ kind: 'idle' });
+    } catch (err) {
+      setPushStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to disable push',
+      });
+    }
+  };
 
   const soundOptions = NOTIFICATION_SOUNDS.map((s) => ({
     value: s.id,
@@ -29,6 +119,46 @@ export function NotificationSettings() {
 
   return (
     <div className="space-y-8">
+      <SettingsSection title={t('push.title')} description={t('push.description')}>
+        <div className="rounded-md border p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-sm font-medium" htmlFor="push-relay-url">
+              {t('push.relay_label')}
+            </label>
+            <PushStatusBadge status={pushStatus} t={t} />
+          </div>
+          <p className="text-xs text-muted-foreground">{t('push.relay_desc')}</p>
+          <input
+            id="push-relay-url"
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            spellCheck={false}
+            value={relayUrl}
+            onChange={(e) => setRelayUrl(e.target.value)}
+            placeholder={t('push.relay_placeholder')}
+            disabled={busy || pushStatus.kind === 'unsupported'}
+            className="w-full rounded border bg-background px-3 py-2 text-sm disabled:opacity-50"
+          />
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={handleEnablePush}
+              disabled={busy || pushStatus.kind === 'unsupported' || !isValidRelay || !client}
+            >
+              {pushStatus.kind === 'enabled' ? t('push.reenable') : t('push.enable')}
+            </Button>
+            {pushStatus.kind === 'enabled' && (
+              <Button variant="outline" onClick={handleDisablePush} disabled={busy}>
+                {t('push.disable')}
+              </Button>
+            )}
+          </div>
+          {pushStatus.kind === 'unsupported' && (
+            <p className="text-xs text-muted-foreground">{t('push.ios_hint')}</p>
+          )}
+        </div>
+      </SettingsSection>
+
       <SettingsSection title={t('sound_selection.title')} description={t('sound_selection.description')}>
         <SettingItem
           label={t('sound_selection.choose')}
@@ -118,6 +248,45 @@ export function NotificationSettings() {
           />
         </SettingItem>
       </SettingsSection>
+
+      <ConfirmDialog {...confirmDialogProps} />
     </div>
   );
+}
+
+function PushStatusBadge({
+  status,
+  t,
+}: {
+  status: PushStatus;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  if (status.kind === 'enabled') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+        <CheckCircle2 className="w-3.5 h-3.5" />
+        {t('push.status_active')}
+      </span>
+    );
+  }
+  if (status.kind === 'busy') {
+    return <span className="text-xs text-muted-foreground">{t('push.status_busy')}</span>;
+  }
+  if (status.kind === 'unsupported') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+        <XCircle className="w-3.5 h-3.5" />
+        {t('push.status_unsupported')}
+      </span>
+    );
+  }
+  if (status.kind === 'error') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs text-destructive" title={status.message}>
+        <XCircle className="w-3.5 h-3.5" />
+        {status.message}
+      </span>
+    );
+  }
+  return <span className="text-xs text-muted-foreground">{t('push.status_inactive')}</span>;
 }

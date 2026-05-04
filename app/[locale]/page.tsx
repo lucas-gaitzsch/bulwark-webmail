@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useMemo, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Sidebar } from "@/components/layout/sidebar";
 import { EmailList } from "@/components/email/email-list";
@@ -51,6 +52,7 @@ import { Input } from "@/components/ui/input";
 import { FilePreviewModal } from "@/components/files/file-preview-modal";
 import { isFilePreviewable } from "@/lib/file-preview";
 import { appendPlainTextSignature } from "@/lib/signature-utils";
+import { computeReplyThreadingHeaders } from "@/lib/email-threading";
 import { Search, Filter, ChevronDown, X, Paperclip, Star, Mail, MailOpen, RotateCcw, PenSquare, PenLine, CheckSquare, Square, AlertTriangle } from "lucide-react";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { Button } from "@/components/ui/button";
@@ -59,6 +61,27 @@ import { usePluginStore } from "@/stores/plugin-store";
 import { useThemeStore } from "@/stores/theme-store";
 import { consumePendingMailto } from "@/lib/protocol-handlers/session";
 import { plainTextToComposerBody } from "@/lib/email-composer-utils";
+import { appLifecycleHooks, uiHooks, routerHooks, toastHooks, emailHooks } from "@/lib/plugin-hooks";
+import type { EmailReadView } from "@/lib/plugin-types";
+
+function emailToReadView(email: Email): EmailReadView {
+  return {
+    id: email.id,
+    threadId: email.threadId,
+    mailboxIds: Object.keys(email.mailboxIds || {}).filter(k => email.mailboxIds[k]),
+    from: (email.from || []).map(a => ({ name: a.name || '', email: a.email })),
+    to: (email.to || []).map(a => ({ name: a.name || '', email: a.email })),
+    cc: (email.cc || []).map(a => ({ name: a.name || '', email: a.email })),
+    subject: email.subject || '',
+    receivedAt: email.receivedAt,
+    isRead: !!email.keywords?.['$seen'],
+    isFlagged: !!email.keywords?.['$flagged'],
+    hasAttachment: email.hasAttachment,
+    preview: email.preview || '',
+    keywords: Object.keys(email.keywords || {}).filter(k => email.keywords[k]),
+  };
+}
+
 
 export default function Home() {
   const t = useTranslations();
@@ -115,6 +138,88 @@ export default function Home() {
     return () => clearInterval(timer);
   }, [isRateLimited, rateLimitUntil]);
 
+  // Plugin hooks: window-level lifecycle + selection + service-worker messages.
+  // One effect because the listeners share a registration / cleanup window.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onFocus = () => { appLifecycleHooks.onWindowFocus.emit(); };
+    const onBlur = () => { appLifecycleHooks.onWindowBlur.emit(); };
+    const onOnline = () => { appLifecycleHooks.onOnline.emit(); };
+    const onOffline = () => { appLifecycleHooks.onOffline.emit(); };
+
+    let selectionTimer: ReturnType<typeof setTimeout> | null = null;
+    const onSelectionChange = () => {
+      if (selectionTimer) clearTimeout(selectionTimer);
+      selectionTimer = setTimeout(() => {
+        const sel = document.getSelection();
+        const text = sel?.toString() ?? '';
+        if (!text) return;
+        const anchorNode = sel?.anchorNode as Node | null;
+        const anchorEl = (anchorNode?.nodeType === Node.ELEMENT_NODE
+          ? anchorNode as Element
+          : anchorNode?.parentElement) ?? null;
+        let source: 'email-body' | 'composer' | 'task-detail' | 'event-detail' | 'other' = 'other';
+        let emailId: string | undefined;
+        if (anchorEl) {
+          if (anchorEl.closest('[data-plugin-source="email-body"], iframe.email-body, .email-viewer-body')) {
+            source = 'email-body';
+            const idEl = anchorEl.closest('[data-email-id]') as HTMLElement | null;
+            emailId = idEl?.dataset.emailId;
+          } else if (anchorEl.closest('[data-plugin-source="composer"], .email-composer')) {
+            source = 'composer';
+          } else if (anchorEl.closest('[data-plugin-source="task-detail"]')) {
+            source = 'task-detail';
+          } else if (anchorEl.closest('[data-plugin-source="event-detail"]')) {
+            source = 'event-detail';
+          }
+        }
+        uiHooks.onTextSelectionChange.emit({ text, source, emailId });
+      }, 150);
+    };
+
+    const onSwMessage = (e: MessageEvent) => {
+      const msg = e.data as { kind?: string; tag?: string; data?: unknown } | null;
+      if (msg && msg.kind === 'notificationclick' && typeof msg.tag === 'string') {
+        toastHooks.onNotificationClick.emit({ tag: msg.tag, data: msg.data });
+      }
+    };
+
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('blur', onBlur);
+    window.addEventListener('online', onOnline);
+    window.addEventListener('offline', onOffline);
+    document.addEventListener('selectionchange', onSelectionChange);
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('message', onSwMessage);
+    }
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('blur', onBlur);
+      window.removeEventListener('online', onOnline);
+      window.removeEventListener('offline', onOffline);
+      document.removeEventListener('selectionchange', onSelectionChange);
+      if (selectionTimer) clearTimeout(selectionTimer);
+      if (typeof navigator !== 'undefined' && navigator.serviceWorker) {
+        navigator.serviceWorker.removeEventListener('message', onSwMessage);
+      }
+    };
+  }, []);
+
+  // Plugin hooks: route navigation. Tracks Next.js pathname transitions.
+  const pathname = usePathname();
+  const prevPathnameRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pathname) return;
+    const from = prevPathnameRef.current;
+    if (from === pathname) return;
+    if (from !== null) {
+      routerHooks.onRouteLeave.emit({ path: from });
+      routerHooks.onNavigate.emit({ path: pathname, from });
+    }
+    routerHooks.onRouteEnter.emit({ path: pathname });
+    prevPathnameRef.current = pathname;
+  }, [pathname]);
+
   // Mobile/tablet responsive hooks
   const { isMobile, isTablet } = useDeviceDetection();
   const { activeView, sidebarOpen, setSidebarOpen, setActiveView, tabletListVisible, setTabletListVisible, sidebarWidth, emailListWidth, setSidebarWidth, setEmailListWidth, persistColumnWidths, sidebarCollapsed, resetSidebarWidth, resetEmailListWidth } = useUIStore();
@@ -139,6 +244,7 @@ export default function Home() {
     deleteEmail,
     markAsRead,
     toggleStar,
+    setEmailKeywordsLocal,
     moveToMailbox,
     moveThreadToMailbox,
     searchEmails,
@@ -681,11 +787,50 @@ export default function Home() {
     });
   }, [enableUnifiedMailbox, isAuthenticated, client, mailboxes, connectedAccountsSignature, buildUnifiedAccounts, populateUnifiedAccountMailboxes, refreshUnifiedCounts]);
 
+  // System-notification click handler. The push SW navigates the user back
+  // here with `?email=<id>` (specific email it built the toast from) or
+  // `?openLatestUnread=1` (generic "New mail" toast — happens when the
+  // preview API failed). We resolve those params once after the inbox has
+  // finished loading and open the right message, then strip the params so a
+  // refresh doesn't re-open it.
+  const notificationParamHandledRef = useRef(false);
+  useEffect(() => {
+    if (notificationParamHandledRef.current) return;
+    if (!isAuthenticated || !client) return;
+    if (mailboxes.length === 0) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const emailIdParam = params.get('email');
+    const openLatestUnread = params.get('openLatestUnread') === '1';
+    if (!emailIdParam && !openLatestUnread) return;
+
+    // For the latest-unread case we need the inbox emails loaded; bail and
+    // let the effect re-run once `emails` is populated.
+    if (openLatestUnread && emails.length === 0) return;
+
+    notificationParamHandledRef.current = true;
+    window.history.replaceState({}, '', window.location.pathname);
+
+    if (emailIdParam) {
+      setLoadingEmail(true);
+      fetchEmailContent(client, emailIdParam).finally(() => setLoadingEmail(false));
+      return;
+    }
+
+    // emails are sorted receivedAt-desc, so the first unread is the newest.
+    const newestUnread = emails.find(e => !e.keywords?.$seen);
+    if (newestUnread) {
+      selectEmail(newestUnread);
+    }
+  }, [isAuthenticated, client, mailboxes.length, emails, fetchEmailContent, selectEmail, setLoadingEmail]);
+
   // Auto-fetch full email content when an email is auto-selected (e.g. after delete/archive)
   useEffect(() => {
     if (!selectedEmail || !client) return;
-    // If the email lacks bodyValues, it was auto-selected from the list and needs full content
-    if (!selectedEmail.bodyValues) {
+    // If the email lacks bodyValues, it was auto-selected from the list and needs full content.
+    // Skip when handleEmailSelect already started a fetch (it sets isLoadingEmail before
+    // calling selectEmail on the stub), to avoid a duplicate request.
+    if (!selectedEmail.bodyValues && !isLoadingEmail) {
       const perAccountClient = isUnifiedView && selectedEmail.accountId
         ? useAuthStore.getState().getClientForAccount(selectedEmail.accountId)
         : undefined;
@@ -780,6 +925,8 @@ export default function Home() {
     fromName?: string;
     identityId?: string;
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>;
+    inReplyTo?: string[];
+    references?: string[];
   }) => {
     if (!client) return;
 
@@ -787,7 +934,7 @@ export default function Home() {
       const effectiveMode = pendingDraft?.mode ?? composerMode;
       const originalEmailId = selectedEmail?.id;
 
-      await sendEmail(client, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments);
+      await sendEmail(client, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references);
       setShowComposer(false);
 
       // Mark the original email with $answered or $forwarded keyword
@@ -822,7 +969,15 @@ export default function Home() {
     }
   };
 
-  const handleReply = (draftText?: string) => {
+  const handleReply = async (draftText?: string) => {
+    if (selectedEmail) {
+      const ok = await emailHooks.onBeforeReply.intercept({
+        originalEmailId: selectedEmail.id,
+        originalEmail: emailToReadView(selectedEmail),
+        mode: 'reply' as const,
+      });
+      if (!ok) return;
+    }
     setComposerDraftText(draftText || "");
     setComposerMode('reply');
     setShowComposer(true);
@@ -881,13 +1036,29 @@ export default function Home() {
     if (isMobile) setActiveView('viewer');
   };
 
-  const handleReplyAll = () => {
+  const handleReplyAll = async () => {
+    if (selectedEmail) {
+      const ok = await emailHooks.onBeforeReplyAll.intercept({
+        originalEmailId: selectedEmail.id,
+        originalEmail: emailToReadView(selectedEmail),
+        mode: 'reply-all' as const,
+      });
+      if (!ok) return;
+    }
     setComposerMode('replyAll');
     setShowComposer(true);
     if (isMobile) setActiveView('viewer');
   };
 
-  const handleForward = () => {
+  const handleForward = async () => {
+    if (selectedEmail) {
+      const ok = await emailHooks.onBeforeForward.intercept({
+        originalEmailId: selectedEmail.id,
+        originalEmail: emailToReadView(selectedEmail),
+        mode: 'forward' as const,
+      });
+      if (!ok) return;
+    }
     setComposerMode('forward');
     setShowComposer(true);
     if (isMobile) setActiveView('viewer');
@@ -919,13 +1090,24 @@ export default function Home() {
       }
     } else {
       // Not in trash: always move to trash
-      const trashMailbox = mailboxes.find(m => m.role === 'trash' && !m.isShared);
+      const trashMailbox =
+        mailboxes.find(m => m.role === 'trash' && !m.isShared) ??
+        mailboxes.find(m => {
+          if (m.isShared) return false;
+          const lower = m.name.toLowerCase();
+          return lower.includes('trash') || lower.includes('deleted');
+        });
       if (trashMailbox) {
         try {
           await moveToMailbox(client, emailToDelete.id, trashMailbox.id);
         } catch (error) {
           console.error("Failed to move email to trash:", error);
+          const { toast } = await import('sonner');
+          toast.error(error instanceof Error ? error.message : 'Failed to move email to trash');
         }
+      } else {
+        const { toast } = await import('sonner');
+        toast.error('Trash mailbox not found - cannot move email to trash');
       }
     }
   };
@@ -1073,11 +1255,9 @@ export default function Home() {
       // Update email keywords via JMAP
       await client.updateEmailKeywords(emailId, keywords);
 
-      // Update local state
-      selectEmail(email.id === selectedEmail?.id ? { ...email, keywords } : selectedEmail);
-
-      // Refresh emails list to show color in list
-      await fetchEmails(client, selectedMailbox);
+      // Patch the email in place so the list keeps its scroll/pagination state
+      // instead of being reset to the first page by a full refetch.
+      setEmailKeywordsLocal(emailId, keywords);
 
       // Refresh tag counts
       fetchTagCounts(client);
@@ -1479,6 +1659,12 @@ export default function Home() {
 
     const originalEmailId = selectedEmail.id;
 
+    // RFC 5322 §3.6.4 threading — keep the conversation stitched together (#234).
+    const threading = computeReplyThreadingHeaders({
+      messageId: selectedEmail.messageId,
+      references: selectedEmail.references,
+    });
+
     // Send reply with just the body text
     await sendEmail(
       client,
@@ -1490,7 +1676,11 @@ export default function Home() {
       primaryIdentity?.id,
       primaryIdentity?.email,
       undefined,
-      primaryIdentity?.name || undefined
+      primaryIdentity?.name || undefined,
+      undefined,
+      undefined,
+      threading?.inReplyTo,
+      threading?.references,
     );
 
     // Mark the original email as answered
@@ -1532,7 +1722,13 @@ export default function Home() {
       setShowComposer(false);
     }
 
-    // Set loading state immediately (keep current email visible)
+    // Show the list stub immediately so subject/sender render without
+    // waiting for the body fetch — avoids the loading flicker.
+    const listEmail = emails.find(e => e.id === email.id);
+    if (listEmail) {
+      selectEmail(listEmail);
+    }
+
     setLoadingEmail(true);
 
     // On mobile, switch to viewer
@@ -1549,7 +1745,6 @@ export default function Home() {
     try {
       // In unified view each email carries its own accountId. Use that
       // account's client so we fetch from the server that actually owns it.
-      const listEmail = emails.find(e => e.id === email.id);
       const emailAccountId = isUnifiedView ? listEmail?.accountId : undefined;
       const perAccountClient = emailAccountId
         ? useAuthStore.getState().getClientForAccount(emailAccountId)
@@ -2141,6 +2336,9 @@ export default function Home() {
                     htmlBody: selectedEmail.bodyValues?.[selectedEmail.htmlBody?.[0]?.partId || '']?.value || undefined,
                     receivedAt: selectedEmail.receivedAt,
                     attachments: selectedEmail.attachments,
+                    messageId: selectedEmail.messageId,
+                    inReplyTo: selectedEmail.inReplyTo,
+                    references: selectedEmail.references,
                   } : undefined)}
                   initialDraftText={composerDraftText}
                   initialData={pendingDraft}

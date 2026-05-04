@@ -22,6 +22,7 @@ interface UseContextMenuReturn<T> {
 
 const MENU_WIDTH = 200;
 const MENU_HEIGHT = 320; // Approximate max height
+const VIEWPORT_MARGIN = 10;
 
 export function useContextMenu<T>(): UseContextMenuReturn<T> {
   const [contextMenu, setContextMenu] = useState<ContextMenuState<T>>({
@@ -40,18 +41,18 @@ export function useContextMenu<T>(): UseContextMenuReturn<T> {
     let y = clientY;
 
     // Adjust for right edge
-    if (x + MENU_WIDTH > viewportWidth - 10) {
-      x = viewportWidth - MENU_WIDTH - 10;
+    if (x + MENU_WIDTH > viewportWidth - VIEWPORT_MARGIN) {
+      x = viewportWidth - MENU_WIDTH - VIEWPORT_MARGIN;
     }
 
     // Adjust for bottom edge
-    if (y + MENU_HEIGHT > viewportHeight - 10) {
-      y = viewportHeight - MENU_HEIGHT - 10;
+    if (y + MENU_HEIGHT > viewportHeight - VIEWPORT_MARGIN) {
+      y = viewportHeight - MENU_HEIGHT - VIEWPORT_MARGIN;
     }
 
     // Ensure minimum position
-    x = Math.max(10, x);
-    y = Math.max(10, y);
+    x = Math.max(VIEWPORT_MARGIN, x);
+    y = Math.max(VIEWPORT_MARGIN, y);
 
     return { x, y };
   }, []);

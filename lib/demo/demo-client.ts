@@ -95,6 +95,18 @@ export class DemoJMAPClient implements IJMAPClient {
   getLastStates(): AccountStates { return { ...this.lastStates }; }
   setLastStates(states: AccountStates): void { this.lastStates = { ...states }; }
 
+  // PushSubscription endpoints have no meaning in demo mode - the demo client
+  // never makes real network calls so there's nothing for the relay to push to.
+  async listPushSubscriptions() { return []; }
+  async createPushSubscription(): Promise<string> {
+    throw new Error('Push subscriptions are not available in demo mode');
+  }
+  async verifyPushSubscription(): Promise<void> {
+    throw new Error('Push subscriptions are not available in demo mode');
+  }
+  async updatePushSubscription(): Promise<boolean> { return false; }
+  async destroyPushSubscription(): Promise<void> { /* no-op */ }
+
   // ── Quota ─────────────────────────────────────────────────────
 
   async getQuota(): Promise<{ used: number; total: number } | null> {
@@ -383,6 +395,7 @@ export class DemoJMAPClient implements IJMAPClient {
     draftId?: string,
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>,
     _fromName?: string,
+    htmlBody?: string,
   ): Promise<string> {
     const draftsMb = this.data.mailboxes.find(m => m.role === 'drafts');
     const id = draftId || generateDemoId('email');
@@ -402,9 +415,13 @@ export class DemoJMAPClient implements IJMAPClient {
       sentAt: new Date().toISOString(),
       preview: body.substring(0, 200),
       hasAttachment: !!attachments?.length,
-      textBody: [{ partId: '1', blobId: generateDemoId('blob'), size: body.length, type: 'text/plain' }],
-      htmlBody: [],
-      bodyValues: { '1': { value: body } },
+      textBody: [{ partId: htmlBody ? 'text' : '1', blobId: generateDemoId('blob'), size: body.length, type: 'text/plain' }],
+      htmlBody: htmlBody
+        ? [{ partId: 'html', blobId: generateDemoId('blob'), size: htmlBody.length, type: 'text/html' }]
+        : [],
+      bodyValues: htmlBody
+        ? { text: { value: body }, html: { value: htmlBody } }
+        : { '1': { value: body } },
       attachments: attachments?.map(a => ({ ...a, partId: generateDemoId('part') })),
       messageId: `<${id}@demo.example.com>`,
     };
@@ -430,6 +447,8 @@ export class DemoJMAPClient implements IJMAPClient {
     _fromName?: string,
     htmlBody?: string,
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>,
+    inReplyTo?: string[],
+    references?: string[],
   ): Promise<void> {
     // Remove draft if updating
     if (draftId) {
@@ -455,6 +474,8 @@ export class DemoJMAPClient implements IJMAPClient {
       bodyValues: htmlBody ? { '1': { value: body }, '2': { value: htmlBody } } : { '1': { value: body } },
       attachments: attachments?.map(a => ({ ...a, partId: generateDemoId('part') })),
       messageId: `<${generateDemoId('msg')}@demo.example.com>`,
+      inReplyTo: inReplyTo?.length ? inReplyTo : undefined,
+      references: references?.length ? references : undefined,
     };
     this.data.emails.push(email);
     this.recalcMailboxCounts();

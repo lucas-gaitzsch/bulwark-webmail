@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "메일 선택",
       "select_all": "모두 선택",
+      "selected_messages": "이메일 {count, plural, one {1개} other {#건}} 선택됨",
       "mark_read": "읽은 상태로 표시",
       "mark_unread": "읽지 않은 상태로 표시",
       "delete": "삭제",
@@ -238,6 +239,11 @@
     "unstar": "별표 해제",
     "mark_unread": "읽지 않은 상태로 표시",
     "mark_read": "읽은 상태로 표시",
+    "unread": "안 읽음",
+    "read": "읽음",
+    "spam_short": "스팸",
+    "not_spam_short": "스팸 아님",
+    "move": "이동",
     "print": "인쇄",
     "view_source": "원본 보기",
     "export_email": ".eml 파일로 내보내기",
@@ -321,7 +327,20 @@
         "fail": "DMARC 실패",
         "none": "DMARC 없음"
       },
-      "spam_score": "스팸 점수"
+      "spam_score": "스팸 점수",
+      "tooltip_spf": "Sender Policy Framework: 발신 서버가 해당 도메인을 대신해 메일을 보낼 권한이 있는지 확인합니다",
+      "tooltip_dkim": "DomainKeys Identified Mail: 암호화 서명을 통해 메일이 전송 중에 변경되지 않았음을 확인합니다",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: SPF와 DKIM이 발신자 도메인과 일치하는지 확인하고 실패에 대한 정책을 설정합니다",
+      "policy": "정책",
+      "result": {
+        "pass": "통과",
+        "fail": "실패",
+        "softfail": "경미한 실패",
+        "neutral": "중립",
+        "permerror": "영구 오류",
+        "temperror": "일시적 오류",
+        "none": "없음"
+      }
     },
     "headers": {
       "routing": "라우팅",
@@ -441,10 +460,37 @@
       "cancel_info": "주최자가 이 일정을 취소했어요.",
       "event_updated": "업데이트 #{sequence}",
       "event_status_tentative": "미정",
-      "event_status_cancelled": "취소됨"
+      "event_status_cancelled": "취소됨",
+      "collapse": "세부정보 숨기기",
+      "expand": "세부정보 표시"
     },
     "send": "보내기",
-    "more": "더보기"
+    "more": "더보기",
+    "details": {
+      "recipients_routing": "수신자 및 라우팅",
+      "authentication_security": "인증 및 보안",
+      "identifiers_threading": "식별자 및 스레드",
+      "mailing_list": "메일링 리스트",
+      "message_properties": "메시지 속성",
+      "sent": "보낸 시각",
+      "received": "받은 시각",
+      "delivery_time": "전달 시간",
+      "in_reply_to": "회신 대상",
+      "references": "참조",
+      "thread_id": "스레드 ID",
+      "size": "크기",
+      "mime_type": "MIME 타입",
+      "attachments_summary": "{count}개 파일 · {size}",
+      "list_id": "리스트 ID",
+      "list_help": "리스트 도움말",
+      "list_post": "리스트 게시",
+      "list_unsubscribe": "구독 해지",
+      "iprev": "역방향 DNS",
+      "spam_status": "스팸 상태",
+      "ai_verdict": "AI 판정",
+      "account": "계정",
+      "no_subject": "(제목 없음)"
+    }
   },
   "email_composer": {
     "new_message": "새 메시지",
@@ -523,7 +569,10 @@
       "message": "메시지에 \"{keyword}\"이(가) 언급되어 있지만 파일이 첨부되지 않았습니다. 그래도 보내시겠습니까?",
       "send_anyway": "그래도 보내기",
       "back": "편집으로 돌아가기"
-    }
+    },
+    "add_link": "링크 추가",
+    "link_url_prompt": "URL을 입력하세요",
+    "sending": "전송 중..."
   },
   "confirm_dialog": {
     "confirm": "확인",
@@ -817,6 +866,23 @@
         "sound_desc": "일정 알림이 올 때 소리로 알려줘요",
         "invitation_parsing": "이메일 초대장 분석",
         "invitation_parsing_desc": "이메일 첨부파일에서 캘린더 초대장을 감지하고 캘린더에 표시해요"
+      },
+      "push": {
+        "confirm_disable_message": "이 사이트가 닫혀 있을 때 이 기기는 알림을 더 이상 받지 않습니다.",
+        "confirm_disable_title": "백그라운드 알림을 비활성화하시겠습니까?",
+        "description": "이 사이트가 닫혀 있을 때 새 메일에 대한 시스템 알림을 받습니다. Bulwark 푸시 릴레이를 통해 전달되며, 릴레이는 메일 내용을 절대 보지 않습니다.",
+        "disable": "비활성화",
+        "enable": "활성화",
+        "ios_hint": "iOS에서는 먼저 사이트를 홈 화면에 설치하세요. Safari는 설치된 PWA에만 Web Push를 전달합니다.",
+        "reenable": "다시 등록",
+        "relay_desc": "기본값은 호스팅된 Bulwark 릴레이입니다. 셀프 호스팅 시에만 변경하세요.",
+        "relay_label": "푸시 릴레이",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "이 기기에서 활성",
+        "status_busy": "처리 중…",
+        "status_inactive": "이 기기에서 활성화되지 않음",
+        "status_unsupported": "이 브라우저는 Web Push를 지원하지 않습니다",
+        "title": "백그라운드 알림"
       }
     },
     "language_region": {
@@ -904,6 +970,13 @@
       "auto_select_reply_identity": {
         "label": "답장 시 보내는 사람 자동 선택",
         "description": "답장할 때 메일을 받았던 주소로 보내는 사람을 자동으로 변경해요"
+      },
+      "sub_address_delimiter": {
+        "label": "서브 주소 구분자",
+        "description": "사용자 이름과 서브 주소 태그를 나누는 문자예요. 메일 서버가 사용하는 구분자에 맞춰 주세요 (예: user{delimiter}tag@domain.com).",
+        "option": "{delimiter}  (user{delimiter}tag@domain.com)",
+        "custom": "사용자 지정…",
+        "custom_input_label": "사용자 지정 구분 문자"
       },
       "attachment_click_action": {
         "label": "첨부파일 클릭 동작",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "첨부 파일 목록에서 인라인 이미지 숨기기",
         "description": "메시지 본문에 포함된 이미지는 별도의 첨부 파일로 표시되지 않습니다"
+      },
+      "attachment_image_previews": {
+        "label": "첨부 파일에 이미지 미리보기 표시",
+        "description": "이미지 첨부 파일을 일반 파일 아이콘 대신 썸네일 카드로 표시합니다"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "주소록을 찾을 수 없음",
       "categories_title": "카테고리",
       "categories_description": "연락처 카테고리 이름 변경",
-      "no_categories": "카테고리를 찾을 수 없음"
+      "no_categories": "카테고리를 찾을 수 없음",
+      "group_by_letter_description": "연락처 목록에 알파벳순 섹션 헤더 표시",
+      "group_by_letter_label": "첫 글자로 그룹화"
     },
     "filters": {
       "title": "이메일 필터",
@@ -1607,41 +1686,41 @@
     "edit_draft": "임시보관 메일 수정"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "폴더를 읽음으로 표시",
+    "mark_folder_tree_read": "폴더 및 하위 폴더를 읽음으로 표시",
+    "mark_all_folders_read": "모든 폴더를 읽음으로 표시",
+    "new_subfolder": "새 하위 폴더...",
+    "new_folder": "새 폴더...",
+    "rename": "이름 바꾸기...",
+    "empty_folder": "폴더 비우기",
+    "empty_folder_generic": "폴더 비우기",
+    "delete_folder": "폴더 삭제",
+    "refresh": "새로 고침",
+    "mark_all_confirm_title": "모든 폴더를 읽음으로 표시",
+    "mark_all_confirm_message": "개인 계정의 모든 읽지 않은 메시지를 읽음으로 표시하시겠습니까?",
+    "delete_confirm_title": "폴더 삭제",
+    "delete_confirm_message": "폴더 \"{name}\"을(를) 영구적으로 삭제하시겠습니까? 이 작업은 취소할 수 없습니다.",
+    "prompt_new_subfolder": "새 하위 폴더의 이름을 입력하세요.",
+    "prompt_new_folder": "새 폴더의 이름을 입력하세요.",
+    "prompt_rename": "이 폴더의 새 이름을 입력하세요.",
+    "toast_marked_read": "폴더를 읽음으로 표시했습니다",
+    "toast_marked_read_count": "{count, plural, one {메시지 1개} other {메시지 #개}}을(를) 읽음으로 표시했습니다",
+    "toast_already_read": "읽지 않은 메시지가 없습니다",
+    "toast_marked_all_read": "모든 폴더를 읽음으로 표시했습니다",
+    "toast_emptied": "폴더를 비웠습니다",
+    "toast_folder_created": "폴더가 생성되었습니다",
+    "toast_folder_renamed": "폴더 이름이 변경되었습니다",
+    "toast_folder_deleted": "폴더가 삭제되었습니다",
+    "toast_error_mark_read": "읽음으로 표시하지 못했습니다",
+    "toast_error_empty": "폴더를 비우지 못했습니다",
+    "toast_error_create": "폴더를 생성하지 못했습니다",
+    "toast_error_rename": "폴더 이름을 변경하지 못했습니다",
+    "toast_error_delete": "폴더를 삭제하지 못했습니다",
+    "toast_error_delete_has_children": "폴더에 하위 폴더가 있습니다. 먼저 제거하세요.",
+    "toast_error_delete_has_email": "폴더가 비어 있지 않습니다. 먼저 비우세요.",
+    "placeholder_folder_name": "폴더 이름",
+    "create": "만들기",
+    "rename_confirm": "이름 바꾸기"
   },
   "shortcuts": {
     "title": "단축키",
@@ -1748,7 +1827,7 @@
       "use_address": "이 주소 사용하기",
       "invalid_tag": "태그는 알파벳, 숫자, 대시(-)만 쓸 수 있어요",
       "tag_too_long": "태그는 30자 이하여야 해요",
-      "help_text": "user+tag@domain.com 으로 보낸 메일은 내 받은편지함으로 들어와요",
+      "help_text": "user{delimiter}tag@domain.com 으로 보낸 메일은 내 받은편지함으로 들어와요",
       "validation": {
         "empty": "태그를 비워둘 수 없어요",
         "too_long": "태그는 {max}자 이하여야 해요",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "내일",
       "export_ics": ".ics로 내보내기",
       "copy_title": "제목 복사",
-      "copy_link": "회의 링크 복사"
+      "copy_link": "회의 링크 복사",
+      "go_to_today": "오늘로 이동",
+      "new_all_day_event": "새 종일 이벤트",
+      "new_event": "새 이벤트",
+      "new_task": "새 작업"
     },
     "detail": {
       "add_note": "메모 추가...",
@@ -2444,6 +2527,20 @@
       "due_today": "오늘 마감",
       "due_tomorrow": "내일 마감",
       "overdue": "기한 지남"
+    },
+    "months": {
+      "jan": "1월",
+      "feb": "2월",
+      "mar": "3월",
+      "apr": "4월",
+      "may": "5월",
+      "jun": "6월",
+      "jul": "7월",
+      "aug": "8월",
+      "sep": "9월",
+      "oct": "10월",
+      "nov": "11월",
+      "dec": "12월"
     }
   },
   "advanced_search": {

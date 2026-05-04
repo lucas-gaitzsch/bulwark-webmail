@@ -12,7 +12,7 @@ A modern, self-hosted webmail client for [Stalwart Mail Server](https://stalw.ar
 
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL%20v3-blue.svg?logo=gnu&logoColor=white)](LICENSE)
 [![Discord](https://img.shields.io/discord/1482128142939455674?color=7289da&label=discord&logo=discord&logoColor=white)](https://discord.gg/tYCujymGrT)
-[![Version](https://img.shields.io/badge/version-1.5.2-green.svg?logo=git&logoColor=white)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.6.0-green.svg?logo=git&logoColor=white)](CHANGELOG.md)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fbulwarkmail%2Fwebmail-blue?logo=docker&logoColor=white)](https://ghcr.io/bulwarkmail/webmail)
 
 </div>
@@ -55,7 +55,7 @@ A modern, self-hosted webmail client for [Stalwart Mail Server](https://stalw.ar
 
 ## Overview
 
-Bulwark is a full webmail suite – not just an inbox. It bundles the four apps most self-hosters end up wanting on the same login:
+Bulwark is a full webmail suite, not just an inbox. It bundles the four apps most self-hosters end up wanting on the same login:
 
 - **Mail** – threading, unified inbox, full-text search, Sieve filters, S/MIME, templates
 - **Calendar** – month/week/day/agenda, recurring events, iMIP invitations, CalDAV subscriptions
@@ -214,6 +214,26 @@ STALWART_FEATURES=true               # password change, Sieve filters, etc.
 LOG_FORMAT=text                      # "text" or "json"
 LOG_LEVEL=info                       # error | warn | info | debug
 ```
+
+</details>
+
+<details>
+<summary>Subpath / reverse proxy mount</summary>
+
+To serve the webmail at a subpath (e.g. `https://example.com/webmail`):
+
+```env
+NEXT_PUBLIC_BASE_PATH=/webmail
+NEXT_PUBLIC_LOCALE_PREFIX=always     # avoids next-intl rewrite loops
+```
+
+Unlike most other variables, `NEXT_PUBLIC_BASE_PATH` is read at **build time** because Next.js bakes it into emitted asset URLs. To use it with the published Docker image, build your own image with the variable set:
+
+```bash
+docker build --build-arg NEXT_PUBLIC_BASE_PATH=/webmail -t bulwark-webmail .
+```
+
+Then point your reverse proxy at the container without stripping the prefix - the app expects to receive requests under `/webmail/...` and serves all routes (`/webmail/api/...`, `/webmail/_next/static/...`, `/webmail/sw.js`, etc.) accordingly.
 
 </details>
 

@@ -1,5 +1,83 @@
 # Changelog
 
+## 1.6.0 (2026-05-01)
+
+### Features
+
+- **Deployment**: Subpath deployment support via `NEXT_PUBLIC_BASE_PATH` environment variable
+- **Mail**: Image attachment thumbnails and preview chips
+- **Mobile**: Reworked mobile mail viewer toolbar
+- **Mobile**: Mobile-friendly settings panel
+- **Mobile**: Mobile-friendly admin panel
+- **Mail**: Redesigned expanded details panel
+- **Mailbox**: Show full path in mailbox context menu header with intelligent path shortening
+
+### Fixes
+
+- **Viewer**: Respect per-email dark mode toggle when "always show in light mode" is on
+- **Navigation**: Scroll apps list in navigation rail to prevent overflow
+- **Context menu**: Clamp submenu inside viewport
+- **Context menu**: Prevent context menu from clipping below viewport
+- **Context menu**: Prevent jump and animation on open
+- **Mail**: Stop silently destroying emails when trash mailbox isn't found (#195)
+- **Mail**: Preserve list scroll position when tagging an email
+- **Mail**: Render below-header overflow popup outside clipped row
+- **Mail**: Collapse below-header attachments to single row with overflow pill
+- **Push**: Fix push preview JMAP query
+- **Tour**: Navigate tour to mailbox when starting from another page
+- **i18n**: Add `useTranslations` for "selected emails" and "cancel" on email list batch operations
+
+### i18n
+
+- Translate SPF/DKIM/DMARC tooltips
+- Add missing keys across 14 locales
+
+## 1.5.4 (2026-05-01)
+
+### Features
+
+- **PWA**: Web push notifications for new inbox mail (#233), with click-through to open the message
+- **Composer**: Insert and edit tables in rich-text emails (#236)
+- **Mail**: Configurable sub-addressing delimiter character (#239)
+- **i18n**: Turkish localization
+- **i18n**: Missing keys filled in across 15 locales
+
+### Fixes
+
+- **Mail**: Set In-Reply-To and References headers on replies (#234)
+- **Mail**: Persist htmlBody in drafts to preserve rich formatting (#236)
+- **Auth**: Pin JMAP auth verification to the configured server URL (#237)
+- **Auth**: Evict unrecoverable basic-auth accounts on reload
+- **Notifications**: Scope new-mail notifications to genuine inbox deliveries
+- **Notifications**: Extend PushVerification timeout and clean up leftover subscriptions
+- **Viewer**: Smooth out body load to prevent flicker on first render
+- **Viewer**: Prevent iframe flash when loading images or trusting the sender
+- **Viewer**: Pad bare HTML emails like plain-text mails for consistent layout
+- **Viewer**: Light-mode override now only affects body content
+- **Viewer**: Detect `<style>` tag when applying padding
+- **Viewer**: Drop iframe border-radius
+- **Calendar**: Localize event start date in detail popover and event modal
+- **Dev**: Include http protocol in connect-src for development mode CSP
+
+## 1.5.3 (2026-04-28)
+
+> **New:** Help shape Bulwark Webmail. Each instance now sends a lightweight daily heartbeat (version, platform, bucketed account counts, feature toggles - never message data or PII) so we can see which platforms and features actually get used and prioritize fixes where they matter most. You're in control: opt out any time from **Admin → Telemetry** or by setting `BULWARK_TELEMETRY=off`. Full schema in the [privacy notice](https://bulwarkmail.org/docs/legal/privacy/telemetry).
+
+### Features
+
+- **Telemetry**: Anonymous instance telemetry, on by default. Reports schema version, platform, bucketed account counts, and feature toggles only - disable from the admin UI, with `BULWARK_TELEMETRY=off`, or by clearing the endpoint
+- **Telemetry**: Track unique logins (HMAC'd per instance, 90-day retention) so the heartbeat can report bucketed account totals without storing usernames
+- **Plugins**: Theme API v2 with token compiler and skin slot
+- **Plugins**: Extension preview page and detailed extension info API
+- **Calendar**: Right-click context menu on empty calendar space
+- **Docker**: Persistent named volume for telemetry data so the instance id and admin's consent choice survive container upgrades
+
+### Fixes
+
+- **Security**: Block telemetry endpoint from pointing at internal/loopback hosts (validation + DNS-rebind re-check at fetch time)
+- **Security**: Harden plugin config, TOTP token exchange, and branding file serving
+- **Mail**: Batch shortcuts now act on the multi-selection when one is present (#228)
+
 ## 1.5.2 (2026-04-27)
 
 ### Features

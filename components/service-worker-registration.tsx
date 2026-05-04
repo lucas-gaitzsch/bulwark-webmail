@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+const BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/+$/, "");
+
 export function ServiceWorkerRegistration() {
   useEffect(() => {
     if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
@@ -23,7 +25,7 @@ export function ServiceWorkerRegistration() {
     }
 
     navigator.serviceWorker
-      .register("/sw.js")
+      .register(`${BASE_PATH}/sw.js`, { scope: `${BASE_PATH}/` })
       .then((registration) => {
         console.log("Service Worker registered successfully:", registration);
       })

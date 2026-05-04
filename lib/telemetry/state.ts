@@ -41,7 +41,7 @@ export async function getInstanceId(): Promise<string> {
   return fresh;
 }
 
-// Default consent is 'on' — telemetry is anonymous and enabled by default.
+// Default consent is 'on' - telemetry is anonymous and enabled by default.
 // Admins can disable via the UI, the BULWARK_TELEMETRY env var, or by clearing
 // the endpoint. See https://bulwarkmail.org/docs/legal/privacy/telemetry.
 const DEFAULTS: TelemetryStateFile = {

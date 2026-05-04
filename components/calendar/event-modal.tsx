@@ -21,6 +21,9 @@ import {
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { useSettingsStore } from "@/stores/settings-store";
 import { generateUUID } from "@/lib/utils";
+import { useFormatEventDate } from "@/hooks/use-format-event-date";
+import { calendarHooks } from "@/lib/plugin-hooks";
+import type { ConflictWarning } from "@/lib/plugin-types";
 
 export interface PendingEventPreview {
   start: Date;
@@ -130,6 +133,7 @@ export function EventModal({
   const timeFormat = useSettingsStore((s) => s.timeFormat);
   const timeDisplayFmt = timeFormat === "12h" ? "h:mm a" : "HH:mm";
   const isEdit = !!event;
+  const formatEventDate = useFormatEventDate();
   const [mode, setMode] = useState<"view" | "edit">(isEdit ? "view" : "edit");
 
   const userIsOrganizer = useMemo(() => {
@@ -239,6 +243,31 @@ export function EventModal({
   });
   const [sendInvitations, setSendInvitations] = useState(true);
   const participantInputRef = useRef<ParticipantInputHandle>(null);
+
+  // Plugin transform: collect conflict warnings for the current event form.
+  // Re-runs (debounced) whenever fields that affect scheduling change.
+  const [pluginConflictWarnings, setPluginConflictWarnings] = useState<ConflictWarning[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      const startStr = allDay ? `${startDate}T00:00:00` : `${startDate}T${startTime}:00`;
+      const endStr = allDay ? `${endDate}T23:59:59` : `${endDate}T${endTime}:00`;
+      const warnings = await calendarHooks.onCheckEventConflicts.transform([] as ConflictWarning[], {
+        event: {
+          title,
+          description,
+          start: startStr,
+          end: endStr,
+          isAllDay: allDay,
+          location,
+          virtualLocation,
+          calendarId,
+        },
+      });
+      if (!cancelled) setPluginConflictWarnings(warnings);
+    }, 250);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [title, description, startDate, startTime, endDate, endTime, allDay, location, virtualLocation, calendarId]);
 
   // Report live preview to parent for grid outline
   useEffect(() => {
@@ -495,14 +524,14 @@ export function EventModal({
 
     return (
       <div ref={modalRef} role="dialog" aria-modal={isMobile || undefined} aria-label={event.title || t("events.no_title")} className={isMobile ? "fixed inset-0 z-50 flex flex-col bg-background" : "flex flex-col h-full bg-background"}>
-          <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
-            <h2 className="text-lg font-semibold truncate">{event.title || t("events.no_title")}</h2>
-            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors duration-150 text-muted-foreground hover:text-foreground" aria-label={t("form.cancel")}>
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+          <h2 className="text-lg font-semibold truncate">{event.title || t("events.no_title")}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors duration-150 text-muted-foreground hover:text-foreground" aria-label={t("form.cancel")}>
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
-          <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto">
           <div className="px-6 py-4 space-y-3">
             <div className="flex items-start gap-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-950/50 px-4 py-3">
               <CalendarDays className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
@@ -517,7 +546,7 @@ export function EventModal({
             </div>
 
             <div className="text-sm">
-              <span className="font-medium">{format(startD, "EEE, MMM d, yyyy")}</span>
+              <span className="font-medium">{formatEventDate(startD)}</span>
               {!event.showWithoutTime && (
                 <span className="text-muted-foreground ml-2">
                   {format(startD, timeDisplayFmt)} – {format(endD, timeDisplayFmt)}
@@ -550,48 +579,48 @@ export function EventModal({
               </div>
             )}
           </div>
-          </div>
+        </div>
 
-          <div className="px-6 py-4 border-t border-border flex-shrink-0">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{t("participants.rsvp_label")}</span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant={userCurrentStatus === "accepted" ? "default" : "outline"}
-                  onClick={() => handleRsvp("accepted")}
-                  className={userCurrentStatus === "accepted"
-                    ? "bg-success hover:bg-success/80 text-success-foreground"
-                    : "text-success border-success/30 hover:bg-success/10"}
-                >
-                  {userCurrentStatus === "accepted" && <Check className="w-4 h-4 mr-1" />}
-                  {t("participants.accepted")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={userCurrentStatus === "tentative" ? "default" : "outline"}
-                  onClick={() => handleRsvp("tentative")}
-                  className={userCurrentStatus === "tentative"
-                    ? "bg-warning hover:bg-warning/80 text-warning-foreground"
-                    : "border border-warning/30 text-warning hover:bg-warning/10"}
-                >
-                  {userCurrentStatus === "tentative" && <Check className="w-4 h-4 mr-1" />}
-                  {t("participants.tentative")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={userCurrentStatus === "declined" ? "default" : "ghost"}
-                  onClick={() => handleRsvp("declined")}
-                  className={userCurrentStatus === "declined"
-                    ? "bg-destructive hover:bg-destructive/80 text-destructive-foreground"
-                    : "text-destructive hover:bg-destructive/10"}
-                >
-                  {userCurrentStatus === "declined" && <Check className="w-4 h-4 mr-1" />}
-                  {t("participants.declined")}
-                </Button>
-              </div>
+        <div className="px-6 py-4 border-t border-border flex-shrink-0">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium">{t("participants.rsvp_label")}</span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={userCurrentStatus === "accepted" ? "default" : "outline"}
+                onClick={() => handleRsvp("accepted")}
+                className={userCurrentStatus === "accepted"
+                  ? "bg-success hover:bg-success/80 text-success-foreground"
+                  : "text-success border-success/30 hover:bg-success/10"}
+              >
+                {userCurrentStatus === "accepted" && <Check className="w-4 h-4 mr-1" />}
+                {t("participants.accepted")}
+              </Button>
+              <Button
+                size="sm"
+                variant={userCurrentStatus === "tentative" ? "default" : "outline"}
+                onClick={() => handleRsvp("tentative")}
+                className={userCurrentStatus === "tentative"
+                  ? "bg-warning hover:bg-warning/80 text-warning-foreground"
+                  : "border border-warning/30 text-warning hover:bg-warning/10"}
+              >
+                {userCurrentStatus === "tentative" && <Check className="w-4 h-4 mr-1" />}
+                {t("participants.tentative")}
+              </Button>
+              <Button
+                size="sm"
+                variant={userCurrentStatus === "declined" ? "default" : "ghost"}
+                onClick={() => handleRsvp("declined")}
+                className={userCurrentStatus === "declined"
+                  ? "bg-destructive hover:bg-destructive/80 text-destructive-foreground"
+                  : "text-destructive hover:bg-destructive/10"}
+              >
+                {userCurrentStatus === "declined" && <Check className="w-4 h-4 mr-1" />}
+                {t("participants.declined")}
+              </Button>
             </div>
           </div>
+        </div>
       </div>
     );
   }
@@ -638,7 +667,7 @@ export function EventModal({
               <Clock className="w-4 h-4 text-muted-foreground mt-0.5 flex-shrink-0" />
               <div className="text-sm">
                 <span className="font-medium text-foreground">
-                  {format(startD, "EEE, MMM d, yyyy")}
+                  {formatEventDate(startD)}
                 </span>
                 {event.showWithoutTime ? (
                   <span className="text-muted-foreground ml-1.5">{t("events.all_day")}</span>
@@ -767,16 +796,16 @@ export function EventModal({
 
   return (
     <div ref={modalRef} role="dialog" aria-modal={isMobile || undefined} aria-label={isEdit ? t("events.edit") : t("events.create")} data-tour="event-modal" className={isMobile ? "fixed inset-0 z-50 flex flex-col bg-background" : "flex flex-col h-full bg-background"}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
-          <h2 className="text-lg font-semibold">
-            {isEdit ? t("events.edit") : t("events.create")}
-          </h2>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors duration-150 text-muted-foreground hover:text-foreground" aria-label={t("form.cancel")}>
-            <X className="w-5 h-5" />
-          </button>
-        </div>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
+        <h2 className="text-lg font-semibold">
+          {isEdit ? t("events.edit") : t("events.create")}
+        </h2>
+        <button onClick={onClose} className="p-1.5 rounded-md hover:bg-muted transition-colors duration-150 text-muted-foreground hover:text-foreground" aria-label={t("form.cancel")}>
+          <X className="w-5 h-5" />
+        </button>
+      </div>
 
-        <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto">
         <div className="px-6 py-4 space-y-4">
           <div>
             <label className="text-sm font-medium mb-1 block">{t("form.title")}</label>
@@ -921,6 +950,26 @@ export function EventModal({
             )}
           </div>
 
+          {pluginConflictWarnings.length > 0 && (
+            <div className="space-y-1.5">
+              {pluginConflictWarnings.map(w => (
+                <div
+                  key={w.key}
+                  className={
+                    w.severity === 'error'
+                      ? 'text-sm rounded-md border border-destructive/50 bg-destructive/10 text-destructive px-3 py-2'
+                      : w.severity === 'info'
+                        ? 'text-sm rounded-md border border-border bg-muted/40 text-muted-foreground px-3 py-2'
+                        : 'text-sm rounded-md border border-yellow-500/50 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 px-3 py-2'
+                  }
+                  title={w.message}
+                >
+                  {w.message}
+                </div>
+              ))}
+            </div>
+          )}
+
           {calendars.length > 1 && (
             <div>
               <label className="text-sm font-medium mb-1 block">{t("form.calendar_select")}</label>
@@ -986,69 +1035,69 @@ export function EventModal({
             </div>
           )}
         </div>
-        </div>
+      </div>
 
-        <div className="flex items-center justify-between px-6 py-4 border-t border-border flex-shrink-0">
-          <div className="flex items-center gap-1">
-            {isEdit && onDelete && (
-              showDeleteConfirm ? (
-                <div className="flex items-center gap-2">
-                  <div>
-                    <span className="text-sm text-red-600 dark:text-red-400">
-                      {t("form.delete_confirm")}
-                    </span>
-                    {hasParticipants && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {t("participants.cancel_notification")}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => { onDelete(event!.id, hasParticipants || undefined); onClose(); }}
-                    className="text-red-600 dark:text-red-400 border-red-300 dark:border-red-700"
-                  >
-                    {t("events.delete")}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)}>
-                    {t("form.cancel")}
-                  </Button>
+      <div className="flex items-center justify-between px-6 py-4 border-t border-border flex-shrink-0">
+        <div className="flex items-center gap-1">
+          {isEdit && onDelete && (
+            showDeleteConfirm ? (
+              <div className="flex items-center gap-2">
+                <div>
+                  <span className="text-sm text-red-600 dark:text-red-400">
+                    {t("form.delete_confirm")}
+                  </span>
+                  {hasParticipants && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {t("participants.cancel_notification")}
+                    </p>
+                  )}
                 </div>
-              ) : (
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={() => setShowDeleteConfirm(true)}
-                  className="text-red-600 dark:text-red-400"
+                  onClick={() => { onDelete(event!.id, hasParticipants || undefined); onClose(); }}
+                  className="text-red-600 dark:text-red-400 border-red-300 dark:border-red-700"
                 >
-                  <Trash2 className="w-4 h-4 mr-1" />
                   {t("events.delete")}
                 </Button>
-              )
-            )}
-            {isEdit && onDuplicate && !showDeleteConfirm && (
+                <Button variant="ghost" size="sm" onClick={() => setShowDeleteConfirm(false)}>
+                  {t("form.cancel")}
+                </Button>
+              </div>
+            ) : (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleDuplicate}
-                aria-label={t("events.duplicate")}
+                onClick={() => setShowDeleteConfirm(true)}
+                className="text-red-600 dark:text-red-400"
               >
-                <Copy className="w-4 h-4 mr-1" />
-                {t("events.duplicate")}
+                <Trash2 className="w-4 h-4 mr-1" />
+                {t("events.delete")}
               </Button>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={isEdit ? () => setMode("view") : onClose}>
-              {t("form.cancel")}
+            )
+          )}
+          {isEdit && onDuplicate && !showDeleteConfirm && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDuplicate}
+              aria-label={t("events.duplicate")}
+            >
+              <Copy className="w-4 h-4 mr-1" />
+              {t("events.duplicate")}
             </Button>
-            <Button onClick={handleSave} disabled={!title.trim() || isSaving}>
-              {t("form.save")}
-            </Button>
-          </div>
+          )}
         </div>
+
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={isEdit ? () => setMode("view") : onClose}>
+            {t("form.cancel")}
+          </Button>
+          <Button onClick={handleSave} disabled={!title.trim() || isSaving}>
+            {t("form.save")}
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

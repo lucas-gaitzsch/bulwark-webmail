@@ -144,6 +144,12 @@ export function CalendarSidebarPanel({
           {cal.id === BIRTHDAY_CALENDAR_ID && (
             <Cake className="w-3 h-3 text-muted-foreground flex-shrink-0" />
           )}
+          {!cal.isShared && Object.keys(cal.shareWith || {}).length > 0 && (
+            <Users
+              className="w-3 h-3 text-muted-foreground flex-shrink-0"
+              aria-label={tMgmt('share')}
+            />
+          )}
         </button>
       </div>
     );

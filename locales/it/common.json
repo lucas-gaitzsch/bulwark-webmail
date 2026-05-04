@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "Seleziona e-mail",
       "select_all": "Seleziona tutto",
+      "selected_messages": "{count} email {count, plural, one {selezionata} other {selezionate}}",
       "mark_read": "Segna come letto",
       "mark_unread": "Segna come non letto",
       "delete": "Elimina",
@@ -238,6 +239,11 @@
     "unstar": "Rimuovi stella",
     "mark_unread": "Segna come non letto",
     "mark_read": "Segna come letto",
+    "unread": "Non letto",
+    "read": "Letto",
+    "spam_short": "Spam",
+    "not_spam_short": "Non spam",
+    "move": "Sposta",
     "print": "Stampa",
     "view_source": "Visualizza sorgente",
     "export_email": "Esporta come .eml",
@@ -319,7 +325,20 @@
         "fail": "DMARC fallito",
         "none": "Nessun DMARC"
       },
-      "spam_score": "Punteggio spam"
+      "spam_score": "Punteggio spam",
+      "tooltip_spf": "Sender Policy Framework: verifica che il server mittente sia autorizzato a inviare e-mail per conto del dominio",
+      "tooltip_dkim": "DomainKeys Identified Mail: conferma tramite firma crittografica che l'e-mail non è stata alterata durante il transito",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: assicura che SPF e DKIM siano allineati al dominio del mittente e definisce una politica in caso di errore",
+      "policy": "Criterio",
+      "result": {
+        "pass": "Superato",
+        "fail": "Fallito",
+        "softfail": "Fallimento lieve",
+        "neutral": "Neutro",
+        "permerror": "Errore permanente",
+        "temperror": "Errore temporaneo",
+        "none": "Nessuno"
+      }
     },
     "headers": {
       "routing": "Instradamento",
@@ -439,12 +458,39 @@
       "cancel_info": "L'organizzatore ha annullato questo evento.",
       "event_updated": "Aggiornamento #{sequence}",
       "event_status_tentative": "Provvisorio",
-      "event_status_cancelled": "Annullato"
+      "event_status_cancelled": "Annullato",
+      "collapse": "Nascondi dettagli",
+      "expand": "Mostra dettagli"
     },
     "previous": "Precedente",
     "next": "Successivo",
     "send": "Invia",
-    "more": "altri"
+    "more": "altri",
+    "details": {
+      "recipients_routing": "Destinatari e instradamento",
+      "authentication_security": "Autenticazione e sicurezza",
+      "identifiers_threading": "Identificatori e conversazione",
+      "mailing_list": "Mailing list",
+      "message_properties": "Proprietà del messaggio",
+      "sent": "Inviato",
+      "received": "Ricevuto",
+      "delivery_time": "Tempo di consegna",
+      "in_reply_to": "In-Reply-To",
+      "references": "Riferimenti",
+      "thread_id": "ID conversazione",
+      "size": "Dimensione",
+      "mime_type": "Tipo MIME",
+      "attachments_summary": "{count} file · {size}",
+      "list_id": "ID lista",
+      "list_help": "Guida lista",
+      "list_post": "Invio alla lista",
+      "list_unsubscribe": "Annulla iscrizione",
+      "iprev": "DNS inverso",
+      "spam_status": "Stato spam",
+      "ai_verdict": "Verdetto IA",
+      "account": "Account",
+      "no_subject": "(nessun oggetto)"
+    }
   },
   "email_composer": {
     "new_message": "Nuovo messaggio",
@@ -523,7 +569,10 @@
       "message": "Il tuo messaggio menziona \"{keyword}\" ma nessun file è allegato. Inviare comunque?",
       "send_anyway": "Invia comunque",
       "back": "Torna alla modifica"
-    }
+    },
+    "add_link": "Aggiungi link",
+    "link_url_prompt": "Inserisci l'URL",
+    "sending": "Invio in corso..."
   },
   "confirm_dialog": {
     "confirm": "Conferma",
@@ -817,6 +866,23 @@
         "sound_desc": "Riproduci un suono per i promemoria del calendario",
         "invitation_parsing": "Analizza inviti via e-mail",
         "invitation_parsing_desc": "Rileva inviti calendario negli allegati e mostra azioni calendario"
+      },
+      "push": {
+        "confirm_disable_message": "Questo dispositivo non riceverà più avvisi quando il sito è chiuso.",
+        "confirm_disable_title": "Disabilitare le notifiche in background?",
+        "description": "Ricevi notifiche di sistema per la nuova posta quando questo sito è chiuso. Consegnato tramite il relay push Bulwark; il relay non vede mai il contenuto della posta.",
+        "disable": "Disabilita",
+        "enable": "Abilita",
+        "ios_hint": "Su iOS, installa prima il sito sulla schermata Home: Safari consegna Web Push solo alle PWA installate.",
+        "reenable": "Registra di nuovo",
+        "relay_desc": "Per impostazione predefinita usa il relay Bulwark ospitato. Cambialo solo se ospiti in autonomia.",
+        "relay_label": "Relay push",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "Attivo su questo dispositivo",
+        "status_busy": "In elaborazione…",
+        "status_inactive": "Non abilitato su questo dispositivo",
+        "status_unsupported": "Questo browser non supporta Web Push",
+        "title": "Notifiche in background"
       }
     },
     "language_region": {
@@ -899,6 +965,13 @@
       "auto_select_reply_identity": {
         "label": "Seleziona automaticamente l'indirizzo di risposta",
         "description": "Quando rispondi, passa automaticamente l'indirizzo mittente all'identità che ha ricevuto il messaggio originale"
+      },
+      "sub_address_delimiter": {
+        "label": "Delimitatore sub-indirizzo",
+        "description": "Carattere che separa il tuo nome utente dall'etichetta del sub-indirizzo. Usa il delimitatore configurato sul tuo server di posta (es. utente{delimiter}tag@dominio.com).",
+        "option": "{delimiter}  (utente{delimiter}tag@dominio.com)",
+        "custom": "Personalizzato…",
+        "custom_input_label": "Carattere delimitatore personalizzato"
       },
       "show_preview": {
         "label": "Mostra anteprima testo",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "Nascondi le immagini inline dagli allegati",
         "description": "Le immagini incorporate nel corpo del messaggio non vengono elencate come allegati separati"
+      },
+      "attachment_image_previews": {
+        "label": "Mostra anteprime delle immagini negli allegati",
+        "description": "Mostra gli allegati immagine come miniature anziché con icone di file generiche"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "Nessuna rubrica trovata",
       "categories_title": "Categorie",
       "categories_description": "Rinomina le categorie dei contatti",
-      "no_categories": "Nessuna categoria trovata"
+      "no_categories": "Nessuna categoria trovata",
+      "group_by_letter_description": "Mostra intestazioni alfabetiche nell'elenco dei contatti",
+      "group_by_letter_label": "Raggruppa per prima lettera"
     },
     "filters": {
       "title": "Filtri email",
@@ -1607,41 +1686,41 @@
     "edit_draft": "Modifica bozza"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "Segna cartella come letta",
+    "mark_folder_tree_read": "Segna cartella e sottocartelle come lette",
+    "mark_all_folders_read": "Segna tutte le cartelle come lette",
+    "new_subfolder": "Nuova sottocartella...",
+    "new_folder": "Nuova cartella...",
+    "rename": "Rinomina...",
+    "empty_folder": "Svuota cartella",
+    "empty_folder_generic": "Svuota cartella",
+    "delete_folder": "Elimina cartella",
+    "refresh": "Aggiorna",
+    "mark_all_confirm_title": "Segna tutte le cartelle come lette",
+    "mark_all_confirm_message": "Segnare tutti i messaggi non letti del tuo account personale come letti?",
+    "delete_confirm_title": "Elimina cartella",
+    "delete_confirm_message": "Eliminare definitivamente la cartella \"{name}\"? Questa azione non può essere annullata.",
+    "prompt_new_subfolder": "Inserisci un nome per la nuova sottocartella.",
+    "prompt_new_folder": "Inserisci un nome per la nuova cartella.",
+    "prompt_rename": "Inserisci un nuovo nome per questa cartella.",
+    "toast_marked_read": "Cartella segnata come letta",
+    "toast_marked_read_count": "Segnati {count, plural, one {1 messaggio} other {# messaggi}} come letti",
+    "toast_already_read": "Nessun messaggio non letto",
+    "toast_marked_all_read": "Tutte le cartelle segnate come lette",
+    "toast_emptied": "Cartella svuotata",
+    "toast_folder_created": "Cartella creata",
+    "toast_folder_renamed": "Cartella rinominata",
+    "toast_folder_deleted": "Cartella eliminata",
+    "toast_error_mark_read": "Impossibile segnare come letto",
+    "toast_error_empty": "Impossibile svuotare la cartella",
+    "toast_error_create": "Impossibile creare la cartella",
+    "toast_error_rename": "Impossibile rinominare la cartella",
+    "toast_error_delete": "Impossibile eliminare la cartella",
+    "toast_error_delete_has_children": "La cartella contiene sottocartelle. Rimuoverle prima.",
+    "toast_error_delete_has_email": "La cartella non è vuota. Svuotarla prima.",
+    "placeholder_folder_name": "Nome cartella",
+    "create": "Crea",
+    "rename_confirm": "Rinomina"
   },
   "shortcuts": {
     "title": "Scorciatoie da tastiera",
@@ -1748,7 +1827,7 @@
       "use_address": "Usa questo indirizzo",
       "invalid_tag": "Il tag deve contenere solo caratteri alfanumerici e trattini",
       "tag_too_long": "Il tag deve essere di massimo 30 caratteri",
-      "help_text": "I messaggi inviati a utente+tag@dominio.com arriveranno nella tua casella di posta",
+      "help_text": "I messaggi inviati a utente{delimiter}tag@dominio.com arriveranno nella tua casella di posta",
       "validation": {
         "empty": "Il tag non può essere vuoto",
         "too_long": "Il tag deve essere di massimo {max} caratteri",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "Domani",
       "export_ics": "Esporta come .ics",
       "copy_title": "Copia titolo",
-      "copy_link": "Copia link riunione"
+      "copy_link": "Copia link riunione",
+      "go_to_today": "Vai a oggi",
+      "new_all_day_event": "Nuovo evento giornata intera",
+      "new_event": "Nuovo evento",
+      "new_task": "Nuova attività"
     },
     "detail": {
       "add_note": "Aggiungi una nota...",
@@ -2444,6 +2527,20 @@
       "due_today": "Scade oggi",
       "due_tomorrow": "Scade domani",
       "overdue": "Scaduta"
+    },
+    "months": {
+      "jan": "gen",
+      "feb": "feb",
+      "mar": "mar",
+      "apr": "apr",
+      "may": "mag",
+      "jun": "giu",
+      "jul": "lug",
+      "aug": "ago",
+      "sep": "set",
+      "oct": "ott",
+      "nov": "nov",
+      "dec": "dic"
     }
   },
   "advanced_search": {

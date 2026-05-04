@@ -139,6 +139,19 @@ export function AddressBookManagementSettings() {
             {t("default")}
           </span>
         )}
+        {(() => {
+          const shareCount = Object.keys(book.shareWith || {}).length;
+          if (shareCount === 0 || book.isShared) return null;
+          return (
+            <span
+              className="flex items-center gap-1 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full"
+              title={t("share")}
+            >
+              <Users className="w-3 h-3" />
+              {shareCount}
+            </span>
+          );
+        })()}
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {canRename && (
             <button

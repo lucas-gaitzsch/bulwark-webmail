@@ -91,7 +91,7 @@ export function removeThemeCSS(): void {
 }
 
 /**
- * Inject a theme's *skin* CSS — component-level overrides shipped by Theme
+ * Inject a theme's *skin* CSS - component-level overrides shipped by Theme
  * API v2 themes via `skin.css`. Lives in a separate `<style>` tag so it can
  * be removed cleanly without touching the colour-token block, and is placed
  * AFTER the colour block so component rules win specificity.
@@ -124,7 +124,7 @@ export function removeThemeSkinCSS(): void {
 }
 
 /**
- * Sanitize a theme *skin* — looser than `sanitizeThemeCSS` because skins
+ * Sanitize a theme *skin* - looser than `sanitizeThemeCSS` because skins
  * intentionally target real component selectors (toolbars, lists, buttons),
  * not just `:root`/`.dark`. The same script-injection / external-resource
  * prohibitions still apply.

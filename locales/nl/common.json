@@ -200,6 +200,7 @@
       "select": "E-mails selecteren",
       "select_all": "Alles selecteren",
       "mark_read": "Markeren als gelezen",
+      "selected_messages": "{count, plural, one {1 e-mail} other {# e-mails}} geselecteerd",
       "mark_unread": "Markeren als ongelezen",
       "delete": "Verwijderen",
       "delete_confirm_title": "E-mails verwijderen",
@@ -238,6 +239,11 @@
     "unstar": "Ster verwijderen",
     "mark_unread": "Markeren als ongelezen",
     "mark_read": "Markeren als gelezen",
+    "unread": "Ongelezen",
+    "read": "Gelezen",
+    "spam_short": "Spam",
+    "not_spam_short": "Geen spam",
+    "move": "Verplaatsen",
     "print": "Afdrukken",
     "view_source": "Bron bekijken",
     "export_email": "Exporteren als .eml",
@@ -319,7 +325,20 @@
         "fail": "DMARC Mislukt",
         "none": "Geen DMARC"
       },
-      "spam_score": "Spamscore"
+      "spam_score": "Spamscore",
+      "tooltip_spf": "Sender Policy Framework: controleert of de verzendende server gemachtigd is om e-mail namens het domein te verzenden",
+      "tooltip_dkim": "DomainKeys Identified Mail: bevestigt met een cryptografische handtekening dat de e-mail tijdens het transport niet is gewijzigd",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: zorgt ervoor dat SPF en DKIM overeenkomen met het domein van de afzender en stelt een beleid in voor fouten",
+      "policy": "Beleid",
+      "result": {
+        "pass": "Geslaagd",
+        "fail": "Mislukt",
+        "softfail": "Zachte mislukking",
+        "neutral": "Neutraal",
+        "permerror": "Permanente fout",
+        "temperror": "Tijdelijke fout",
+        "none": "Geen"
+      }
     },
     "headers": {
       "routing": "Routering",
@@ -439,12 +458,39 @@
       "cancel_info": "De organisator heeft dit evenement geannuleerd.",
       "event_updated": "Update #{sequence}",
       "event_status_tentative": "Voorlopig",
-      "event_status_cancelled": "Geannuleerd"
+      "event_status_cancelled": "Geannuleerd",
+      "collapse": "Details verbergen",
+      "expand": "Details tonen"
     },
     "previous": "Vorige",
     "next": "Volgende",
     "send": "Verzenden",
-    "more": "meer"
+    "more": "meer",
+    "details": {
+      "recipients_routing": "Ontvangers & routing",
+      "authentication_security": "Authenticatie & beveiliging",
+      "identifiers_threading": "Identificatoren & threading",
+      "mailing_list": "Mailinglijst",
+      "message_properties": "Berichteigenschappen",
+      "sent": "Verzonden",
+      "received": "Ontvangen",
+      "delivery_time": "Bezorgtijd",
+      "in_reply_to": "In-Reply-To",
+      "references": "Verwijzingen",
+      "thread_id": "Thread-ID",
+      "size": "Grootte",
+      "mime_type": "MIME-type",
+      "attachments_summary": "{count} bestanden · {size}",
+      "list_id": "Lijst-ID",
+      "list_help": "Lijsthulp",
+      "list_post": "Lijstbericht",
+      "list_unsubscribe": "Afmelden",
+      "iprev": "Reverse DNS",
+      "spam_status": "Spamstatus",
+      "ai_verdict": "AI-oordeel",
+      "account": "Account",
+      "no_subject": "(geen onderwerp)"
+    }
   },
   "email_composer": {
     "new_message": "Nieuw bericht",
@@ -523,7 +569,10 @@
       "message": "Uw bericht vermeldt \"{keyword}\" maar er is geen bestand bijgevoegd. Toch verzenden?",
       "send_anyway": "Toch verzenden",
       "back": "Terug naar bewerken"
-    }
+    },
+    "add_link": "Link toevoegen",
+    "link_url_prompt": "Voer de URL in",
+    "sending": "Bezig met verzenden..."
   },
   "confirm_dialog": {
     "confirm": "Bevestigen",
@@ -817,6 +866,23 @@
         "sound_desc": "Een geluid afspelen voor agendaherinneringen",
         "invitation_parsing": "E-mailuitnodigingen herkennen",
         "invitation_parsing_desc": "Agenda-uitnodigingen in e-mailbijlagen detecteren en agendaacties tonen"
+      },
+      "push": {
+        "confirm_disable_message": "Dit apparaat ontvangt geen meldingen meer als de site is gesloten.",
+        "confirm_disable_title": "Achtergrondmeldingen uitschakelen?",
+        "description": "Ontvang systeemmeldingen voor nieuwe e-mail wanneer deze site gesloten is. Geleverd via de Bulwark-pushrelay; de relay ziet nooit e-mailinhoud.",
+        "disable": "Uitschakelen",
+        "enable": "Inschakelen",
+        "ios_hint": "Installeer de site op iOS eerst op het beginscherm – Safari levert Web Push alleen aan geïnstalleerde PWA's.",
+        "reenable": "Opnieuw registreren",
+        "relay_desc": "Gebruikt standaard de gehoste Bulwark-relay. Wijzig alleen als je zelf hostt.",
+        "relay_label": "Push-relay",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "Actief op dit apparaat",
+        "status_busy": "Bezig…",
+        "status_inactive": "Niet ingeschakeld op dit apparaat",
+        "status_unsupported": "Deze browser ondersteunt geen Web Push",
+        "title": "Achtergrondmeldingen"
       }
     },
     "language_region": {
@@ -899,6 +965,13 @@
       "auto_select_reply_identity": {
         "label": "Antwoordadres automatisch selecteren",
         "description": "Schakel bij het beantwoorden automatisch het Van-adres om naar de identiteit die het oorspronkelijke bericht ontving"
+      },
+      "sub_address_delimiter": {
+        "label": "Sub-adres scheidingsteken",
+        "description": "Teken dat je gebruikersnaam scheidt van het sub-adres-label. Gebruik het scheidingsteken dat je mailserver gebruikt (bv. gebruiker{delimiter}tag@domein.nl).",
+        "option": "{delimiter}  (gebruiker{delimiter}tag@domein.nl)",
+        "custom": "Aangepast…",
+        "custom_input_label": "Aangepast scheidingsteken"
       },
       "show_preview": {
         "label": "Voorbeeldtekst tonen",
@@ -996,6 +1069,10 @@
       "hide_inline_image_attachments": {
         "label": "Inline-afbeeldingen verbergen uit bijlagenlijst",
         "description": "Afbeeldingen die in de berichttekst zijn ingesloten worden niet als aparte bijlagen weergegeven"
+      },
+      "attachment_image_previews": {
+        "label": "Voorbeelden van afbeeldingen tonen in bijlagen",
+        "description": "Toon afbeeldingsbijlagen als miniatuurkaarten in plaats van generieke bestandspictogrammen"
       }
     },
     "composer": {
@@ -1349,7 +1426,9 @@
       "no_address_books": "Geen adresboeken gevonden",
       "categories_title": "Categorieën",
       "categories_description": "Contactcategorieën hernoemen",
-      "no_categories": "Geen categorieën gevonden"
+      "no_categories": "Geen categorieën gevonden",
+      "group_by_letter_description": "Toon alfabetische sectiekoppen in de contactenlijst",
+      "group_by_letter_label": "Groeperen op eerste letter"
     },
     "filters": {
       "title": "E-mailfilters",
@@ -1607,41 +1686,41 @@
     "edit_draft": "Concept bewerken"
   },
   "mailbox_context_menu": {
-    "mark_folder_read": "Mark folder as read",
-    "mark_folder_tree_read": "Mark folder & subfolders as read",
-    "mark_all_folders_read": "Mark all folders as read",
-    "new_subfolder": "New subfolder...",
-    "new_folder": "New folder...",
-    "rename": "Rename...",
-    "empty_folder": "Empty folder",
-    "empty_folder_generic": "Empty folder",
-    "delete_folder": "Delete folder",
-    "refresh": "Refresh",
-    "mark_all_confirm_title": "Mark all folders as read",
-    "mark_all_confirm_message": "Mark every unread message in your personal account as read?",
-    "delete_confirm_title": "Delete folder",
-    "delete_confirm_message": "Permanently delete the folder \"{name}\"? This action cannot be undone.",
-    "prompt_new_subfolder": "Enter a name for the new subfolder.",
-    "prompt_new_folder": "Enter a name for the new folder.",
-    "prompt_rename": "Enter a new name for this folder.",
-    "toast_marked_read": "Folder marked as read",
-    "toast_marked_read_count": "Marked {count, plural, one {1 message} other {# messages}} as read",
-    "toast_already_read": "No unread messages",
-    "toast_marked_all_read": "All folders marked as read",
-    "toast_emptied": "Folder emptied",
-    "toast_folder_created": "Folder created",
-    "toast_folder_renamed": "Folder renamed",
-    "toast_folder_deleted": "Folder deleted",
-    "toast_error_mark_read": "Failed to mark as read",
-    "toast_error_empty": "Failed to empty folder",
-    "toast_error_create": "Failed to create folder",
-    "toast_error_rename": "Failed to rename folder",
-    "toast_error_delete": "Failed to delete folder",
-    "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
-    "placeholder_folder_name": "Folder name",
-    "create": "Create",
-    "rename_confirm": "Rename"
+    "mark_folder_read": "Map markeren als gelezen",
+    "mark_folder_tree_read": "Map en submappen markeren als gelezen",
+    "mark_all_folders_read": "Alle mappen markeren als gelezen",
+    "new_subfolder": "Nieuwe submap...",
+    "new_folder": "Nieuwe map...",
+    "rename": "Hernoemen...",
+    "empty_folder": "Map leegmaken",
+    "empty_folder_generic": "Map leegmaken",
+    "delete_folder": "Map verwijderen",
+    "refresh": "Vernieuwen",
+    "mark_all_confirm_title": "Alle mappen markeren als gelezen",
+    "mark_all_confirm_message": "Alle ongelezen berichten in uw persoonlijke account als gelezen markeren?",
+    "delete_confirm_title": "Map verwijderen",
+    "delete_confirm_message": "Map \"{name}\" definitief verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "prompt_new_subfolder": "Voer een naam in voor de nieuwe submap.",
+    "prompt_new_folder": "Voer een naam in voor de nieuwe map.",
+    "prompt_rename": "Voer een nieuwe naam in voor deze map.",
+    "toast_marked_read": "Map gemarkeerd als gelezen",
+    "toast_marked_read_count": "{count, plural, one {1 bericht} other {# berichten}} gemarkeerd als gelezen",
+    "toast_already_read": "Geen ongelezen berichten",
+    "toast_marked_all_read": "Alle mappen gemarkeerd als gelezen",
+    "toast_emptied": "Map leeggemaakt",
+    "toast_folder_created": "Map aangemaakt",
+    "toast_folder_renamed": "Map hernoemd",
+    "toast_folder_deleted": "Map verwijderd",
+    "toast_error_mark_read": "Markeren als gelezen mislukt",
+    "toast_error_empty": "Map leegmaken mislukt",
+    "toast_error_create": "Map aanmaken mislukt",
+    "toast_error_rename": "Map hernoemen mislukt",
+    "toast_error_delete": "Map verwijderen mislukt",
+    "toast_error_delete_has_children": "Map bevat submappen. Verwijder deze eerst.",
+    "toast_error_delete_has_email": "Map is niet leeg. Maak deze eerst leeg.",
+    "placeholder_folder_name": "Mapnaam",
+    "create": "Aanmaken",
+    "rename_confirm": "Hernoemen"
   },
   "shortcuts": {
     "title": "Sneltoetsen",
@@ -1748,7 +1827,7 @@
       "use_address": "Dit adres gebruiken",
       "invalid_tag": "Tag mag alleen letters, cijfers en streepjes bevatten",
       "tag_too_long": "Tag mag maximaal 30 tekens bevatten",
-      "help_text": "E-mails verzonden naar gebruiker+tag@domein.nl komen in je postvak IN aan",
+      "help_text": "E-mails verzonden naar gebruiker{delimiter}tag@domein.nl komen in je postvak IN aan",
       "validation": {
         "empty": "Tag mag niet leeg zijn",
         "too_long": "Tag mag maximaal {max} tekens bevatten",
@@ -2145,7 +2224,11 @@
       "tomorrow_header": "Morgen",
       "export_ics": "Exporteren als .ics",
       "copy_title": "Titel kopiëren",
-      "copy_link": "Vergaderlink kopiëren"
+      "copy_link": "Vergaderlink kopiëren",
+      "go_to_today": "Ga naar vandaag",
+      "new_all_day_event": "Nieuwe dagvullende afspraak",
+      "new_event": "Nieuwe afspraak",
+      "new_task": "Nieuwe taak"
     },
     "detail": {
       "add_note": "Notitie toevoegen...",
@@ -2444,6 +2527,20 @@
       "due_today": "Vervalt vandaag",
       "due_tomorrow": "Vervalt morgen",
       "overdue": "Achterstallig"
+    },
+    "months": {
+      "jan": "jan",
+      "feb": "feb",
+      "mar": "mrt",
+      "apr": "apr",
+      "may": "mei",
+      "jun": "jun",
+      "jul": "jul",
+      "aug": "aug",
+      "sep": "sep",
+      "oct": "okt",
+      "nov": "nov",
+      "dec": "dec"
     }
   },
   "advanced_search": {

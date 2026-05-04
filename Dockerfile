@@ -4,6 +4,14 @@ COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Optional: serve under a subpath like /webmail. Baked into emitted asset URLs
+# at build time, so it cannot be changed without rebuilding.
+ARG NEXT_PUBLIC_BASE_PATH=
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
+# Commit SHA shown in the About screen. .dockerignore excludes .git, so
+# `git rev-parse` inside the build can't find it — CI must pass it in.
+ARG GIT_COMMIT=unknown
+ENV GIT_COMMIT=$GIT_COMMIT
 RUN npx next build --webpack
 
 FROM node:24-alpine AS runner

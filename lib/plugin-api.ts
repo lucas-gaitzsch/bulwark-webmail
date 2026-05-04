@@ -23,7 +23,7 @@ import {
   taskHooks, templateHooks, smimeHooks, vacationHooks,
   uiHooks, themeHooks, toastHooks, dragDropHooks,
   keyboardHooks, appLifecycleHooks, accountSecurityHooks,
-  sidebarAppHooks, avatarHooks, renderHooks,
+  sidebarAppHooks, avatarHooks, renderHooks, routerHooks,
 } from './plugin-hooks';
 import { createPluginI18n } from './plugin-i18n';
 import { toast as appToast } from '@/stores/toast-store';
@@ -187,6 +187,22 @@ export interface PluginHooksAPI {
   onQuotaChange: (handler: (...args: unknown[]) => unknown) => Disposable;
   /** Intercept - receives MailtoContext, return false to prevent the system mail client */
   onMailtoIntercept: (handler: (ctx: import('./plugin-types').MailtoContext) => boolean | void | Promise<boolean | void>) => Disposable;
+  /** Transform - receives the OutgoingEmail and returns a (possibly modified) copy */
+  onTransformOutgoingEmail: (handler: (email: import('./plugin-types').OutgoingEmail) => import('./plugin-types').OutgoingEmail | void | Promise<import('./plugin-types').OutgoingEmail | void>) => Disposable;
+  /** Intercept - receives ReplyContext, return false to cancel */
+  onBeforeReply: (handler: (ctx: import('./plugin-types').ReplyContext) => boolean | void | Promise<boolean | void>) => Disposable;
+  onBeforeReplyAll: (handler: (ctx: import('./plugin-types').ReplyContext) => boolean | void | Promise<boolean | void>) => Disposable;
+  onBeforeForward: (handler: (ctx: import('./plugin-types').ReplyContext) => boolean | void | Promise<boolean | void>) => Disposable;
+  /** Intercept - receives AttachmentInfo, return false to refuse the upload */
+  onBeforeAttachmentUpload: (handler: (info: import('./plugin-types').AttachmentInfo) => boolean | void | Promise<boolean | void>) => Disposable;
+  onAfterAttachmentUpload: (handler: (info: import('./plugin-types').AttachmentInfo) => void) => Disposable;
+  onAttachmentDownload: (handler: (info: import('./plugin-types').AttachmentInfo) => void) => Disposable;
+  /** Transform - receives AttachmentPreview, may return a modified preview */
+  onAttachmentPreview: (handler: (preview: import('./plugin-types').AttachmentPreview, info: import('./plugin-types').AttachmentInfo) => import('./plugin-types').AttachmentPreview | void | Promise<import('./plugin-types').AttachmentPreview | void>) => Disposable;
+  /** Transform - receives ExternalSearchResult[] and returns an extended array */
+  onProvideSearchResults: (handler: (results: import('./plugin-types').ExternalSearchResult[], ctx: { query: string; filters: import('./plugin-types').SearchFilters }) => import('./plugin-types').ExternalSearchResult[] | void | Promise<import('./plugin-types').ExternalSearchResult[] | void>) => Disposable;
+  /** Observer - debounced snapshot of the composer draft */
+  onDraftChange: (handler: (draft: import('./plugin-types').DraftView) => void) => Disposable;
   // Calendar
   onCalendarEventOpen: (handler: (...args: unknown[]) => unknown) => Disposable;
   onBeforeEventCreate: (handler: (...args: unknown[]) => unknown) => Disposable;
@@ -204,6 +220,8 @@ export interface PluginHooksAPI {
   onICalSubscriptionChange: (handler: (...args: unknown[]) => unknown) => Disposable;
   onCalendarAlert: (handler: (...args: unknown[]) => unknown) => Disposable;
   onCalendarAlertAcknowledge: (handler: (...args: unknown[]) => unknown) => Disposable;
+  /** Transform - receives ConflictWarning[] and returns an extended array */
+  onCheckEventConflicts: (handler: (warnings: import('./plugin-types').ConflictWarning[], ctx: { event: import('./plugin-types').CalendarEventFormView }) => import('./plugin-types').ConflictWarning[] | void | Promise<import('./plugin-types').ConflictWarning[] | void>) => Disposable;
   // Calendar Form
   onCalendarEventFormOpen: (handler: (...args: unknown[]) => unknown) => Disposable;
   onCalendarEventFormSave: (handler: (...args: unknown[]) => unknown) => Disposable;
@@ -220,6 +238,8 @@ export interface PluginHooksAPI {
   onContactGroupChange: (handler: (...args: unknown[]) => unknown) => Disposable;
   onContactGroupMemberChange: (handler: (...args: unknown[]) => unknown) => Disposable;
   onContactMove: (handler: (...args: unknown[]) => unknown) => Disposable;
+  /** Transform - receives RecipientSuggestion[] and returns an extended array */
+  onProvideRecipientSuggestions: (handler: (suggestions: import('./plugin-types').RecipientSuggestion[], ctx: { query: string }) => import('./plugin-types').RecipientSuggestion[] | void | Promise<import('./plugin-types').RecipientSuggestion[] | void>) => Disposable;
   // Files
   onFileNavigate: (handler: (...args: unknown[]) => unknown) => Disposable;
   onBeforeFileUpload: (handler: (...args: unknown[]) => unknown) => Disposable;
@@ -297,6 +317,10 @@ export interface PluginHooksAPI {
   onColumnResize: (handler: (...args: unknown[]) => unknown) => Disposable;
   onMobileBack: (handler: () => void) => Disposable;
   onMobileViewSwitch: (handler: (...args: unknown[]) => unknown) => Disposable;
+  /** Intercept - receives ExternalLinkContext, return false to cancel navigation */
+  onBeforeExternalLink: (handler: (ctx: import('./plugin-types').ExternalLinkContext) => boolean | void | Promise<boolean | void>) => Disposable;
+  /** Observer - debounced text-selection change */
+  onTextSelectionChange: (handler: (ctx: import('./plugin-types').SelectionContext) => void) => Disposable;
   // Theme
   onThemeChange: (handler: (...args: unknown[]) => unknown) => Disposable;
   onCustomThemeChange: (handler: (...args: unknown[]) => unknown) => Disposable;
@@ -305,6 +329,8 @@ export interface PluginHooksAPI {
   onToastShow: (handler: (...args: unknown[]) => unknown) => Disposable;
   onToastDismiss: (handler: (...args: unknown[]) => unknown) => Disposable;
   onBrowserNotification: (handler: (...args: unknown[]) => unknown) => Disposable;
+  /** Observer fired when an OS-level notification is clicked */
+  onNotificationClick: (handler: (ctx: { tag: string; data?: unknown }) => void) => Disposable;
   // Drag & Drop
   onDragStart: (handler: (...args: unknown[]) => unknown) => Disposable;
   onDragEnd: (handler: (...args: unknown[]) => unknown) => Disposable;
@@ -320,6 +346,12 @@ export interface PluginHooksAPI {
   onBeforeUnload: (handler: () => void) => Disposable;
   onAppError: (handler: (...args: unknown[]) => unknown) => Disposable;
   onInterval: (handler: () => void, intervalMs: number) => Disposable;
+  /** Observer - browser window focus / blur */
+  onWindowFocus: (handler: () => void) => Disposable;
+  onWindowBlur: (handler: () => void) => Disposable;
+  /** Observer - network connectivity transitions */
+  onOnline: (handler: () => void) => Disposable;
+  onOffline: (handler: () => void) => Disposable;
   // Account Security
   onPasswordChange: (handler: () => void) => Disposable;
   onTotpChange: (handler: (...args: unknown[]) => unknown) => Disposable;
@@ -335,6 +367,11 @@ export interface PluginHooksAPI {
   // Render - transform hook for email list row badges
   // Handler: (badges: EmailListBadge[], ctx: { emailId: string; email: EmailReadView }) => EmailListBadge[]
   onEmailListItemRender: (handler: (...args: unknown[]) => unknown) => Disposable;
+  // Router
+  /** Observer - fired on every in-app navigation. RouteContext.from holds the previous path. */
+  onNavigate: (handler: (ctx: import('./plugin-types').RouteContext) => void) => Disposable;
+  onRouteEnter: (handler: (ctx: import('./plugin-types').RouteContext) => void) => Disposable;
+  onRouteLeave: (handler: (ctx: import('./plugin-types').RouteContext) => void) => Disposable;
 }
 
 // --- Permission mapping for hooks ----------------------------
@@ -350,7 +387,13 @@ const HOOK_PERMISSIONS: Record<string, Permission> = {
   onEmailSelectionChange: 'email:read', onNewEmailReceived: 'email:read',
   onPushConnectionChange: 'email:read', onQuotaChange: 'email:read',
   onMailtoIntercept: 'email:read', onEmailListItemRender: 'email:read',
+  onBeforeReply: 'email:read', onBeforeReplyAll: 'email:read',
+  onBeforeForward: 'email:read', onAttachmentDownload: 'email:read',
+  onAttachmentPreview: 'email:read', onProvideSearchResults: 'email:read',
+  onDraftChange: 'email:read',
+  onBeforeAttachmentUpload: 'email:write', onAfterAttachmentUpload: 'email:write',
   onBeforeEmailSend: 'email:send', onAfterEmailSend: 'email:send',
+  onTransformOutgoingEmail: 'email:send',
   onBeforeEmailDelete: 'email:write', onAfterEmailDelete: 'email:write',
   onBeforeEmailMove: 'email:write', onAfterEmailMove: 'email:write',
   onEmailArchive: 'email:write', onEmailUnarchive: 'email:write',
@@ -362,6 +405,7 @@ const HOOK_PERMISSIONS: Record<string, Permission> = {
   onCalendarEventOpen: 'calendar:read', onCalendarDateChange: 'calendar:read',
   onCalendarViewChange: 'calendar:read', onCalendarVisibilityToggle: 'calendar:read',
   onCalendarAlert: 'calendar:read', onCalendarAlertAcknowledge: 'calendar:read',
+  onCheckEventConflicts: 'calendar:read',
   onCalendarEventFormOpen: 'calendar:read', onCalendarEventFormSave: 'calendar:write',
   onBeforeEventCreate: 'calendar:write', onAfterEventCreate: 'calendar:write',
   onBeforeEventUpdate: 'calendar:write', onAfterEventUpdate: 'calendar:write',
@@ -370,6 +414,7 @@ const HOOK_PERMISSIONS: Record<string, Permission> = {
   onCalendarChange: 'calendar:write', onICalSubscriptionChange: 'calendar:write',
   // Contacts
   onContactOpen: 'contacts:read', onContactSelectionChange: 'contacts:read',
+  onProvideRecipientSuggestions: 'contacts:read',
   onBeforeContactCreate: 'contacts:write', onAfterContactCreate: 'contacts:write',
   onBeforeContactUpdate: 'contacts:write', onAfterContactUpdate: 'contacts:write',
   onBeforeContactDelete: 'contacts:write', onAfterContactDelete: 'contacts:write',
@@ -419,12 +464,13 @@ const HOOK_PERMISSIONS: Record<string, Permission> = {
   onSidebarCollapse: 'ui:observe', onDeviceTypeChange: 'ui:observe',
   onColumnResize: 'ui:observe', onMobileBack: 'ui:observe',
   onMobileViewSwitch: 'ui:observe',
+  onBeforeExternalLink: 'ui:observe', onTextSelectionChange: 'ui:observe',
   // Theme
   onThemeChange: 'ui:observe', onCustomThemeChange: 'ui:observe',
   onLocaleChange: 'ui:observe',
   // Toast
   onToastShow: 'ui:observe', onToastDismiss: 'ui:observe',
-  onBrowserNotification: 'ui:observe',
+  onBrowserNotification: 'ui:observe', onNotificationClick: 'ui:observe',
   // Drag & Drop
   onDragStart: 'ui:observe', onDragEnd: 'ui:observe',
   onEmailDrop: 'ui:observe', onTagDrop: 'ui:observe',
@@ -435,6 +481,8 @@ const HOOK_PERMISSIONS: Record<string, Permission> = {
   onAppReady: 'app:lifecycle', onVisibilityChange: 'app:lifecycle',
   onBeforeUnload: 'app:lifecycle', onAppError: 'app:lifecycle',
   onInterval: 'app:lifecycle',
+  onWindowFocus: 'app:lifecycle', onWindowBlur: 'app:lifecycle',
+  onOnline: 'app:lifecycle', onOffline: 'app:lifecycle',
   // Account Security
   onPasswordChange: 'security:read', onTotpChange: 'security:read',
   onAppPasswordChange: 'security:read', onEncryptionChange: 'security:read',
@@ -444,6 +492,8 @@ const HOOK_PERMISSIONS: Record<string, Permission> = {
   onSidebarAppChange: 'ui:observe',
   // Avatar
   onAvatarResolve: 'email:read',
+  // Router
+  onNavigate: 'ui:observe', onRouteEnter: 'ui:observe', onRouteLeave: 'ui:observe',
 };
 
 // Map hook names â†’ actual HookBus instances
@@ -494,6 +544,8 @@ const HOOK_BUSES: Record<string, { register: (pluginId: string, handler: (...arg
   ...Object.fromEntries(Object.entries(avatarHooks)),
   // Render
   ...Object.fromEntries(Object.entries(renderHooks)),
+  // Router
+  ...Object.fromEntries(Object.entries(routerHooks)),
 };
 
 // --- Slot registration bridge --------------------------------

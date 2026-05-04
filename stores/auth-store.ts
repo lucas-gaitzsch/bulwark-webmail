@@ -1209,6 +1209,15 @@ export const useAuthStore = create<AuthState>()(
           for (const account of accounts) {
             if (clients.has(account.id)) continue; // Already connected
 
+            // Basic auth without rememberMe leaves nothing to restore — the
+            // user logged in without persisting credentials. Evict silently
+            // so the login screen is shown without flagging a fake error.
+            if (account.authMode === 'basic' && !account.rememberMe) {
+              evictAccount(account.id);
+              accountStore.removeAccount(account.id);
+              continue;
+            }
+
             try {
               if (account.authMode === 'oauth') {
                 const res = await apiFetch(`/api/auth/token?slot=${account.cookieSlot}`, { method: 'PUT' });
@@ -1225,7 +1234,7 @@ export const useAuthStore = create<AuthState>()(
                 } else {
                   throw new Error(`Token refresh failed: ${res.status}`);
                 }
-              } else if (account.authMode === 'basic' && account.rememberMe) {
+              } else {
                 const res = await apiFetch(`/api/auth/session?slot=${account.cookieSlot}`, { method: 'PUT' });
                 if (res.ok) {
                   const { serverUrl, username, password } = await res.json();
@@ -1238,9 +1247,6 @@ export const useAuthStore = create<AuthState>()(
                 } else {
                   throw new Error(`Session cookie missing: ${res.status}`);
                 }
-              } else {
-                // Basic auth without rememberMe - can't restore
-                throw new Error('No saved session');
               }
             } catch (err) {
               debug.error(`Failed to restore account ${account.id}:`, err);

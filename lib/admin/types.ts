@@ -39,6 +39,7 @@ export interface FeatureGates {
   folderIconsEnabled: boolean;
   hoverActionsConfigEnabled: boolean;
   filesEnabled: boolean;
+  contactsEnabled: boolean;
 }
 
 export const DEFAULT_FEATURE_GATES: FeatureGates = {
@@ -58,6 +59,7 @@ export const DEFAULT_FEATURE_GATES: FeatureGates = {
   folderIconsEnabled: true,
   hoverActionsConfigEnabled: true,
   filesEnabled: true,
+  contactsEnabled: true,
 };
 
 export interface ThemePolicy {

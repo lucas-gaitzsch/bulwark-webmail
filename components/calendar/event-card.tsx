@@ -150,9 +150,8 @@ export function EventCard({ event, calendar, variant, onClick, onMouseEnter, onM
         aria-label={ariaLabel}
         {...dragProps}
         className={cn(
-          "w-full h-full text-left rounded px-1.5 py-0.5 text-xs overflow-hidden",
+          "w-full h-full text-left rounded-r px-1.5 py-0.5 text-xs overflow-hidden",
           "hover:opacity-90 transition-opacity cursor-pointer",
-          continuesBefore && "rounded-l-sm",
           continuesAfter && "rounded-r-sm",
           continuesBefore && "-ml-0.5",
           continuesAfter && "pr-2",
@@ -182,7 +181,7 @@ export function EventCard({ event, calendar, variant, onClick, onMouseEnter, onM
       {...dragProps}
       data-calendar-event
       className={cn(
-        "w-full h-full text-left rounded px-1.5 py-0.5 text-xs overflow-hidden",
+        "w-full h-full text-left rounded-r px-1.5 py-0.5 text-xs overflow-hidden",
         "hover:opacity-90 transition-opacity cursor-pointer",
         isSelected && "ring-2 ring-primary",
         isBeingDragged && "opacity-50",

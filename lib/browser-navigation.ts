@@ -8,17 +8,27 @@ export function replaceWindowLocation(url: string): void {
   window.location.replace(url);
 }
 
+// Build-time constant injected by next.config.ts. When the app is built with
+// NEXT_PUBLIC_BASE_PATH=/webmail, Next.js itself prefixes routes and assets;
+// helpers below use the same value so client code stays consistent.
+const STATIC_BASE_PATH = (process.env.NEXT_PUBLIC_BASE_PATH ?? '').replace(/\/+$/, '');
+
 /**
- * Returns the mount prefix from the current URL.
- * When the app is served behind a reverse proxy at e.g. /bulwark,
- * the browser sees /bulwark/en/login while Next.js sees /en/login.
+ * Returns the mount prefix the app is served at.
  *
- * If a locale is supplied (e.g. from route params) it is used directly;
- * otherwise the first path segment that matches a known locale is used.
+ * Resolution order:
+ *  1. The build-time `NEXT_PUBLIC_BASE_PATH` constant (set in next.config.ts).
+ *  2. Runtime detection from `window.location.pathname` for legacy deploys
+ *     where the reverse proxy mounts the app at a subpath without rebuilding.
+ *
+ * If a locale is supplied (e.g. from route params) it anchors the runtime
+ * detection; otherwise the first path segment that matches a known locale is
+ * used.
  *
  * Returns '' when there is no prefix.
  */
 export function getPathPrefix(locale?: string): string {
+  if (STATIC_BASE_PATH) return STATIC_BASE_PATH;
   if (typeof window === 'undefined') return '';
 
   const segments = window.location.pathname.split('/').filter(Boolean);

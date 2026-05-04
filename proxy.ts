@@ -23,7 +23,7 @@ export async function proxy(request: NextRequest) {
     ? `'self' 'nonce-${nonce}' 'unsafe-eval' blob:`
     : `'self' 'nonce-${nonce}' blob:`;
 
-  const connectSrc = isDev ? `'self' https: ws: wss:` : `'self' https:`;
+  const connectSrc = isDev ? `'self' http: https: ws: wss:` : `'self' https:`;
 
   const frameAncestors = process.env.ALLOWED_FRAME_ANCESTORS?.trim() || "'none'";
 

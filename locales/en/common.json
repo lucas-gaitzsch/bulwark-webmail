@@ -199,6 +199,7 @@
     "batch_actions": {
       "select": "Select emails",
       "select_all": "Select all",
+      "selected_messages": "{count, plural, one {1 email} other {# emails}} selected",
       "mark_read": "Mark as read",
       "mark_unread": "Mark as unread",
       "delete": "Delete",
@@ -238,6 +239,11 @@
     "unstar": "Unstar",
     "mark_unread": "Mark as unread",
     "mark_read": "Mark as read",
+    "unread": "Unread",
+    "read": "Read",
+    "spam_short": "Spam",
+    "not_spam_short": "Not spam",
+    "move": "Move",
     "print": "Print",
     "view_source": "View source",
     "export_email": "Export as .eml",
@@ -321,7 +327,45 @@
         "fail": "DMARC Fail",
         "none": "No DMARC"
       },
-      "spam_score": "Spam Score"
+      "spam_score": "Spam Score",
+      "tooltip_spf": "Sender Policy Framework: Verifies that the sending server is authorized to send email on behalf of the domain",
+      "tooltip_dkim": "DomainKeys Identified Mail: Confirms the email was not altered in transit using a cryptographic signature",
+      "tooltip_dmarc": "Domain-based Message Authentication, Reporting & Conformance: Ensures SPF and DKIM align with the sender's domain and sets a policy for failures",
+      "policy": "Policy",
+      "result": {
+        "pass": "Pass",
+        "fail": "Fail",
+        "softfail": "Soft fail",
+        "neutral": "Neutral",
+        "permerror": "Permanent error",
+        "temperror": "Temporary error",
+        "none": "None"
+      }
+    },
+    "details": {
+      "recipients_routing": "Recipients & routing",
+      "authentication_security": "Authentication & security",
+      "identifiers_threading": "Identifiers & threading",
+      "mailing_list": "Mailing list",
+      "message_properties": "Message properties",
+      "sent": "Sent",
+      "received": "Received",
+      "delivery_time": "Delivery time",
+      "in_reply_to": "In-Reply-To",
+      "references": "References",
+      "thread_id": "Thread ID",
+      "size": "Size",
+      "mime_type": "MIME type",
+      "attachments_summary": "{count} files · {size}",
+      "list_id": "List ID",
+      "list_help": "List help",
+      "list_post": "List post",
+      "list_unsubscribe": "Unsubscribe",
+      "iprev": "Reverse DNS",
+      "spam_status": "Spam status",
+      "ai_verdict": "AI verdict",
+      "account": "Account",
+      "no_subject": "(no subject)"
     },
     "headers": {
       "routing": "Routing",
@@ -465,6 +509,8 @@
     "send": "Send",
     "cancel": "Cancel",
     "attach": "Attach",
+    "attach_photos": "Photos & Videos",
+    "attach_files": "Files",
     "discard": "Discard",
     "discard_draft_title": "Discard draft?",
     "discard_draft_confirm": "You have unsaved changes. Do you want to discard this draft?",
@@ -799,6 +845,23 @@
         "swift": "Swift Gesture",
         "relax": "Relax"
       },
+      "push": {
+        "title": "Background Notifications",
+        "description": "Receive system notifications for new mail when this site is closed. Delivered via the Bulwark push relay; the relay never sees mail content.",
+        "relay_label": "Push relay",
+        "relay_desc": "Defaults to the hosted Bulwark relay. Change only if you self-host.",
+        "relay_placeholder": "https://notifications.relay.example.com",
+        "status_active": "Active on this device",
+        "status_inactive": "Not enabled on this device",
+        "status_unsupported": "This browser does not support Web Push",
+        "status_busy": "Working…",
+        "enable": "Enable",
+        "reenable": "Re-register",
+        "disable": "Disable",
+        "confirm_disable_title": "Disable background notifications?",
+        "confirm_disable_message": "This device will stop receiving alerts when the site is closed.",
+        "ios_hint": "On iOS, install the site to your home screen first - Safari only delivers Web Push to installed PWAs."
+      },
       "sound_selection": {
         "title": "Notification Sound",
         "description": "Choose which sound to play for notifications",
@@ -910,6 +973,13 @@
         "label": "Auto-select Reply Address",
         "description": "When replying, automatically switch the From address to the identity that originally received the message"
       },
+      "sub_address_delimiter": {
+        "label": "Sub-Address Delimiter",
+        "description": "Character separating your username from a sub-address tag. Match the delimiter your mail server uses (e.g. user{delimiter}tag@domain.com).",
+        "option": "{delimiter}  (user{delimiter}tag@domain.com)",
+        "custom": "Custom…",
+        "custom_input_label": "Custom delimiter character"
+      },
       "attachment_click_action": {
         "label": "Attachment Click Action",
         "description": "Choose whether clicking a file attachment previews it or downloads it immediately",
@@ -1001,6 +1071,10 @@
       "hide_inline_image_attachments": {
         "label": "Hide inline images from attachments",
         "description": "Images embedded in the message body are not listed as separate attachments"
+      },
+      "attachment_image_previews": {
+        "label": "Show image previews in attachments",
+        "description": "Render image attachments as thumbnail cards instead of generic file icons"
       }
     },
     "composer": {
@@ -1755,7 +1829,7 @@
       "use_address": "Use This Address",
       "invalid_tag": "Tag must be alphanumeric and dashes only",
       "tag_too_long": "Tag must be 30 characters or less",
-      "help_text": "Emails sent to user+tag@domain.com will arrive in your inbox",
+      "help_text": "Emails sent to user{delimiter}tag@domain.com will arrive in your inbox",
       "validation": {
         "empty": "Tag cannot be empty",
         "too_long": "Tag must be {max} characters or less",
@@ -2287,6 +2361,20 @@
       "fri": "Fri",
       "sat": "Sat",
       "sun": "Sun"
+    },
+    "months": {
+      "jan": "Jan",
+      "feb": "Feb",
+      "mar": "Mar",
+      "apr": "Apr",
+      "may": "May",
+      "jun": "Jun",
+      "jul": "Jul",
+      "aug": "Aug",
+      "sep": "Sep",
+      "oct": "Oct",
+      "nov": "Nov",
+      "dec": "Dec"
     },
     "notifications": {
       "event_created": "Event created",

@@ -88,7 +88,7 @@ export const pluginStorage = {
     await deleteItem(STORE_THEMES, themeId);
   },
 
-  // Theme skin CSS — separate store so it can be present/absent independently
+  // Theme skin CSS - separate store so it can be present/absent independently
   // of the colour-token CSS (e.g. some v2 themes ship colours only).
   async saveThemeSkin(themeId: string, skin: string): Promise<void> {
     await putItem(STORE_THEME_SKINS, themeId, skin);
