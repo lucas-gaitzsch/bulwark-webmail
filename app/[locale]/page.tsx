@@ -59,7 +59,8 @@ import { Button } from "@/components/ui/button";
 import { useConfig } from "@/hooks/use-config";
 import { usePluginStore } from "@/stores/plugin-store";
 import { useThemeStore } from "@/stores/theme-store";
-import { consumePendingMailto } from "@/lib/protocol-handlers/session";
+import { consumePendingMailto, listenForMailtoRequests } from "@/lib/protocol-handlers/session";
+import type { ParsedMailto } from "@/lib/protocol-handlers/mailto";
 import { plainTextToComposerBody } from "@/lib/email-composer-utils";
 import { appLifecycleHooks, uiHooks, routerHooks, toastHooks, emailHooks } from "@/lib/plugin-hooks";
 import type { EmailReadView } from "@/lib/plugin-types";
@@ -669,12 +670,7 @@ export default function Home() {
     }
   }, [initialCheckDone, isAuthenticated, authLoading]);
 
-  useEffect(() => {
-    if (!isAuthenticated || !client) return;
-
-    const pending = consumePendingMailto();
-    if (!pending) return;
-
+  const openMailtoDraft = useCallback((pending: ParsedMailto) => {
     const body = useSettingsStore.getState().plainTextMode
       ? pending.body
       : plainTextToComposerBody(pending.body);
@@ -696,7 +692,20 @@ export default function Home() {
     setComposerMode("compose");
     setShowComposer(true);
     if (isMobile) setActiveView("viewer");
-  }, [isAuthenticated, client, isMobile, setActiveView]);
+  }, [isMobile, setActiveView]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    const pending = consumePendingMailto();
+    if (pending) openMailtoDraft(pending);
+  }, [isAuthenticated, client, openMailtoDraft]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    return listenForMailtoRequests(openMailtoDraft);
+  }, [isAuthenticated, client, openMailtoDraft]);
 
   // Load mailboxes and emails when authenticated (only if not already loaded)
   useEffect(() => {

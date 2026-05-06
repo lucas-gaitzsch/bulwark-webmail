@@ -170,7 +170,7 @@ export default function CalendarPage() {
   }, [error]);
 
   useEffect(() => {
-    if (!isAuthenticated || !client) return;
+    if (!isAuthenticated || !client || !supportsCalendar) return;
 
     const pending = consumePendingWebcal();
     if (!pending) return;
@@ -180,7 +180,7 @@ export default function CalendarPage() {
       name: pending.suggestedName,
     });
     setShowSubscriptionModal(true);
-  }, [isAuthenticated, client]);
+  }, [isAuthenticated, client, supportsCalendar]);
 
   useEffect(() => {
     if (client && !hasFetched.current) {

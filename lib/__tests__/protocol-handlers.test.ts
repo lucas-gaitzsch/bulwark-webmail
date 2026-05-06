@@ -37,6 +37,14 @@ describe("protocol handlers", () => {
       });
     });
 
+    it("preserves literal plus signs in query values", () => {
+      expect(parseMailto("mailto:?to=user+tag@example.com&subject=C++&body=a+b")).toMatchObject({
+        to: ["user+tag@example.com"],
+        subject: "C++",
+        body: "a+b",
+      });
+    });
+
     it("rejects non-mailto URLs", () => {
       expect(parseMailto("https://example.com")).toBeNull();
     });

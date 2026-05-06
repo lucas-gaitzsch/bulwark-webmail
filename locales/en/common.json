@@ -145,6 +145,8 @@
     "mailto_registered": "Email handler registration requested",
     "webcal_registered": "Calendar handler registration requested",
     "registration_failed": "Protocol handler registration failed",
+    "opening_mailto": "Opening composer...",
+    "opening_webcal": "Opening calendar...",
     "browser_note": "Your browser or operating system may ask you to confirm this and may require Bulwark to be installed before it can be selected as the default app."
   },
   "sidebar_apps": {

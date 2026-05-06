@@ -71,7 +71,6 @@ export default function manifest(): ExtendedManifest {
     ],
     protocol_handlers: [
       { protocol: "mailto", url: withBase("/protocol/mailto?url=%s") },
-      { protocol: "webcal", url: withBase("/protocol/webcal?url=%s") },
     ],
     launch_handler: {
       client_mode: "navigate-existing",

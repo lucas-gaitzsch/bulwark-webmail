@@ -145,6 +145,8 @@
     "mailto_registered": "Registrierung als E-Mail-Handler angefordert",
     "webcal_registered": "Registrierung als Kalender-Handler angefordert",
     "registration_failed": "Protokoll-Handler konnte nicht registriert werden",
+    "opening_mailto": "Editor wird geöffnet...",
+    "opening_webcal": "Kalender wird geöffnet...",
     "browser_note": "Ihr Browser oder Betriebssystem kann eine Bestätigung verlangen. Eventuell muss Bulwark installiert sein, bevor es als Standard-App ausgewählt werden kann."
   },
   "sidebar_apps": {
@@ -509,6 +511,8 @@
     "send": "Senden",
     "cancel": "Abbrechen",
     "attach": "Anhängen",
+    "attach_photos": "Fotos und Videos",
+    "attach_files": "Dateien",
     "discard": "Verwerfen",
     "discard_draft_title": "Entwurf verwerfen?",
     "discard_draft_confirm": "Sie haben ungespeicherte Änderungen. Möchten Sie diesen Entwurf verwerfen?",

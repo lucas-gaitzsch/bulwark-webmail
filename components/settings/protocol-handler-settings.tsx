@@ -21,7 +21,11 @@ function registerProtocolHandler(protocol: "mailto" | "webcal") {
   );
 }
 
-export function ProtocolHandlerSettings() {
+interface ProtocolHandlerSettingsProps {
+  supportsCalendar: boolean;
+}
+
+export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSettingsProps) {
   const t = useTranslations("protocol_handlers");
   const [supported, setSupported] = useState(false);
 
@@ -52,11 +56,13 @@ export function ProtocolHandlerSettings() {
         </Button>
       </SettingItem>
 
-      <SettingItem label={t("webcal_label")} description={t("webcal_description")}>
-        <Button size="sm" onClick={() => handleRegister("webcal")} disabled={!supported}>
-          {t("register_webcal")}
-        </Button>
-      </SettingItem>
+      {supportsCalendar && (
+        <SettingItem label={t("webcal_label")} description={t("webcal_description")}>
+          <Button size="sm" onClick={() => handleRegister("webcal")} disabled={!supported}>
+            {t("register_webcal")}
+          </Button>
+        </SettingItem>
+      )}
 
       <p className="text-xs text-muted-foreground">{t("browser_note")}</p>
     </SettingsSection>

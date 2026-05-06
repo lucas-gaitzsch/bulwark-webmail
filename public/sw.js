@@ -23,6 +23,7 @@ function getBasePath() {
 }
 
 const BASE_PATH = getBasePath();
+const MAILTO_CLIENT_IDS = new Set();
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -41,6 +42,37 @@ self.addEventListener("push", (event) => {
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   event.waitUntil(handleNotificationClick(event));
+});
+
+self.addEventListener("message", (event) => {
+  const data = event.data || {};
+  if (data.type === "mailto-client-ready") {
+    if (event.source && event.source.id) {
+      MAILTO_CLIENT_IDS.add(event.source.id);
+    }
+    return;
+  }
+
+  if (data.type === "mailto-client-gone") {
+    if (event.source && event.source.id) {
+      MAILTO_CLIENT_IDS.delete(event.source.id);
+    }
+    return;
+  }
+
+  if (data.type === "open-mailto-in-client") {
+    event.waitUntil(handleOpenMailtoInClient(event));
+    return;
+  }
+
+  if (data.type === "focus-existing-mailto-client") {
+    event.waitUntil(focusExistingWindowClient(event.source && event.source.id, true));
+    return;
+  }
+
+  if (data.type !== "focus-existing-client") return;
+
+  event.waitUntil(focusExistingWindowClient(event.source && event.source.id));
 });
 
 async function handlePush(event) {
@@ -157,6 +189,58 @@ async function handleNotificationClick(event) {
 
   if (self.clients.openWindow) {
     return self.clients.openWindow(targetUrl || `${BASE_PATH}/`);
+  }
+}
+
+async function focusExistingWindowClient(sourceClientId, requireMailtoReady) {
+  const client = await findReusableWindowClient(sourceClientId, requireMailtoReady);
+  if (client && "focus" in client) {
+    return client.focus();
+  }
+}
+
+async function handleOpenMailtoInClient(event) {
+  const data = event.data || {};
+  const responsePort = event.ports && event.ports[0];
+  const client = await findReusableWindowClient(event.source && event.source.id, true);
+
+  if (!client) {
+    responsePort && responsePort.postMessage({ delivered: false });
+    return;
+  }
+
+  try {
+    client.postMessage({ type: "mailto-request", id: data.id, value: data.value });
+    if ("focus" in client) {
+      await client.focus();
+    }
+    responsePort && responsePort.postMessage({ delivered: true });
+  } catch (_) {
+    responsePort && responsePort.postMessage({ delivered: false });
+  }
+}
+
+async function findReusableWindowClient(sourceClientId, requireMailtoReady) {
+  const scopedPath = BASE_PATH ? `${BASE_PATH}/` : "/";
+  const allClients = await self.clients.matchAll({
+    type: "window",
+    includeUncontrolled: true,
+  });
+
+  for (const client of allClients) {
+    if (client.id === sourceClientId) continue;
+    if (requireMailtoReady && !MAILTO_CLIENT_IDS.has(client.id)) continue;
+
+    try {
+      const url = new URL(client.url);
+      if (url.origin !== self.location.origin) continue;
+      if (!url.pathname.startsWith(scopedPath)) continue;
+      if (url.pathname.includes("/protocol/")) continue;
+
+      return client;
+    } catch (_) {
+      // Detached clients can disappear while iterating.
+    }
   }
 }
 

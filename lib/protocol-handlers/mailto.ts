@@ -29,11 +29,16 @@ function splitRecipients(value: string): string[] {
     .filter(Boolean);
 }
 
-function getQueryValue(searchParams: URLSearchParams, key: string): string {
+type QueryParam = {
+  key: string;
+  value: string;
+};
+
+function getQueryValue(searchParams: QueryParam[], key: string): string {
   const values: string[] = [];
   const lowerKey = key.toLowerCase();
 
-  for (const [paramKey, value] of searchParams.entries()) {
+  for (const { key: paramKey, value } of searchParams) {
     if (paramKey.toLowerCase() === lowerKey) {
       values.push(value);
     }
@@ -50,34 +55,61 @@ function decodePathname(pathname: string): string | null {
   }
 }
 
-export function parseMailto(raw: string): ParsedMailto | null {
-  let url: URL;
-
+function decodeQueryPart(value: string): string | null {
   try {
-    url = new URL(raw);
+    // RFC 6068 uses percent-encoding for mailto query fields; unlike form
+    // encoding, a literal '+' is part of the value and must not become space.
+    return decodeURIComponent(value);
   } catch {
     return null;
   }
+}
 
-  if (url.protocol !== "mailto:") return null;
+function parseQuery(query: string): QueryParam[] | null {
+  if (!query) return [];
 
-  const decodedPathname = decodePathname(url.pathname);
+  const params: QueryParam[] = [];
+  for (const part of query.split("&")) {
+    if (!part) continue;
+    const separatorIndex = part.indexOf("=");
+    const rawKey = separatorIndex >= 0 ? part.slice(0, separatorIndex) : part;
+    const rawValue = separatorIndex >= 0 ? part.slice(separatorIndex + 1) : "";
+    const key = decodeQueryPart(rawKey);
+    const value = decodeQueryPart(rawValue);
+    if (key === null || value === null) return null;
+    params.push({ key, value });
+  }
+
+  return params;
+}
+
+export function parseMailto(raw: string): ParsedMailto | null {
+  if (!raw.toLowerCase().startsWith("mailto:")) return null;
+
+  const addressAndQuery = raw.slice("mailto:".length);
+  const queryIndex = addressAndQuery.indexOf("?");
+  const rawPathname = queryIndex >= 0 ? addressAndQuery.slice(0, queryIndex) : addressAndQuery;
+  const rawQuery = queryIndex >= 0 ? addressAndQuery.slice(queryIndex + 1) : "";
+
+  const decodedPathname = decodePathname(rawPathname);
   if (decodedPathname === null) return null;
+  const searchParams = parseQuery(rawQuery);
+  if (searchParams === null) return null;
 
   const to = [
     ...splitRecipients(decodedPathname),
-    ...splitRecipients(getQueryValue(url.searchParams, "to")),
+    ...splitRecipients(getQueryValue(searchParams, "to")),
   ].slice(0, MAX_RECIPIENTS);
   const remainingAfterTo = Math.max(0, MAX_RECIPIENTS - to.length);
-  const cc = splitRecipients(getQueryValue(url.searchParams, "cc")).slice(0, remainingAfterTo);
+  const cc = splitRecipients(getQueryValue(searchParams, "cc")).slice(0, remainingAfterTo);
   const remainingAfterCc = Math.max(0, MAX_RECIPIENTS - to.length - cc.length);
-  const bcc = splitRecipients(getQueryValue(url.searchParams, "bcc")).slice(0, remainingAfterCc);
+  const bcc = splitRecipients(getQueryValue(searchParams, "bcc")).slice(0, remainingAfterCc);
 
   return {
     to,
     cc,
     bcc,
-    subject: stripControlChars(getQueryValue(url.searchParams, "subject")).slice(0, MAX_SUBJECT_LENGTH),
-    body: stripBodyControlChars(getQueryValue(url.searchParams, "body")).slice(0, MAX_BODY_LENGTH),
+    subject: stripControlChars(getQueryValue(searchParams, "subject")).slice(0, MAX_SUBJECT_LENGTH),
+    body: stripBodyControlChars(getQueryValue(searchParams, "body")).slice(0, MAX_BODY_LENGTH),
   };
 }
