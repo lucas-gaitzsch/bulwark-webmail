@@ -238,10 +238,7 @@ export function ContextMenuSubMenu({
       {isOpen && (
         <div
           ref={subMenuRef}
-          className={cn(
-            "fixed z-50 min-w-[180px] bg-background rounded-md shadow-lg border border-border",
-            "animate-in fade-in-0 zoom-in-95 duration-100"
-          )}
+          className="fixed z-50 min-w-[180px] bg-background rounded-md shadow-lg border border-border"
           style={{
             left: subMenuPos?.x ?? 0,
             top: subMenuPos?.y ?? 0,

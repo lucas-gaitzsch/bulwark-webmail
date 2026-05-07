@@ -168,6 +168,11 @@ export async function GET(
         }))
       : [];
 
+    const fileUrl = (path: unknown): string | null =>
+      typeof path === 'string' && path
+        ? new URL(`/api/v1/files/${path}`, DIRECTORY_URL).toString()
+        : null;
+
     return NextResponse.json(
       {
         extension: {
@@ -184,6 +189,8 @@ export async function GET(
           githubRepo: extension.githubRepo ?? null,
           license: extension.license ?? null,
           minAppVersion: extension.minAppVersion ?? null,
+          iconUrl: fileUrl(extension.iconPath),
+          bannerUrl: fileUrl(extension.bannerPath),
           author: extension.author ?? null,
           latestVersion,
           versions,

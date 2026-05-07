@@ -3,6 +3,7 @@ import { configManager } from '@/lib/admin/config-manager';
 import { requireAdminAuth, getClientIP } from '@/lib/admin/session';
 import { auditLog } from '@/lib/admin/audit';
 import { CONFIG_ENV_MAP } from '@/lib/admin/types';
+import { parseJmapServers } from '@/lib/admin/jmap-servers';
 import { logger } from '@/lib/logger';
 
 /**
@@ -45,6 +46,23 @@ export async function PATCH(request: NextRequest) {
     const invalidKeys = Object.keys(updates).filter(k => !validKeys.includes(k));
     if (invalidKeys.length > 0) {
       return NextResponse.json({ error: `Unknown config keys: ${invalidKeys.join(', ')}` }, { status: 400 });
+    }
+
+    // Normalize jmapServers: pass through the parser so invalid entries are
+    // rejected (bad ids, duplicate ids, non-HTTP URLs) before they're persisted.
+    if ('jmapServers' in updates) {
+      const incoming = updates.jmapServers;
+      if (incoming != null && !Array.isArray(incoming)) {
+        return NextResponse.json({ error: 'jmapServers must be an array' }, { status: 400 });
+      }
+      const sanitized = parseJmapServers(incoming);
+      const incomingCount = Array.isArray(incoming) ? incoming.length : 0;
+      if (sanitized.length !== incomingCount) {
+        return NextResponse.json({
+          error: 'One or more jmapServers entries are invalid (each needs a unique id, label, and HTTP(S) url).',
+        }, { status: 400 });
+      }
+      updates.jmapServers = sanitized;
     }
 
     // Get old values for audit

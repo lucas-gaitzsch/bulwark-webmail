@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP Server",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "The server must allow CORS requests from this domain.",
+    "jmap_server_label": "Server",
+    "jmap_server_auto_picked": "Server selected from your email domain.",
     "sign_in": "Sign in",
     "signing_in": "Signing in...",
     "loading": "Loading...",
@@ -432,6 +434,7 @@
       "declined_counter_title": "Counter Proposal Declined",
       "cancelled_title": "Event Cancelled",
       "organizer": "Organized by {name}",
+      "organizer_label": "Organized by",
       "attendees": "{count, plural, one {# attendee} other {# attendees}}",
       "accept": "Accept",
       "maybe": "Maybe",
@@ -719,6 +722,9 @@
     "discard_changes": "Discard unsaved changes?",
     "discard": "Discard",
     "keep_editing": "Keep editing",
+    "search_placeholder": "Search settings",
+    "search_clear": "Clear search",
+    "search_no_results": "No matching settings",
     "tabs": {
       "appearance": "Appearance",
       "language": "Language & Region",
@@ -1379,7 +1385,7 @@
         "description": "Sync your settings across browsers and devices"
       },
       "sender_favicons": {
-        "label": "Sender Favicons (Experimental)",
+        "label": "Sender Favicons",
         "description": "Show website icons as profile pictures for business senders"
       },
       "show_avatars_in_junk": {

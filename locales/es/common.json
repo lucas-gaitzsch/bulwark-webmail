@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "Servidor JMAP",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "El servidor debe permitir solicitudes CORS desde este dominio.",
+    "jmap_server_label": "Servidor",
+    "jmap_server_auto_picked": "Servidor seleccionado a partir del dominio de tu correo.",
     "sign_in": "Iniciar sesión",
     "signing_in": "Iniciando sesión...",
     "loading": "Cargando...",
@@ -405,6 +407,7 @@
       "declined_counter_title": "Contrapropuesta rechazada",
       "cancelled_title": "Evento cancelado",
       "organizer": "Organizado por {name}",
+      "organizer_label": "Organizado por",
       "attendees": "{count, plural, one {# asistente} other {# asistentes}}",
       "accept": "Aceptar",
       "maybe": "Quizás",
@@ -511,8 +514,8 @@
     "send": "Enviar",
     "cancel": "Cancelar",
     "attach": "Adjuntar",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "Fotos y videos",
+    "attach_files": "Archivos",
     "discard": "Descartar",
     "discard_draft_title": "¿Descartar borrador?",
     "discard_draft_confirm": "Tiene cambios sin guardar. ¿Desea descartar este borrador?",
@@ -1379,7 +1382,7 @@
         "description": "Sincronice sus ajustes entre navegadores y dispositivos"
       },
       "sender_favicons": {
-        "label": "Favicons de remitente (Experimental)",
+        "label": "Favicons de remitente",
         "description": "Mostrar iconos de sitios web como fotos de perfil para remitentes empresariales"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Vista previa"
       }
-    }
+    },
+    "search_placeholder": "Buscar ajustes",
+    "search_clear": "Borrar búsqueda",
+    "search_no_results": "No hay ajustes coincidentes"
   },
   "errors": {
     "page_error_title": "Algo salió mal",

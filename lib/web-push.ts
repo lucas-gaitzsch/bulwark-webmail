@@ -25,7 +25,7 @@ const SUBSCRIPTION_REFRESH_THRESHOLD_DAYS = 7;
 
 // Only `EmailDelivery` state-changes when new mail is actually delivered.
 // `Email` fires for any mutation (sending, drafting, moving, marking read,
-// deleting) and `Mailbox` fires for mailbox edits — both produced spurious
+// deleting) and `Mailbox` fires for mailbox edits - both produced spurious
 // system notifications, so we keep them out of the push subscription.
 // In-app sync uses a separate StateChange channel and is unaffected.
 const PUSH_TYPES = ['EmailDelivery'] as const;

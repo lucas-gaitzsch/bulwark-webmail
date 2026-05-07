@@ -1,8 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPlugin } from '@/lib/admin/plugin-registry';
+import { getDevPlugin } from '@/lib/admin/plugin-dev';
 import { getPluginConfig, setPluginConfig, deletePluginConfigKey } from '@/lib/admin/plugin-config';
 import { requireAdminAuth } from '@/lib/admin/session';
 import { getStalwartCredentials } from '@/lib/stalwart/credentials';
+
+/** Resolve a plugin from the persisted registry first, then PLUGIN_DEV_DIR. */
+async function resolvePlugin(id: string) {
+  const registered = await getPlugin(id);
+  if (registered) return registered;
+  const dev = await getDevPlugin(id);
+  return dev?.plugin ?? null;
+}
 
 /**
  * GET /api/admin/plugins/[id]/config - Read plugin config
@@ -35,7 +44,7 @@ export async function GET(
       }
     }
 
-    const plugin = await getPlugin(id);
+    const plugin = await resolvePlugin(id);
     if (!plugin) {
       return NextResponse.json({ error: 'Plugin not found' }, { status: 404 });
     }
@@ -80,7 +89,7 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid plugin ID' }, { status: 400 });
     }
 
-    const plugin = await getPlugin(id);
+    const plugin = await resolvePlugin(id);
     if (!plugin) {
       return NextResponse.json({ error: 'Plugin not found' }, { status: 404 });
     }

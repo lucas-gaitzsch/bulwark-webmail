@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { logger } from '@/lib/logger';
-import { refreshTokenCookieName } from '@/lib/oauth/tokens';
+import { refreshTokenCookieName, refreshTokenServerCookieName } from '@/lib/oauth/tokens';
 import { exchangeCodeForTokens, buildOAuthParams, getMetadata, getTokenEndpoint } from '@/lib/oauth/token-exchange';
 import { getCookieOptions } from '@/lib/oauth/cookie-config';
 
@@ -15,25 +15,35 @@ function getSlot(request: NextRequest): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const { code, code_verifier, redirect_uri, slot: bodySlot } = await request.json();
+    const { code, code_verifier, redirect_uri, slot: bodySlot, server_id: bodyServerId } = await request.json();
 
     if (!code || !code_verifier || !redirect_uri) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
     const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot <= 4 ? bodySlot : getSlot(request);
+    const serverId = typeof bodyServerId === 'string' && bodyServerId ? bodyServerId : null;
 
-    const tokens = await exchangeCodeForTokens(code, code_verifier, redirect_uri);
+    const tokens = await exchangeCodeForTokens(code, code_verifier, redirect_uri, serverId);
 
     const response = NextResponse.json({
       access_token: tokens.access_token,
       expires_in: tokens.expires_in,
     });
 
+    const cookieStore = await cookies();
     if (tokens.refresh_token) {
       const cookieName = refreshTokenCookieName(slot);
-      const cookieStore = await cookies();
       cookieStore.set(cookieName, tokens.refresh_token, getCookieOptions());
+    }
+    // Persist which server entry minted this refresh token so the PUT/DELETE
+    // handlers can route the refresh/revocation calls to the right token
+    // endpoint without the client having to track it across page loads.
+    const serverCookieName = refreshTokenServerCookieName(slot);
+    if (serverId) {
+      cookieStore.set(serverCookieName, serverId, getCookieOptions());
+    } else {
+      cookieStore.delete(serverCookieName);
     }
 
     return response;
@@ -49,17 +59,18 @@ export async function PUT(request: NextRequest) {
     const cookieName = refreshTokenCookieName(slot);
     const cookieStore = await cookies();
     const refreshToken = cookieStore.get(cookieName)?.value;
+    const serverId = cookieStore.get(refreshTokenServerCookieName(slot))?.value || null;
 
     if (!refreshToken) {
       return NextResponse.json({ error: 'No refresh token' }, { status: 401 });
     }
 
-    const tokenEndpoint = await getTokenEndpoint();
+    const tokenEndpoint = await getTokenEndpoint(serverId);
 
     const params = buildOAuthParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
-    });
+    }, serverId);
 
     const tokenResponse = await fetch(tokenEndpoint, {
       method: 'POST',
@@ -71,6 +82,7 @@ export async function PUT(request: NextRequest) {
       const errorText = await tokenResponse.text();
       logger.error('Token refresh failed', { status: tokenResponse.status, error: errorText });
       cookieStore.delete(cookieName);
+      cookieStore.delete(refreshTokenServerCookieName(slot));
       return NextResponse.json({ error: 'Refresh failed' }, { status: 401 });
     }
 
@@ -104,13 +116,15 @@ export async function DELETE(request: NextRequest) {
       const cookieStore = await cookies();
       for (let i = 0; i <= 4; i++) {
         const name = refreshTokenCookieName(i);
+        const serverCookieName = refreshTokenServerCookieName(i);
         const token = cookieStore.get(name)?.value;
+        const slotServerId = cookieStore.get(serverCookieName)?.value || null;
         if (token) {
           // Best-effort revocation
           try {
-            const metadata = await getMetadata().catch(() => null);
+            const metadata = await getMetadata(slotServerId).catch(() => null);
             if (metadata?.revocation_endpoint) {
-              const params = buildOAuthParams({ token, token_type_hint: 'refresh_token' });
+              const params = buildOAuthParams({ token, token_type_hint: 'refresh_token' }, slotServerId);
               await fetch(metadata.revocation_endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -120,6 +134,7 @@ export async function DELETE(request: NextRequest) {
           } catch { /* best effort */ }
           cookieStore.delete(name);
         }
+        cookieStore.delete(serverCookieName);
       }
       return NextResponse.json({ ok: true });
     }
@@ -128,7 +143,8 @@ export async function DELETE(request: NextRequest) {
     const cookieName = refreshTokenCookieName(slot);
     const cookieStore = await cookies();
     const refreshToken = cookieStore.get(cookieName)?.value;
-    const metadata = await getMetadata().catch((err) => {
+    const slotServerId = cookieStore.get(refreshTokenServerCookieName(slot))?.value || null;
+    const metadata = await getMetadata(slotServerId).catch((err) => {
       logger.warn('Failed to discover OAuth metadata during logout', {
         error: err instanceof Error ? err.message : 'Unknown error',
       });
@@ -140,7 +156,7 @@ export async function DELETE(request: NextRequest) {
         const params = buildOAuthParams({
           token: refreshToken,
           token_type_hint: 'refresh_token',
-        });
+        }, slotServerId);
 
         try {
           const revocationResponse = await fetch(metadata.revocation_endpoint, {
@@ -158,6 +174,7 @@ export async function DELETE(request: NextRequest) {
 
       cookieStore.delete(cookieName);
     }
+    cookieStore.delete(refreshTokenServerCookieName(slot));
 
     let end_session_url: string | undefined;
     if (metadata?.end_session_endpoint) {

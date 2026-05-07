@@ -12,13 +12,22 @@ interface SmimeStatusBannerProps {
   className?: string;
 }
 
+type SmimeVariant = 'success' | 'warning' | 'error' | 'info';
+
+const variantTone: Record<SmimeVariant, string> = {
+  success: 'bg-success/15 text-success',
+  warning: 'bg-warning/15 text-warning',
+  error: 'bg-destructive/15 text-destructive',
+  info: 'bg-info/15 text-info',
+};
+
 export function SmimeStatusBanner({ status, onUnlockKey, className }: SmimeStatusBannerProps) {
   const t = useTranslations('smime');
 
   const items: Array<{
     icon: React.ReactNode;
     text: string;
-    variant: 'success' | 'warning' | 'error' | 'info';
+    variant: SmimeVariant;
   }> = [];
 
   // Encryption status
@@ -26,26 +35,26 @@ export function SmimeStatusBanner({ status, onUnlockKey, className }: SmimeStatu
     if (status.decryptionError) {
       if (status.decryptionError === 'locked') {
         items.push({
-          icon: <Lock className="w-4 h-4" />,
+          icon: <Lock className="w-5 h-5" />,
           text: t('unlock_key_desc'),
           variant: 'warning',
         });
       } else if (status.decryptionError === 'no-key') {
         items.push({
-          icon: <Lock className="w-4 h-4" />,
+          icon: <Lock className="w-5 h-5" />,
           text: t('status_encrypted_no_key'),
           variant: 'warning',
         });
       } else {
         items.push({
-          icon: <ShieldX className="w-4 h-4" />,
+          icon: <ShieldX className="w-5 h-5" />,
           text: t('status_encrypted_failed'),
           variant: 'error',
         });
       }
     } else {
       items.push({
-        icon: <LockOpen className="w-4 h-4" />,
+        icon: <LockOpen className="w-5 h-5" />,
         text: t('status_encrypted_ok'),
         variant: 'success',
       });
@@ -57,26 +66,26 @@ export function SmimeStatusBanner({ status, onUnlockKey, className }: SmimeStatu
     if (status.signatureValid === true) {
       if (status.selfSigned) {
         items.push({
-          icon: <AlertTriangle className="w-4 h-4" />,
+          icon: <AlertTriangle className="w-5 h-5" />,
           text: t('status_signed_self_signed'),
           variant: 'warning',
         });
       } else if (status.signerEmailMatch === false) {
         items.push({
-          icon: <AlertTriangle className="w-4 h-4" />,
+          icon: <AlertTriangle className="w-5 h-5" />,
           text: t('status_signed_mismatch'),
           variant: 'warning',
         });
       } else {
         items.push({
-          icon: <ShieldCheck className="w-4 h-4" />,
+          icon: <ShieldCheck className="w-5 h-5" />,
           text: t('status_signed_valid'),
           variant: 'success',
         });
       }
     } else if (status.signatureValid === false) {
       items.push({
-        icon: <ShieldAlert className="w-4 h-4" />,
+        icon: <ShieldAlert className="w-5 h-5" />,
         text: status.signatureError || t('status_signed_invalid'),
         variant: 'error',
       });
@@ -86,7 +95,7 @@ export function SmimeStatusBanner({ status, onUnlockKey, className }: SmimeStatu
   // Unsupported S/MIME
   if (status.unsupportedReason) {
     items.push({
-      icon: <Info className="w-4 h-4" />,
+      icon: <Info className="w-5 h-5" />,
       text: t('status_unsupported'),
       variant: 'info',
     });
@@ -94,33 +103,34 @@ export function SmimeStatusBanner({ status, onUnlockKey, className }: SmimeStatu
 
   if (items.length === 0) return null;
 
-  const variantStyles = {
-    success: 'bg-success/10 text-success border-success/30',
-    warning: 'bg-warning/10 text-warning border-warning/30',
-    error: 'bg-destructive/10 text-destructive border-destructive/30',
-    info: 'bg-info/10 text-info border-info/30',
-  };
-
   return (
-    <div className={cn("flex flex-col gap-1.5 py-1", className)}>
+    <div className={cn("flex flex-col gap-3 py-1", className)}>
       {items.map((item, i) => (
-        <div
-          key={i}
-          className={cn(
-            "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm border",
-            variantStyles[item.variant],
-          )}
-        >
-          {item.icon}
-          <span className="flex-1">{item.text}</span>
-          {item.variant === 'warning' && status.decryptionError === 'locked' && onUnlockKey && (
-            <button
-              onClick={onUnlockKey}
-              className="text-xs font-medium underline hover:no-underline"
-            >
-              {t('unlock_key')}
-            </button>
-          )}
+        <div key={i} className="flex items-start gap-3">
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm",
+            variantTone[item.variant],
+          )}>
+            {item.icon}
+          </div>
+          <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                S/MIME
+              </div>
+              <div className="text-sm font-medium text-foreground break-words">
+                {item.text}
+              </div>
+            </div>
+            {item.variant === 'warning' && status.decryptionError === 'locked' && onUnlockKey && (
+              <button
+                onClick={onUnlockKey}
+                className="text-xs font-medium underline hover:no-underline flex-shrink-0"
+              >
+                {t('unlock_key')}
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

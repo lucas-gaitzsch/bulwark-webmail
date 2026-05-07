@@ -52,6 +52,14 @@ export function sanitizeFrameOrigins(input: unknown): string[] {
   return out;
 }
 
+/**
+ * Same syntax + validation as `sanitizeFrameOrigins`, but for the
+ * `httpOrigins` manifest field. Kept as a separate exported function so the
+ * intent is explicit at every call site (frame embedding vs. HTTP fetch).
+ */
+export const sanitizeHttpOrigins = sanitizeFrameOrigins;
+export const isValidHttpOrigin = isValidFrameOrigin;
+
 // In-memory cache. The proxy fires on every page navigation; reading the
 // registry JSON every time is fine but cheap to skip when nothing has
 // changed. Five seconds is short enough to make plugin install/uninstall

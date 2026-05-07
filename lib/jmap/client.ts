@@ -304,7 +304,7 @@ function stripMessageIdBrackets(id: string): string {
 // form: `Display Name <addr@example.com>`. Re-emitting that as the JMAP
 // from.name field produces a doubled From header (`"Name <addr>" <addr>`)
 // whose display-name is invalid per RFC 5322 §3.4 and gets rejected by the
-// submission validator — the email then sits forever in Drafts.
+// submission validator - the email then sits forever in Drafts.
 function sanitizeIdentityDisplayName(name: string | undefined | null): string {
   if (!name) return '';
   return name.replace(/\s*<[^>]*>\s*$/, '').trim();

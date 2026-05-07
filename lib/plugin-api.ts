@@ -108,6 +108,75 @@ function createPluginLogger(pluginId: string) {
   };
 }
 
+// --- Cross-origin fetch helpers ------------------------------
+
+/**
+ * Returns true when `url`'s origin is allowed by one of the plugin's
+ * declared `httpOrigins` patterns. Patterns are either a literal origin
+ * (`https://host[:port]`) or a wildcard subdomain form (`https://*.host`).
+ *
+ * Wildcards match exactly one subdomain layer above `host` - e.g.
+ * `https://*.example.com` matches `https://a.example.com` but NOT
+ * `https://example.com` and NOT `https://a.b.example.com`. This mirrors how
+ * the CSP frame-src handles wildcards and avoids accidentally widening
+ * access when the manifest only intended a single tier.
+ */
+function originMatchesAllowlist(url: URL, allowlist: string[]): boolean {
+  if (url.protocol !== 'https:') return false;
+  for (const entry of allowlist) {
+    let parsed: URL;
+    try {
+      parsed = new URL(entry.replace('*.', ''));
+    } catch {
+      continue;
+    }
+    if (parsed.protocol !== 'https:') continue;
+    const port = url.port || '';
+    const expectedPort = parsed.port || '';
+    if (port !== expectedPort) continue;
+    if (entry.includes('*.')) {
+      const suffix = '.' + parsed.hostname.toLowerCase();
+      if (url.hostname.toLowerCase().endsWith(suffix)) {
+        const prefix = url.hostname.slice(0, url.hostname.length - suffix.length);
+        // Require exactly one non-empty subdomain label.
+        if (prefix.length > 0 && !prefix.includes('.')) return true;
+      }
+    } else {
+      if (url.hostname.toLowerCase() === parsed.hostname.toLowerCase()) return true;
+    }
+  }
+  return false;
+}
+
+// --- Cross-origin fetch types --------------------------------
+
+export interface PluginFetchInit {
+  /** HTTP method. Defaults to GET. */
+  method?: string;
+  /** Request headers. Plain object only - no Headers / cookies forwarded. */
+  headers?: Record<string, string>;
+  /** Body. Plain string, ArrayBuffer, Uint8Array, Blob, or FormData. */
+  body?: string | ArrayBuffer | ArrayBufferView | Blob | FormData | null;
+  /** Optional AbortSignal for cancellation. */
+  signal?: AbortSignal;
+}
+
+export interface PluginFetchResponse {
+  ok: boolean;
+  status: number;
+  statusText: string;
+  /** Response headers, lower-cased keys. */
+  headers: Record<string, string>;
+  /** Resolves the body as text. */
+  text: () => Promise<string>;
+  /** Resolves the body as parsed JSON, or null on parse error. */
+  json: () => Promise<unknown>;
+  /** Resolves the body as raw bytes. */
+  arrayBuffer: () => Promise<ArrayBuffer>;
+  /** Resolves the body as a Blob. */
+  blob: () => Promise<Blob>;
+}
+
 // --- PluginAPI interface -------------------------------------
 
 export interface PluginAPI {
@@ -137,6 +206,16 @@ export interface PluginAPI {
   };
   http: {
     post: (path: string, body: Record<string, unknown>) => Promise<{ ok: boolean; status: number; data: unknown }>;
+    /**
+     * Cross-origin fetch against an origin declared in the manifest's
+     * `httpOrigins` allowlist. Requires `http:fetch` permission.
+     *
+     * No webmail credentials are forwarded - the plugin must supply its own
+     * `Authorization` (or other auth) header. Each call is gated on origin
+     * even when the URL came from plugin settings, so a user-pasted URL
+     * outside the allowlist is rejected at the boundary.
+     */
+    fetch: (url: string, init?: PluginFetchInit) => Promise<PluginFetchResponse>;
   };
   storage: ReturnType<typeof createPluginStorage>;
   log: ReturnType<typeof createPluginLogger>;
@@ -758,6 +837,58 @@ export function createPluginAPI(plugin: InstalledPlugin): PluginAPI {
         });
         const data = await res.json().catch(() => null);
         return { ok: res.ok, status: res.status, data };
+      },
+
+      fetch: async (rawUrl: string, init?: PluginFetchInit) => {
+        requirePermission(plugin, 'http:fetch');
+        if (typeof rawUrl !== 'string') {
+          throw new Error('url must be a string');
+        }
+        let url: URL;
+        try {
+          url = new URL(rawUrl);
+        } catch {
+          throw new Error('url must be an absolute https:// URL');
+        }
+        const allowlist = plugin.httpOrigins ?? [];
+        if (allowlist.length === 0) {
+          throw new Error(`Plugin "${plugin.id}" has no httpOrigins declared`);
+        }
+        if (!originMatchesAllowlist(url, allowlist)) {
+          throw new Error(`Origin ${url.origin} not in plugin httpOrigins allowlist`);
+        }
+        // Defence-in-depth: don't let the plugin smuggle a header that the
+        // host's same-origin /api flow uses to authenticate the user.
+        const safeHeaders: Record<string, string> = {};
+        if (init?.headers) {
+          for (const [k, v] of Object.entries(init.headers)) {
+            const lower = k.toLowerCase();
+            if (lower === 'cookie' || lower === 'x-jmap-username') continue;
+            safeHeaders[k] = v;
+          }
+        }
+        const res = await fetch(url.toString(), {
+          method: init?.method ?? 'GET',
+          headers: safeHeaders,
+          // eslint-disable-next-line no-undef
+          body: (init?.body ?? undefined) as BodyInit | undefined,
+          signal: init?.signal,
+          credentials: 'omit',
+          mode: 'cors',
+          redirect: 'follow',
+        });
+        const headersOut: Record<string, string> = {};
+        res.headers.forEach((value, key) => { headersOut[key.toLowerCase()] = value; });
+        return {
+          ok: res.ok,
+          status: res.status,
+          statusText: res.statusText,
+          headers: headersOut,
+          text: () => res.text(),
+          json: () => res.json().catch(() => null),
+          arrayBuffer: () => res.arrayBuffer(),
+          blob: () => res.blob(),
+        };
       },
     },
 

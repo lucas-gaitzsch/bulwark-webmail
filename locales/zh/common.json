@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP 服务器",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "服务器必须允许来自此域名的 CORS 请求。",
+    "jmap_server_label": "服务器",
+    "jmap_server_auto_picked": "已根据您的电子邮件域名选择服务器。",
     "sign_in": "登录",
     "signing_in": "正在登录…",
     "loading": "正在加载…",
@@ -407,6 +409,7 @@
       "declined_counter_title": "改期建议已被拒绝",
       "cancelled_title": "活动已取消",
       "organizer": "组织者：{name}",
+      "organizer_label": "组织者：",
       "attendees": "{count, plural, one {# 位参与者} other {# 位参与者}}",
       "accept": "接受",
       "maybe": "暂定",
@@ -511,8 +514,8 @@
     "send": "发送",
     "cancel": "取消",
     "attach": "附件",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "照片和视频",
+    "attach_files": "文件",
     "discard": "丢弃",
     "discard_draft_title": "丢弃草稿？",
     "discard_draft_confirm": "您有未保存的更改。确定要丢弃这封草稿吗？",
@@ -1379,7 +1382,7 @@
         "description": "跨浏览器和设备同步您的设置"
       },
       "sender_favicons": {
-        "label": "发件人图标（实验性）",
+        "label": "发件人图标",
         "description": "使用企业发件人的网站图标作为头像"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "预览"
       }
-    }
+    },
+    "search_placeholder": "搜索设置",
+    "search_clear": "清除搜索",
+    "search_no_results": "没有匹配的设置"
   },
   "errors": {
     "page_error_title": "出了点问题",

@@ -18,6 +18,14 @@ import { discoverOAuth, type OAuthMetadata } from "@/lib/oauth/discovery";
 import { generateCodeVerifier, generateCodeChallenge, generateState } from "@/lib/oauth/pkce";
 import { OAUTH_SCOPES } from "@/lib/oauth/tokens";
 import { useUpdateStore, selectBanner } from "@/stores/update-store";
+import type { PublicJmapServerEntry } from "@/lib/admin/jmap-servers";
+
+function findServerByDomain(servers: PublicJmapServerEntry[], email: string | undefined): PublicJmapServerEntry | undefined {
+  if (!email || !email.includes("@")) return undefined;
+  const domain = email.split("@")[1]?.trim().toLowerCase();
+  if (!domain) return undefined;
+  return servers.find((s) => (s.domains ?? []).some((d) => d.toLowerCase() === domain));
+}
 
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0";
 const GIT_COMMIT = process.env.NEXT_PUBLIC_GIT_COMMIT || "unknown";
@@ -109,7 +117,7 @@ export default function LoginPage() {
   const isAddAccountMode = searchParams.get("mode") === "add-account";
   const { login, loginDemo, isLoading, error, clearError, isAuthenticated } = useAuthStore();
   const { theme, setTheme, initializeTheme } = useThemeStore(useShallow((s) => ({ theme: s.theme, setTheme: s.setTheme, initializeTheme: s.initializeTheme })));
-  const { appName, jmapServerUrl: serverUrl, oauthEnabled, oauthOnly, oauthClientId, oauthIssuerUrl, rememberMeEnabled, devMode, demoMode, loginLogoLightUrl, loginLogoDarkUrl, loginCompanyName, loginImprintUrl, loginPrivacyPolicyUrl, loginWebsiteUrl, isLoading: configLoading, error: configError, autoSsoEnabled, embeddedMode: _embeddedMode, allowCustomJmapEndpoint } = useConfig();
+  const { appName, jmapServerUrl: configuredServerUrl, oauthEnabled, oauthOnly, oauthClientId: globalOauthClientId, oauthIssuerUrl: globalOauthIssuerUrl, rememberMeEnabled, devMode, demoMode, loginLogoLightUrl, loginLogoDarkUrl, loginCompanyName, loginImprintUrl, loginPrivacyPolicyUrl, loginWebsiteUrl, isLoading: configLoading, error: configError, autoSsoEnabled, embeddedMode: _embeddedMode, allowCustomJmapEndpoint, jmapServers, jmapServerAutoPickByDomain } = useConfig();
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
 
   const [formData, setFormData] = useState({
@@ -117,6 +125,18 @@ export default function LoginPage() {
     password: "",
   });
   const [jmapEndpoint, setJmapEndpoint] = useState("");
+  const [selectedServerId, setSelectedServerId] = useState<string | null>(null);
+  const [domainAutoLocked, setDomainAutoLocked] = useState(false);
+
+  const hasServerList = jmapServers.length > 0;
+  const selectedServer = hasServerList
+    ? jmapServers.find((s) => s.id === selectedServerId) ?? jmapServers[0]
+    : undefined;
+
+  // Effective values: per-server overrides win, then global config.
+  const serverUrl = selectedServer?.url || configuredServerUrl;
+  const effectiveOauthClientId = selectedServer?.oauth?.clientId || globalOauthClientId;
+  const effectiveOauthIssuerUrl = selectedServer?.oauth?.issuerUrl || globalOauthIssuerUrl;
   const [totpCode, setTotpCode] = useState("");
   const [showTotpField, setShowTotpField] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
@@ -156,6 +176,27 @@ export default function LoginPage() {
       setJmapEndpoint(serverUrl);
     }
   }, [serverUrl, jmapEndpoint]);
+
+  // Initialize selected server when the server list arrives. Picks the first
+  // entry; the auto-pick effect below may override based on the email domain.
+  useEffect(() => {
+    if (!hasServerList) return;
+    if (selectedServerId && jmapServers.some((s) => s.id === selectedServerId)) return;
+    setSelectedServerId(jmapServers[0].id);
+  }, [hasServerList, jmapServers, selectedServerId]);
+
+  // Auto-pick by email domain. Locks the dropdown to the matched server until
+  // the user clears the email or types a domain we don't recognize.
+  useEffect(() => {
+    if (!jmapServerAutoPickByDomain || !hasServerList) return;
+    const match = findServerByDomain(jmapServers, formData.username);
+    if (match) {
+      if (selectedServerId !== match.id) setSelectedServerId(match.id);
+      setDomainAutoLocked(true);
+    } else {
+      setDomainAutoLocked(false);
+    }
+  }, [jmapServerAutoPickByDomain, hasServerList, jmapServers, formData.username, selectedServerId]);
 
   useEffect(() => {
     try {
@@ -254,7 +295,9 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!oauthEnabled || !serverUrl) return;
-    discoverOAuth(oauthIssuerUrl || serverUrl)
+    setOauthDiscoveryDone(false);
+    setOauthMetadata(null);
+    discoverOAuth(effectiveOauthIssuerUrl || serverUrl)
       .then((metadata) => {
         setOauthMetadata(metadata);
         setOauthDiscoveryDone(true);
@@ -263,7 +306,7 @@ export default function LoginPage() {
         setOauthMetadata(null);
         setOauthDiscoveryDone(true);
       });
-  }, [oauthEnabled, serverUrl, oauthIssuerUrl]);
+  }, [oauthEnabled, serverUrl, effectiveOauthIssuerUrl]);
 
   // Auto-SSO: when enabled with OAUTH_ONLY, skip the login page entirely
   const ssoError = searchParams.get("sso_error");
@@ -278,7 +321,11 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ redirect_uri: redirectUri, locale: params.locale }),
+        body: JSON.stringify({
+          redirect_uri: redirectUri,
+          locale: params.locale,
+          server_id: selectedServer?.id,
+        }),
       });
 
       if (!res.ok) {
@@ -304,7 +351,7 @@ export default function LoginPage() {
     } catch {
       setOauthLoading(false);
     }
-  }, [params.locale]);
+  }, [params.locale, selectedServer?.id]);
 
   useEffect(() => {
     if (!autoSsoEnabled || !oauthOnly || !oauthDiscoveryDone || !oauthMetadata) return;
@@ -445,7 +492,7 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = async () => {
-    if (!oauthMetadata || !oauthClientId) return;
+    if (!oauthMetadata || !effectiveOauthClientId) return;
     setOauthLoading(true);
 
     const verifier = generateCodeVerifier();
@@ -454,9 +501,19 @@ export default function LoginPage() {
     const prefix = getPathPrefix(params.locale as string);
     const redirectUri = `${window.location.origin}${prefix}/${params.locale}/auth/callback`;
 
+    // Resolve the JMAP URL to send to the callback. Server-list entries win
+    // over the custom-endpoint input, which wins over the global server URL.
+    const oauthServerUrl = selectedServer?.url
+      || (allowCustomJmapEndpoint ? jmapEndpoint : configuredServerUrl);
+
     sessionStorage.setItem("oauth_code_verifier", verifier);
     sessionStorage.setItem("oauth_state", state);
-    sessionStorage.setItem("oauth_server_url", allowCustomJmapEndpoint ? jmapEndpoint : serverUrl!);
+    sessionStorage.setItem("oauth_server_url", oauthServerUrl!);
+    if (selectedServer?.id) {
+      sessionStorage.setItem("oauth_server_id", selectedServer.id);
+    } else {
+      sessionStorage.removeItem("oauth_server_id");
+    }
     if (isAddAccountMode) {
       sessionStorage.setItem("oauth_add_account_mode", "true");
     }
@@ -473,7 +530,7 @@ export default function LoginPage() {
 
     const authUrl = new URL(oauthMetadata.authorization_endpoint);
     authUrl.searchParams.set("response_type", "code");
-    authUrl.searchParams.set("client_id", oauthClientId);
+    authUrl.searchParams.set("client_id", effectiveOauthClientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("scope", OAUTH_SCOPES);
     authUrl.searchParams.set("state", state);
@@ -486,7 +543,10 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const effectiveServerUrl = allowCustomJmapEndpoint ? jmapEndpoint : serverUrl;
+    // Server-list entries always win - `allowCustomJmapEndpoint` is only honored
+    // when the admin hasn't configured a server list.
+    const effectiveServerUrl = selectedServer?.url
+      || (allowCustomJmapEndpoint ? jmapEndpoint : serverUrl);
     const success = await login(
       effectiveServerUrl,
       formData.username,
@@ -607,13 +667,17 @@ export default function LoginPage() {
             <div className="px-8 pb-10 pt-4">
               {error && (
                 <div className={cn(
-                  "mb-5 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3",
+                  "mb-5 p-3 rounded-xl border border-destructive/20 bg-destructive/5 flex items-start gap-3",
                   shakeError && "animate-shake"
                 )}>
-                  <AlertCircle className="w-4.5 h-4.5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-600 dark:text-red-400 leading-relaxed">
-                    {t(`error.${error}`) || t("error.generic")}
-                  </p>
+                  <div className="w-10 h-10 rounded-full bg-destructive/15 text-destructive flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0 self-center">
+                    <p className="text-sm text-destructive leading-relaxed">
+                      {t(`error.${error}`) || t("error.generic")}
+                    </p>
+                  </div>
                 </div>
               )}
 
@@ -754,37 +818,45 @@ export default function LoginPage() {
             {/* Session Expired Banner */}
             {sessionExpired && (
               <div
-                className="mb-5 p-3.5 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3"
+                className="mb-5 p-3 rounded-xl border border-info/20 bg-info/5 flex items-start gap-3"
                 role="status"
                 aria-live="polite"
               >
-                <Info className="w-4.5 h-4.5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-blue-700 dark:text-blue-300 flex-1 leading-relaxed">
-                  {t("session_expired")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setSessionExpired(false)}
-                  className="p-0.5 rounded-md hover:bg-blue-500/10 transition-colors flex-shrink-0"
-                  aria-label={t("dismiss")}
-                >
-                  <X className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </button>
+                <div className="w-10 h-10 rounded-full bg-info/15 text-info flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <Info className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0 self-center flex items-center gap-2">
+                  <p className="text-sm text-info flex-1 leading-relaxed">
+                    {t("session_expired")}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSessionExpired(false)}
+                    className="p-1 rounded-md text-info hover:bg-info/10 transition-colors flex-shrink-0"
+                    aria-label={t("dismiss")}
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             )}
 
             {/* Error Message */}
             {error && (
               <div className={cn(
-                "mb-5 p-3.5 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-3",
+                "mb-5 p-3 rounded-xl border border-destructive/20 bg-destructive/5 flex items-start gap-3",
                 shakeError && "animate-shake"
               )}>
-                <AlertCircle className="w-4.5 h-4.5 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-600 dark:text-red-400 leading-relaxed">
-                  {error === 'invalid_credentials' && showTotpField && totpCode
-                    ? t('error.totp_invalid')
-                    : t(`error.${error}`) || t("error.generic")}
-                </p>
+                <div className="w-10 h-10 rounded-full bg-destructive/15 text-destructive flex items-center justify-center flex-shrink-0 shadow-sm">
+                  <AlertCircle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0 self-center">
+                  <p className="text-sm text-destructive leading-relaxed">
+                    {error === 'invalid_credentials' && showTotpField && totpCode
+                      ? t('error.totp_invalid')
+                      : t(`error.${error}`) || t("error.generic")}
+                  </p>
+                </div>
               </div>
             )}
 
@@ -836,11 +908,15 @@ export default function LoginPage() {
                     )}
                   </Button>
                 ) : oauthDiscoveryDone ? (
-                  <div className="p-3.5 bg-warning/10 border border-warning/20 rounded-xl flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-warning">
-                      {t("error.oauth_discovery_failed")}
-                    </p>
+                  <div className="p-3 rounded-xl border border-warning/20 bg-warning/5 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-warning/15 text-warning flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0 self-center">
+                      <p className="text-sm text-warning leading-relaxed">
+                        {t("error.oauth_discovery_failed")}
+                      </p>
+                    </div>
                   </div>
                 ) : (
                   <div className="flex justify-center py-4">
@@ -852,8 +928,32 @@ export default function LoginPage() {
               /* Login Form */
               <form onSubmit={handleSubmit} className="space-y-5">
                 <fieldset disabled={isLoading} className="space-y-4">
-                  {/* JMAP Endpoint field (when custom endpoints are allowed) */}
-                  {allowCustomJmapEndpoint && (
+                  {/* Server picker (when admin has configured a server list) */}
+                  {hasServerList && jmapServers.length > 1 && (
+                    <div className="space-y-1.5">
+                      <label htmlFor="jmap-server-select" className="block text-sm font-medium text-foreground">
+                        {t("jmap_server_label")}
+                      </label>
+                      <select
+                        id="jmap-server-select"
+                        value={selectedServer?.id ?? ""}
+                        onChange={(e) => setSelectedServerId(e.target.value)}
+                        disabled={domainAutoLocked}
+                        className="h-11 w-full px-3.5 bg-muted/40 border border-border/60 rounded-xl focus:bg-background focus:border-primary/50 transition-all duration-200 text-sm text-foreground disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        {jmapServers.map((s) => (
+                          <option key={s.id} value={s.id}>{s.label}</option>
+                        ))}
+                      </select>
+                      {domainAutoLocked && (
+                        <p className="text-[11px] text-muted-foreground leading-snug">
+                          {t("jmap_server_auto_picked")}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {/* JMAP Endpoint field (only when no server list and custom endpoints are allowed) */}
+                  {!hasServerList && allowCustomJmapEndpoint && (
                     <div className="space-y-1.5">
                       <label htmlFor="jmap-endpoint" className="block text-sm font-medium text-foreground">
                         {t("jmap_endpoint_label")}
@@ -1068,11 +1168,15 @@ export default function LoginPage() {
                 )}
 
                 {oauthEnabled && oauthDiscoveryDone && !oauthMetadata && (
-                  <div className="mt-2 p-3 bg-warning/10 border border-warning/20 rounded-xl flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-warning">
-                      {t("error.oauth_discovery_failed")}
-                    </p>
+                  <div className="mt-2 p-3 rounded-xl border border-warning/20 bg-warning/5 flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-warning/15 text-warning flex items-center justify-center flex-shrink-0 shadow-sm">
+                      <AlertCircle className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0 self-center">
+                      <p className="text-sm text-warning leading-relaxed">
+                        {t("error.oauth_discovery_failed")}
+                      </p>
+                    </div>
                   </div>
                 )}
               </form>

@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    // `fetch failed` from undici is too generic to debug — the real reason
+    // `fetch failed` from undici is too generic to debug - the real reason
     // (ENOTFOUND, ECONNREFUSED, TLS error, …) is on `error.cause`.
     const err = error as Error & { cause?: { code?: string; message?: string } };
     logger.error('push preview failed', {

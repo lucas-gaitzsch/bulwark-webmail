@@ -51,7 +51,7 @@ export async function fetchStatus(
   if (!endpoint) return { ok: false, error: 'endpoint blank' };
   if (!currentVersion) return { ok: false, error: 'current version blank' };
 
-  // Build the URL safely — never inject the version as a raw path component.
+  // Build the URL safely - never inject the version as a raw path component.
   let url: URL;
   try {
     url = new URL(endpoint);

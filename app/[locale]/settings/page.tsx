@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter } from '@/i18n/navigation';
-import { useTranslations } from 'next-intl';
+import { useTranslations, useMessages } from 'next-intl';
 import {
   ArrowLeft,
   ChevronRight,
   LogOut,
   Settings as SettingsIcon,
   Palette,
+  Search,
   User,
   Shield,
   UserPen,
@@ -32,9 +33,11 @@ import {
   Languages,
   Info,
   Bug,
+  X,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { AppearanceSettings } from '@/components/settings/appearance-settings';
 import { LayoutSettings } from '@/components/settings/layout-settings';
 import { LanguageSettings } from '@/components/settings/language-settings';
@@ -64,6 +67,9 @@ import { PluginsSettings } from '@/components/settings/plugins-settings';
 import { ProtocolHandlerSettings } from '@/components/settings/protocol-handler-settings';
 import { useAuthStore, redirectToLogin } from '@/stores/auth-store';
 import { useEmailStore } from '@/stores/email-store';
+import { usePluginStore } from '@/stores/plugin-store';
+import { useThemeStore } from '@/stores/theme-store';
+import { useSettingsStore } from '@/stores/settings-store';
 import { useIsDesktop } from '@/hooks/use-media-query';
 import { NavigationRail } from '@/components/layout/navigation-rail';
 import { SidebarAppsModal } from '@/components/layout/sidebar-apps-modal';
@@ -108,7 +114,6 @@ interface TabDef {
   label: string;
   icon: LucideIcon;
   group: TabGroup;
-  experimental?: boolean;
 }
 
 const tabIcons: Record<Tab, LucideIcon> = {
@@ -140,6 +145,175 @@ const tabIcons: Record<Tab, LucideIcon> = {
 };
 
 const tabGroupOrder: TabGroup[] = ['general', 'appearance', 'mail', 'privacy', 'apps', 'advanced'];
+
+// Translation paths per tab. Tabs that share a namespace (email_behavior,
+// appearance) explicitly list the subkeys they actually render so sub-results
+// are attributed to the correct tab. Tabs with their own namespace just point
+// at the namespace root.
+const tabSearchPaths: Record<Tab, string[]> = {
+  account: [
+    'settings.account.name_label',
+    'settings.account.username_label',
+    'settings.account.account_type_label',
+    'settings.account.auth_method_label',
+    'settings.account.email',
+    'settings.account.server',
+    'settings.account.storage',
+  ],
+  language: ['settings.appearance.language'],
+  notifications: ['settings.notifications'],
+  appearance: [
+    'settings.appearance.theme',
+    'settings.appearance.font_size',
+    'settings.appearance.list_density',
+    'settings.appearance.animations',
+  ],
+  layout: [
+    'settings.appearance.toolbar_position',
+    'settings.appearance.toolbar_labels',
+    'settings.appearance.hide_account_switcher',
+    'settings.appearance.show_rail_account_list',
+    'settings.appearance.unified_mailbox',
+    'settings.appearance.colorful_sidebar_icons',
+    'settings.email_behavior.mail_layout',
+  ],
+  reading: [
+    'settings.email_behavior.mark_read',
+    'settings.email_behavior.archive_mode',
+    'settings.email_behavior.delete_action',
+    'settings.email_behavior.attachment_click_action',
+    'settings.email_behavior.attachment_image_previews',
+    'settings.email_behavior.attachment_position',
+    'settings.email_behavior.disable_threading',
+    'settings.email_behavior.emails_per_page',
+    'settings.email_behavior.hide_inline_image_attachments',
+    'settings.email_behavior.hover_actions',
+    'settings.email_behavior.permanently_delete_junk',
+    'settings.email_behavior.show_preview',
+    'settings.email_behavior.plain_text_mode',
+  ],
+  composing: [
+    'settings.email_behavior.attachment_reminder',
+    'settings.email_behavior.auto_select_reply_identity',
+    'settings.email_behavior.default_mail_program',
+    'settings.email_behavior.sub_address_delimiter',
+  ],
+  identities: ['settings.identities'],
+  vacation: ['settings.vacation'],
+  filters: ['settings.filters'],
+  templates: ['settings.templates'],
+  folders: ['settings.folders'],
+  keywords: ['settings.keywords'],
+  security: ['settings.security'],
+  encryption: ['smime'],
+  content_senders: [
+    'settings.email_behavior.always_light_mode',
+    'settings.email_behavior.external_content',
+    'settings.email_behavior.trusted_senders',
+  ],
+  calendar: ['calendar.settings', 'calendar.management'],
+  contacts: ['settings.contacts', 'contacts'],
+  files: ['settings.files'],
+  sidebar_apps: ['settings.sidebar_apps', 'sidebar_apps'],
+  about_data: ['settings.advanced'],
+  themes: [],
+  plugins: [],
+  debug: ['settings.advanced'],
+};
+
+// Extra English keywords per tab so common search terms hit even when the
+// translation doesn't contain the literal word.
+const tabKeywords: Record<Tab, string> = {
+  account: 'profile email password user signin signout',
+  language: 'locale region timezone date time format',
+  notifications: 'sound alert push badge',
+  appearance: 'theme dark light font size accent color animation density',
+  layout: 'toolbar sidebar account switcher unified mailbox icons rail',
+  reading: 'mark read preview thread conversation archive delete attachment open',
+  composing: 'editor signature plain text reply forward draft compose',
+  identities: 'from address signature email',
+  vacation: 'auto reply away out of office holiday responder',
+  filters: 'sieve rules block junk forward',
+  templates: 'snippet quick reply',
+  folders: 'mailbox subscribe',
+  keywords: 'tags labels colors',
+  security: 'password 2fa two-factor passkey app password mfa',
+  encryption: 's/mime smime certificate pgp gpg',
+  content_senders: 'block sender remote images privacy tracking',
+  calendar: 'event schedule appointment meeting timezone',
+  contacts: 'address book contact',
+  files: 'attachments cloud drive storage upload',
+  sidebar_apps: 'apps webview iframe',
+  about_data: 'export import storage quota privacy backup',
+  themes: 'custom theme css skin appearance',
+  plugins: 'extensions addons',
+  debug: 'logs developer console diagnostic',
+};
+
+function flattenStrings(node: unknown, sink: string[]): void {
+  if (typeof node === 'string') {
+    sink.push(node);
+    return;
+  }
+  if (Array.isArray(node)) {
+    for (const item of node) flattenStrings(item, sink);
+    return;
+  }
+  if (node && typeof node === 'object') {
+    for (const value of Object.values(node)) flattenStrings(value, sink);
+  }
+}
+
+interface SubResult {
+  label: string;
+  description?: string;
+  // For plugin setting fields: the id of the plugin whose card needs to be
+  // expanded before the field becomes visible in the DOM.
+  pluginId?: string;
+}
+
+// Walk a translation subtree and emit sub-results for renderable settings.
+// Picks up:
+//   - bare string leaves (when a tab path points directly at a flat label)
+//   - objects with a `label` or `title` field (the standard pattern)
+//   - flat `*_label` string keys at any object level (e.g. `name_label`)
+function collectSubResults(node: unknown, sink: SubResult[]): void {
+  if (typeof node === 'string') {
+    sink.push({ label: node });
+    return;
+  }
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return;
+  const obj = node as Record<string, unknown>;
+  const label = typeof obj.label === 'string' ? obj.label : (typeof obj.title === 'string' ? obj.title : undefined);
+  if (label) {
+    sink.push({
+      label,
+      description: typeof obj.description === 'string' ? obj.description : undefined,
+    });
+  }
+  for (const [key, value] of Object.entries(obj)) {
+    if (typeof value === 'string' && key !== 'label' && key !== 'title' && key.endsWith('_label')) {
+      sink.push({ label: value });
+    }
+  }
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      collectSubResults(value, sink);
+    }
+  }
+}
+
+function getByPath(obj: unknown, path: string): unknown {
+  let cur: unknown = obj;
+  for (const key of path.split('.')) {
+    if (cur && typeof cur === 'object' && key in (cur as Record<string, unknown>)) {
+      cur = (cur as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return cur;
+}
 
 // Map legacy tab IDs to current ones; runs once on read of localStorage.
 const LEGACY_TAB_MAP: Record<string, Tab> = {
@@ -174,7 +348,83 @@ export default function SettingsPage() {
   const { isFeatureEnabled } = usePolicyStore();
   const [activeTab, setActiveTab] = useState<Tab>(readPersistedTab);
   const [mobileShowContent, setMobileShowContent] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [pendingHighlight, setPendingHighlight] = useState<{ tab: Tab; label: string; pluginId?: string } | null>(null);
   const isDesktop = useIsDesktop();
+
+  const messages = useMessages() as Record<string, unknown>;
+  const installedPlugins = usePluginStore((s) => s.plugins);
+  const installedThemes = useThemeStore((s) => s.installedThemes);
+  const sidebarAppsList = useSettingsStore((s) => s.sidebarApps);
+
+  // Build a per-tab haystack for fulltext search and a list of sub-results
+  // (individual settings) per tab. Sub-results come from translation entries
+  // that have a `label`/`title` field, plus dynamic content (installed
+  // plugins/themes/sidebar apps).
+  const { tabSearchHaystacks, tabSubResults } = useMemo(() => {
+    const haystacks: Partial<Record<Tab, string>> = {};
+    const subs: Partial<Record<Tab, SubResult[]>> = {};
+    const tabIds = Object.keys(tabSearchPaths) as Tab[];
+    for (const tabId of tabIds) {
+      const strings: string[] = [tabId.replace(/_/g, ' '), tabKeywords[tabId] ?? ''];
+      const list: SubResult[] = [];
+      for (const path of tabSearchPaths[tabId]) {
+        const node = getByPath(messages, path);
+        flattenStrings(node, strings);
+        collectSubResults(node, list);
+      }
+      // Dedupe sub-results by label
+      const seen = new Set<string>();
+      subs[tabId] = list.filter((r) => {
+        if (seen.has(r.label)) return false;
+        seen.add(r.label);
+        return true;
+      });
+      haystacks[tabId] = strings.join(' ').toLowerCase();
+    }
+    if (installedPlugins.length) {
+      const haystackText = installedPlugins.map((p) => {
+        const fieldText = p.settingsSchema
+          ? Object.values(p.settingsSchema)
+              .map((s) => `${s.label} ${s.description ?? ''}`)
+              .join(' ')
+          : '';
+        return `${p.name} ${p.description} ${p.author} ${fieldText}`;
+      }).join(' ');
+      haystacks.plugins = `${haystacks.plugins ?? ''} ${haystackText}`.toLowerCase();
+      const pluginSubs: SubResult[] = installedPlugins.flatMap((p) => {
+        const items: SubResult[] = [{ label: p.name, description: p.description }];
+        if (p.settingsSchema) {
+          for (const schema of Object.values(p.settingsSchema)) {
+            items.push({
+              label: schema.label,
+              description: schema.description,
+              pluginId: p.id,
+            });
+          }
+        }
+        return items;
+      });
+      subs.plugins = [...(subs.plugins ?? []), ...pluginSubs];
+    }
+    if (installedThemes.length) {
+      const text = installedThemes.map((th) => `${th.name} ${th.description} ${th.author}`).join(' ');
+      haystacks.themes = `${haystacks.themes ?? ''} ${text}`.toLowerCase();
+      subs.themes = [
+        ...(subs.themes ?? []),
+        ...installedThemes.map((th) => ({ label: th.name, description: th.description })),
+      ];
+    }
+    if (sidebarAppsList.length) {
+      const text = sidebarAppsList.map((a) => `${a.name} ${a.url}`).join(' ');
+      haystacks.sidebar_apps = `${haystacks.sidebar_apps ?? ''} ${text}`.toLowerCase();
+      subs.sidebar_apps = [
+        ...(subs.sidebar_apps ?? []),
+        ...sidebarAppsList.map((a) => ({ label: a.name, description: a.url })),
+      ];
+    }
+    return { tabSearchHaystacks: haystacks, tabSubResults: subs };
+  }, [messages, installedPlugins, installedThemes, sidebarAppsList]);
 
   // Sidebar resize state
   const [settingsSidebarWidth, setSettingsSidebarWidth] = useState(() => {
@@ -233,6 +483,72 @@ export default function SettingsPage() {
     return () => window.removeEventListener('popstate', handlePop);
   }, [isDesktop, mobileShowContent]);
 
+  // After clicking a search sub-result, scroll the matching setting into view
+  // and add a temporary highlight class. Some tabs fetch data and render
+  // their SettingItems only after a loading state, so retry until the element
+  // shows up (or we give up after ~2s).
+  useEffect(() => {
+    if (!pendingHighlight) return;
+    if (pendingHighlight.tab !== activeTab) return;
+    if (typeof window === 'undefined') return;
+
+    // For plugin-setting sub-results, ask the plugins tab to expand the
+    // matching card so the field becomes part of the DOM. Dispatched here
+    // (not in the click handler) because PluginsSettings only mounts after
+    // the tab switches, and its listener registers in its own useEffect -
+    // child effects run before parent effects, so by the time we get here
+    // the listener is guaranteed to be in place.
+    if (pendingHighlight.pluginId) {
+      window.dispatchEvent(
+        new CustomEvent('settings-plugin-expand', { detail: { pluginId: pendingHighlight.pluginId } })
+      );
+    }
+
+    let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    let cleanupTimer: ReturnType<typeof setTimeout> | undefined;
+    let highlightedEl: HTMLElement | null = null;
+
+    const escaped = pendingHighlight.label.replace(/"/g, '\\"');
+    const selector = `[data-search-label="${escaped}"]`;
+    const deadline = Date.now() + 2000;
+
+    const tryHighlight = () => {
+      if (cancelled) return;
+      const el = document.querySelector<HTMLElement>(selector);
+      if (!el) {
+        if (Date.now() < deadline) {
+          retryTimer = setTimeout(tryHighlight, 80);
+        }
+        return;
+      }
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Remove + reflow + add restarts the CSS animation if the class was
+      // already present (re-clicking the same sub-result).
+      el.classList.remove('settings-search-highlight');
+      void el.offsetWidth;
+      el.classList.add('settings-search-highlight');
+      highlightedEl = el;
+      cleanupTimer = setTimeout(() => {
+        el.classList.remove('settings-search-highlight');
+        highlightedEl = null;
+      }, 1800);
+    };
+
+    // First attempt next frame so the freshly-mounted tab content is in DOM.
+    const raf = window.requestAnimationFrame(tryHighlight);
+
+    // Do NOT reset pendingHighlight here - that would retrigger this effect
+    // and the cleanup below would strip the class right after we added it.
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(raf);
+      if (retryTimer) clearTimeout(retryTimer);
+      if (cleanupTimer) clearTimeout(cleanupTimer);
+      if (highlightedEl) highlightedEl.classList.remove('settings-search-highlight');
+    };
+  }, [pendingHighlight, activeTab]);
+
   if (!isAuthenticated) {
     return null;
   }
@@ -276,8 +592,8 @@ export default function SettingsPage() {
 
     // Advanced
     { id: 'about_data', label: t('tabs.about_data'), icon: tabIcons.about_data, group: 'advanced' },
-    ...(isFeatureEnabled('themesEnabled') ? [{ id: 'themes' as Tab, label: 'Themes', icon: tabIcons.themes, group: 'advanced' as TabGroup, experimental: true }] : []),
-    ...(isFeatureEnabled('pluginsEnabled') ? [{ id: 'plugins' as Tab, label: 'Plugins', icon: tabIcons.plugins, group: 'advanced' as TabGroup, experimental: true }] : []),
+    ...(isFeatureEnabled('themesEnabled') ? [{ id: 'themes' as Tab, label: 'Themes', icon: tabIcons.themes, group: 'advanced' as TabGroup }] : []),
+    ...(isFeatureEnabled('pluginsEnabled') ? [{ id: 'plugins' as Tab, label: 'Plugins', icon: tabIcons.plugins, group: 'advanced' as TabGroup }] : []),
     ...(isFeatureEnabled('debugModeEnabled') ? [{ id: 'debug' as Tab, label: t('tabs.debug'), icon: tabIcons.debug, group: 'advanced' as TabGroup }] : []),
   ];
 
@@ -290,6 +606,30 @@ export default function SettingsPage() {
     }))
     .filter((g) => g.items.length > 0);
 
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const matchesQuery = (tab: TabDef) => {
+    if (!trimmedQuery) return true;
+    if (tab.label.toLowerCase().includes(trimmedQuery)) return true;
+    return tabSearchHaystacks[tab.id]?.includes(trimmedQuery) ?? false;
+  };
+
+  const subResultsForTab = (tabId: Tab): SubResult[] => {
+    if (!trimmedQuery) return [];
+    const list = tabSubResults[tabId] ?? [];
+    return list
+      .filter((r) =>
+        r.label.toLowerCase().includes(trimmedQuery) ||
+        (r.description?.toLowerCase().includes(trimmedQuery) ?? false)
+      )
+      .slice(0, 6);
+  };
+
+  const filteredGroupedTabs = trimmedQuery
+    ? groupedTabs
+        .map((g) => ({ ...g, items: g.items.filter(matchesQuery) }))
+        .filter((g) => g.items.length > 0)
+    : groupedTabs;
+
   // If active tab is not in the visible list (e.g., feature disabled), fall back.
   const isActiveVisible = tabs.some((tab) => tab.id === activeTab);
   const effectiveActiveTab: Tab = isActiveVisible ? activeTab : 'appearance';
@@ -300,6 +640,11 @@ export default function SettingsPage() {
     if (!isDesktop) {
       setMobileShowContent(true);
     }
+  };
+
+  const handleSubResultSelect = (tabId: Tab, sub: SubResult) => {
+    handleTabSelect(tabId);
+    setPendingHighlight({ tab: tabId, label: sub.label, pluginId: sub.pluginId });
   };
 
   const activeTabLabel = tabs.find((tab) => tab.id === effectiveActiveTab)?.label ?? '';
@@ -385,8 +730,36 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pt-3 pb-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+              <Input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('search_placeholder')}
+                className="pl-9 pr-9 h-10"
+                aria-label={t('search_placeholder')}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:bg-muted"
+                  aria-label={t('search_clear')}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          </div>
           <div className="py-2">
-            {groupedTabs.map((group, groupIndex) => (
+            {filteredGroupedTabs.length === 0 && (
+              <div className="px-5 py-6 text-sm text-muted-foreground text-center">
+                {t('search_no_results')}
+              </div>
+            )}
+            {filteredGroupedTabs.map((group, groupIndex) => (
               <div key={group.group}>
                 {groupIndex > 0 && <div className="mx-5 my-2 border-t border-border" />}
                 <div className="px-5 pt-3 pb-1.5">
@@ -396,23 +769,29 @@ export default function SettingsPage() {
                 </div>
                 {group.items.map((tab) => {
                   const Icon = tab.icon;
+                  const subs = subResultsForTab(tab.id);
                   return (
-                    <button
-                      key={tab.id}
-                      onClick={() => handleTabSelect(tab.id)}
-                      className="w-full flex items-center justify-between px-5 py-3.5 text-sm text-foreground hover:bg-muted transition-colors duration-150"
-                    >
-                      <span className="flex items-center gap-3">
-                        <Icon className="w-4 h-4 text-muted-foreground" />
-                        {tab.label}
-                        {tab.experimental && (
-                          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/15 text-warning">
-                            Experimental
-                          </span>
-                        )}
-                      </span>
-                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                    </button>
+                    <div key={tab.id}>
+                      <button
+                        onClick={() => handleTabSelect(tab.id)}
+                        className="w-full flex items-center justify-between px-5 py-3.5 text-sm text-foreground hover:bg-muted transition-colors duration-150"
+                      >
+                        <span className="flex items-center gap-3">
+                          <Icon className="w-4 h-4 text-muted-foreground" />
+                          {tab.label}
+                        </span>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                      </button>
+                      {subs.map((sub) => (
+                        <button
+                          key={`${tab.id}:${sub.label}`}
+                          onClick={() => handleSubResultSelect(tab.id, sub)}
+                          className="w-full flex items-center pl-12 pr-5 py-2 text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors duration-150 text-left"
+                        >
+                          <span className="truncate">{sub.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   );
                 })}
               </div>
@@ -483,8 +862,36 @@ export default function SettingsPage() {
         </div>
 
         <div className="flex-1 overflow-y-auto py-2" data-tour="settings-tabs">
+          <div className="px-3 pt-1 pb-1">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+              <Input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={t('search_placeholder')}
+                className="pl-8 pr-8 h-9 text-sm"
+                aria-label={t('search_placeholder')}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-muted-foreground hover:bg-muted"
+                  aria-label={t('search_clear')}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
           <div className="px-2 space-y-0.5">
-            {groupedTabs.map((group, groupIndex) => (
+            {filteredGroupedTabs.length === 0 && (
+              <div className="px-3 py-6 text-sm text-muted-foreground text-center">
+                {t('search_no_results')}
+              </div>
+            )}
+            {filteredGroupedTabs.map((group, groupIndex) => (
               <div key={group.group}>
                 {groupIndex > 0 && <div className="mx-1 my-2 border-t border-border" />}
                 <div className="px-3 pt-2.5 pb-1">
@@ -494,28 +901,34 @@ export default function SettingsPage() {
                 </div>
                 {group.items.map((tab) => {
                   const Icon = tab.icon;
+                  const subs = subResultsForTab(tab.id);
                   return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={cn(
-                        'w-full text-left px-3 py-2 rounded-md text-sm transition-colors duration-150 flex items-center gap-2.5',
-                        effectiveActiveTab === tab.id
-                          ? 'bg-accent text-accent-foreground font-medium'
-                          : 'hover:bg-muted text-foreground'
-                      )}
-                    >
-                      <Icon className={cn(
-                        'w-4 h-4 shrink-0',
-                        effectiveActiveTab === tab.id ? 'text-accent-foreground' : 'text-muted-foreground'
-                      )} />
-                      {tab.label}
-                      {tab.experimental && (
-                        <span className="ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-warning/15 text-warning shrink-0">
-                          Experimental
-                        </span>
-                      )}
-                    </button>
+                    <div key={tab.id}>
+                      <button
+                        onClick={() => setActiveTab(tab.id)}
+                        className={cn(
+                          'w-full text-left px-3 py-2 rounded-md text-sm transition-colors duration-150 flex items-center gap-2.5',
+                          effectiveActiveTab === tab.id
+                            ? 'bg-accent text-accent-foreground font-medium'
+                            : 'hover:bg-muted text-foreground'
+                        )}
+                      >
+                        <Icon className={cn(
+                          'w-4 h-4 shrink-0',
+                          effectiveActiveTab === tab.id ? 'text-accent-foreground' : 'text-muted-foreground'
+                        )} />
+                        {tab.label}
+                      </button>
+                      {subs.map((sub) => (
+                        <button
+                          key={`${tab.id}:${sub.label}`}
+                          onClick={() => handleSubResultSelect(tab.id, sub)}
+                          className="w-full text-left pl-9 pr-3 py-1.5 rounded-md text-xs text-muted-foreground hover:bg-muted hover:text-foreground transition-colors duration-150"
+                        >
+                          <span className="truncate block">{sub.label}</span>
+                        </button>
+                      ))}
+                    </div>
                   );
                 })}
               </div>

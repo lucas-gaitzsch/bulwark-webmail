@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePolicyStore } from '@/stores/policy-store';
 import { apiFetch } from '@/lib/browser-navigation';
+import type { PublicJmapServerEntry } from '@/lib/admin/jmap-servers';
 
 interface ConfigData {
   appName: string;
@@ -27,6 +28,8 @@ interface ConfigData {
   demoMode: boolean;
   autoSsoEnabled: boolean;
   allowCustomJmapEndpoint: boolean;
+  jmapServers: PublicJmapServerEntry[];
+  jmapServerAutoPickByDomain: boolean;
   embeddedMode: boolean;
   parentOrigin: string;
 }
@@ -103,6 +106,8 @@ export function useConfig(): AppConfig {
     demoMode: configCache?.demoMode || false,
     autoSsoEnabled: configCache?.autoSsoEnabled || false,
     allowCustomJmapEndpoint: configCache?.allowCustomJmapEndpoint || false,
+    jmapServers: configCache?.jmapServers || [],
+    jmapServerAutoPickByDomain: configCache?.jmapServerAutoPickByDomain || false,
     embeddedMode: configCache?.embeddedMode || false,
     parentOrigin: configCache?.parentOrigin || '',
     isLoading: !configCache,
@@ -135,6 +140,8 @@ export function useConfig(): AppConfig {
         demoMode: configCache.demoMode,
         autoSsoEnabled: configCache.autoSsoEnabled,
         allowCustomJmapEndpoint: configCache.allowCustomJmapEndpoint,
+        jmapServers: configCache.jmapServers || [],
+        jmapServerAutoPickByDomain: configCache.jmapServerAutoPickByDomain || false,
         embeddedMode: configCache.embeddedMode,
         parentOrigin: configCache.parentOrigin,
         isLoading: false,
@@ -168,6 +175,8 @@ export function useConfig(): AppConfig {
           demoMode: data.demoMode,
           autoSsoEnabled: data.autoSsoEnabled,
           allowCustomJmapEndpoint: data.allowCustomJmapEndpoint,
+          jmapServers: data.jmapServers || [],
+          jmapServerAutoPickByDomain: data.jmapServerAutoPickByDomain || false,
           embeddedMode: data.embeddedMode,
           parentOrigin: data.parentOrigin,
           isLoading: false,

@@ -59,6 +59,10 @@ export const pluginErrorTracker = new PluginErrorTracker();
 // ─── Timeout Helper ──────────────────────────────────────────
 
 const DEFAULT_TIMEOUT_MS = 5000;
+// Intercept hooks frequently block on user confirmation modals (send,
+// reply-all, mailto, attachment upload), so they need a much longer budget
+// than observer / transform hooks.
+const INTERCEPT_TIMEOUT_MS = 60_000;
 
 function withTimeout<T>(promise: T | Promise<T>, ms: number = DEFAULT_TIMEOUT_MS): Promise<T> {
   if (!(promise instanceof Promise)) return Promise.resolve(promise);
@@ -137,7 +141,7 @@ export class HookBus<T extends (...args: any[]) => any> {
     for (const { pluginId, handler } of this.handlers) {
       if (pluginErrorTracker.isDisabled(pluginId)) continue;
       try {
-        const result = await withTimeout(handler(...args));
+        const result = await withTimeout(handler(...args), INTERCEPT_TIMEOUT_MS);
         if (result === false) return false;
       } catch (err) {
         pluginErrorTracker.record(pluginId, err);

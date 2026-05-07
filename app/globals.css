@@ -765,3 +765,32 @@ body {
 .tiptap.resize-cursor {
   cursor: col-resize;
 }
+
+/* Smooth halo applied to a setting row when the user clicks a sub-result in
+   the settings search. The element bg + a 10px box-shadow fill the row plus
+   a 10px ring of the same tint, then a 2px outline sits exactly at the outer
+   edge. Uses the primary theme color so it adapts to light/dark. */
+@keyframes settings-search-pulse {
+  0% {
+    background-color: color-mix(in srgb, var(--color-primary) 0%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent);
+    outline-color: color-mix(in srgb, var(--color-primary) 0%, transparent);
+  }
+  30% {
+    background-color: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-primary) 12%, transparent);
+    outline-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+  }
+  100% {
+    background-color: color-mix(in srgb, var(--color-primary) 0%, transparent);
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--color-primary) 0%, transparent);
+    outline-color: color-mix(in srgb, var(--color-primary) 0%, transparent);
+  }
+}
+
+.settings-search-highlight {
+  outline: 2px solid transparent;
+  outline-offset: 10px;
+  border-radius: 8px;
+  animation: settings-search-pulse 1.6s ease-in-out forwards;
+}

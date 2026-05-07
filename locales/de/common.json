@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP-Server",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "Der Server muss CORS-Anfragen von dieser Domain zulassen.",
+    "jmap_server_label": "Server",
+    "jmap_server_auto_picked": "Server anhand Ihrer E-Mail-Domain ausgewählt.",
     "sign_in": "Anmelden",
     "signing_in": "Wird angemeldet...",
     "loading": "Lädt...",
@@ -405,6 +407,7 @@
       "declined_counter_title": "Gegenvorschlag abgelehnt",
       "cancelled_title": "Veranstaltung abgesagt",
       "organizer": "Organisiert von {name}",
+      "organizer_label": "Organisiert von",
       "attendees": "{count, plural, one {# Teilnehmer} other {# Teilnehmer}}",
       "accept": "Annehmen",
       "maybe": "Vielleicht",
@@ -511,7 +514,7 @@
     "send": "Senden",
     "cancel": "Abbrechen",
     "attach": "Anhängen",
-    "attach_photos": "Fotos und Videos",
+    "attach_photos": "Fotos & Videos",
     "attach_files": "Dateien",
     "discard": "Verwerfen",
     "discard_draft_title": "Entwurf verwerfen?",
@@ -1379,7 +1382,7 @@
         "description": "Synchronisieren Sie Ihre Einstellungen über Browser und Geräte hinweg"
       },
       "sender_favicons": {
-        "label": "Absender-Favicons (Experimentell)",
+        "label": "Absender-Favicons",
         "description": "Website-Symbole als Profilbilder für geschäftliche Absender anzeigen"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Vorschau"
       }
-    }
+    },
+    "search_placeholder": "Einstellungen durchsuchen",
+    "search_clear": "Suche löschen",
+    "search_no_results": "Keine passenden Einstellungen"
   },
   "errors": {
     "page_error_title": "Etwas ist schiefgelaufen",

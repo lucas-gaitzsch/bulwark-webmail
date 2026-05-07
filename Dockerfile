@@ -9,7 +9,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_BASE_PATH=
 ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 # Commit SHA shown in the About screen. .dockerignore excludes .git, so
-# `git rev-parse` inside the build can't find it — CI must pass it in.
+# `git rev-parse` inside the build can't find it - CI must pass it in.
 ARG GIT_COMMIT=unknown
 ENV GIT_COMMIT=$GIT_COMMIT
 RUN npx next build --webpack

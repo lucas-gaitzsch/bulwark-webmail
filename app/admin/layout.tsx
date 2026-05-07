@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { useAdminTabStore, type AdminTabId } from '@/stores/admin-tab-store';
 import {
   LayoutDashboard,
   Settings,
@@ -20,7 +21,6 @@ import {
   Calendar,
   BookUser,
   HardDrive,
-  ArrowLeft,
   Store,
   Menu,
   X,
@@ -30,40 +30,46 @@ import { useConfig } from '@/hooks/use-config';
 import { useThemeStore } from '@/stores/theme-store';
 import { getActiveAccountSlotHeaders } from '@/lib/auth/active-account-slot';
 
-import { useAuthStore } from '@/stores/auth-store';
 import { useUpdateStore, selectHasUpdate } from '@/stores/update-store';
 import { apiFetch } from '@/lib/browser-navigation';
 
-const NAV_GROUPS = [
+// Single-page tab navigation: clicks update a Zustand store. The URL stays
+// at /admin so React doesn't fire a route transition on every tab switch -
+// matches the regular settings page pattern, fixes the dev-mode "Rendering…"
+// hang we saw with both /admin/<segment> routes and ?tab= search params.
+const NAV_GROUPS: ReadonlyArray<{
+  label: string;
+  items: ReadonlyArray<{ tab: AdminTabId; label: string; icon: typeof LayoutDashboard }>;
+}> = [
   {
     label: 'Overview',
     items: [
-      { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+      { tab: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     ],
   },
   {
     label: 'Configuration',
     items: [
-      { href: '/admin/settings', label: 'Settings', icon: Settings },
-      { href: '/admin/branding', label: 'Branding', icon: Palette },
-      { href: '/admin/auth', label: 'Authentication', icon: Shield },
-      { href: '/admin/policy', label: 'Policy', icon: Scale },
+      { tab: 'settings', label: 'Settings', icon: Settings },
+      { tab: 'branding', label: 'Branding', icon: Palette },
+      { tab: 'auth', label: 'Authentication', icon: Shield },
+      { tab: 'policy', label: 'Policy', icon: Scale },
     ],
   },
   {
     label: 'Extensions',
     items: [
-      { href: '/admin/plugins', label: 'Plugins', icon: Puzzle },
-      { href: '/admin/themes', label: 'Themes', icon: SwatchBook },
-      { href: '/admin/marketplace', label: 'Marketplace', icon: Store },
+      { tab: 'plugins', label: 'Plugins', icon: Puzzle },
+      { tab: 'themes', label: 'Themes', icon: SwatchBook },
+      { tab: 'marketplace', label: 'Marketplace', icon: Store },
     ],
   },
   {
     label: 'System',
     items: [
-      { href: '/admin/version', label: 'Version', icon: Package },
-      { href: '/admin/telemetry', label: 'Telemetry', icon: Activity },
-      { href: '/admin/logs', label: 'Audit Log', icon: ScrollText },
+      { tab: 'version', label: 'Version', icon: Package },
+      { tab: 'telemetry', label: 'Telemetry', icon: Activity },
+      { tab: 'logs', label: 'Audit Log', icon: ScrollText },
     ],
   },
 ];
@@ -71,6 +77,11 @@ const NAV_GROUPS = [
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
+  const storeActiveTab = useAdminTabStore((s) => s.activeTab);
+  const setActiveTab = useAdminTabStore((s) => s.setActiveTab);
+  // Highlight the active tab only on /admin itself - on dynamic routes
+  // (e.g. /admin/plugins/[id]) no tab is "current".
+  const activeTab = pathname === '/admin' ? storeActiveTab : null;
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isStalwartAdmin, setIsStalwartAdmin] = useState(false);
@@ -178,13 +189,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   {group.label}
                 </span>
               </div>
-              {group.items.map(({ href, label, icon: Icon }) => {
-                const active = href === '/admin' ? pathname === '/admin' : pathname.startsWith(href);
-                const showDot = href === '/admin/version' && hasUpdate;
+              {group.items.map(({ tab, label, icon: Icon }) => {
+                const active = activeTab === tab;
+                const showDot = tab === 'version' && hasUpdate;
+                const handleClick = () => {
+                  setActiveTab(tab);
+                  // From a dynamic route (/admin/plugins/[id], /admin/marketplace/[slug])
+                  // we still need a real navigation back to /admin so the page renders.
+                  if (pathname !== '/admin') router.push('/admin');
+                };
                 return (
-                  <Link
-                    key={href}
-                    href={href}
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={handleClick}
                     className={cn(
                       'w-full text-left px-3 py-2 rounded-md text-sm transition-colors duration-150 flex items-center gap-2.5',
                       active
@@ -209,7 +227,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       )}
                     </span>
                     {label}
-                  </Link>
+                  </button>
                 );
               })}
             </div>

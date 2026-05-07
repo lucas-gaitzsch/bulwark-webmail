@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "Servidor JMAP",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "O servidor deve permitir solicitações CORS deste domínio.",
+    "jmap_server_label": "Servidor",
+    "jmap_server_auto_picked": "Servidor selecionado a partir do domínio do seu e-mail.",
     "sign_in": "Entrar",
     "signing_in": "Entrando...",
     "loading": "Carregando...",
@@ -405,6 +407,7 @@
       "declined_counter_title": "Contraproposta recusada",
       "cancelled_title": "Evento cancelado",
       "organizer": "Organizado por {name}",
+      "organizer_label": "Organizado por",
       "attendees": "{count, plural, one {# participante} other {# participantes}}",
       "accept": "Aceitar",
       "maybe": "Talvez",
@@ -511,8 +514,8 @@
     "send": "Enviar",
     "cancel": "Cancelar",
     "attach": "Anexar",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "Fotos e vídeos",
+    "attach_files": "Arquivos",
     "discard": "Descartar",
     "discard_draft_title": "Descartar rascunho?",
     "discard_draft_confirm": "Você tem alterações não salvas. Deseja descartar este rascunho?",
@@ -1379,7 +1382,7 @@
         "description": "Sincronize suas configurações entre navegadores e dispositivos"
       },
       "sender_favicons": {
-        "label": "Favicons de remetente (Experimental)",
+        "label": "Favicons de remetente",
         "description": "Exibir ícones de sites como fotos de perfil para remetentes empresariais"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Visualização"
       }
-    }
+    },
+    "search_placeholder": "Pesquisar configurações",
+    "search_clear": "Limpar pesquisa",
+    "search_no_results": "Nenhuma configuração correspondente"
   },
   "errors": {
     "page_error_title": "Algo deu errado",

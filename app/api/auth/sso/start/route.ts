@@ -18,11 +18,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'SESSION_SECRET is required for SSO' }, { status: 500 });
     }
 
-    const { redirect_uri, locale } = await request.json();
+    const { redirect_uri, locale, server_id: bodyServerId } = await request.json();
 
     if (!redirect_uri || typeof redirect_uri !== 'string') {
       return NextResponse.json({ error: 'Missing redirect_uri' }, { status: 400 });
     }
+
+    const serverId = typeof bodyServerId === 'string' && bodyServerId ? bodyServerId : null;
 
     // Validate redirect_uri origin matches the request origin to prevent open redirects
     const requestOrigin = request.headers.get('origin') || request.nextUrl.origin;
@@ -36,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid redirect_uri' }, { status: 400 });
     }
 
-    const { clientId, discoveryUrl } = getRequiredConfig();
+    const { clientId, discoveryUrl } = getRequiredConfig(serverId);
     const metadata = await discoverOAuth(discoveryUrl);
 
     if (!metadata?.authorization_endpoint) {
@@ -48,12 +50,14 @@ export async function POST(request: NextRequest) {
     const codeChallenge = generateCodeChallengeServer(codeVerifier);
     const state = generateStateServer();
 
-    // Encrypt and store in httpOnly cookie
+    // Encrypt and store in httpOnly cookie. server_id is captured here so the
+    // /complete handler reaches the same OAuth endpoint we used to authorize.
     const pendingData = {
       state,
       code_verifier: codeVerifier,
       redirect_uri,
       created_at: Date.now(),
+      ...(serverId ? { server_id: serverId } : {}),
     };
 
     const encrypted = encryptPayload(pendingData);

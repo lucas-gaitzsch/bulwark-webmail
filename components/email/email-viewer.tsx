@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { formatFileSize, cn, buildMailboxTree, MailboxNode, formatDateTime, generateUUID } from "@/lib/utils";
 import { getSecurityStatus, extractListHeaders } from "@/lib/email-headers";
+import { emailToReadView } from "@/lib/plugin-projection";
 import {
   Reply,
   ReplyAll,
@@ -2696,7 +2697,7 @@ export function EmailViewer({
     const colorScheme = isDark && emailHasNativeDarkMode ? 'light dark' : 'light';
 
     // Bare HTML emails (no <style>) tend to be plain prose without their own
-    // layout — give them the same padding as plain-text mails (.email-content-text).
+    // layout - give them the same padding as plain-text mails (.email-content-text).
     const bodyPadding = effectiveEmailContent.hasStyleTag ? '0' : '1rem 1.25rem';
 
     return `<!DOCTYPE html>
@@ -2758,7 +2759,7 @@ export function EmailViewer({
   }, []);
 
   // Whenever permission is granted (allow toggled, or sender becomes trusted),
-  // restore blocked content in the existing iframe — no srcDoc rebuild.
+  // restore blocked content in the existing iframe - no srcDoc rebuild.
   const senderEmailLower = email?.from?.[0]?.email?.toLowerCase();
   const senderIsTrustedNow = senderEmailLower
     ? isSenderTrusted(senderEmailLower) || (trustedSendersAddressBook && isTrustedAddressBookSender(senderEmailLower))
@@ -2770,7 +2771,7 @@ export function EmailViewer({
   }, [allowExternalContent, senderIsTrustedNow, hasBlockedContent, restoreBlockedContent]);
 
   // Tracks the last rendered body height so the loading skeleton can hold
-  // the same size — avoids the body shrink/expand flash when switching emails.
+  // the same size - avoids the body shrink/expand flash when switching emails.
   const lastBodyHeightRef = useRef<number>(300);
 
   // True while the new email's body is still being fetched. Catches the
@@ -4021,7 +4022,7 @@ export function EmailViewer({
                 };
                 const fullDate = (iso?: string) => iso
                   ? formatDateTime(iso, timeFormat, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', second: '2-digit', timeZoneName: 'short' })
-                  : '—';
+                  : '-';
                 const auth = email.authenticationResults;
                 const totalAttachmentSize = effectiveAttachments.reduce((s, a) => s + (a.size || 0), 0);
                 const topMimeType = email.bodyStructure?.type;
@@ -4418,6 +4419,183 @@ export function EmailViewer({
           </div>
       </div>
 
+        {/* Mobile/Tablet Sender Info - scrolls with content */}
+        <div className="lg:hidden bg-background border-b border-border px-4" style={{ paddingBlock: 'var(--density-header-py)' }}>
+          <div className="flex items-start" style={{ gap: 'var(--density-item-gap)' }}>
+            <button
+              onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
+              className="cursor-pointer group flex-shrink-0"
+              title={sender?.email || undefined}
+            >
+              <Avatar
+                name={sender?.name}
+                email={sender?.email}
+                size="lg"
+                className="shadow-sm w-10 h-10 group-hover:ring-2 group-hover:ring-primary/30 transition-all"
+              />
+            </button>
+            <div className="flex-1 min-w-0">
+              {/* Row 1: Sender name + badges */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
+                  className="text-sm font-semibold text-foreground hover:text-primary hover:underline transition-colors cursor-pointer text-left"
+                >
+                  {sender?.name || sender?.email || t('unknown_sender')}
+                </button>
+                <EmailIdentityBadge email={email} identities={identities} />
+                {shouldShowUnsubBanner && listHeaders?.listUnsubscribe && (
+                  <UnsubscribeBanner
+                    listUnsubscribe={listHeaders.listUnsubscribe}
+                    senderEmail={email?.from?.[0]?.email || ''}
+                    onDismiss={() => {
+                      const messageId = email?.messageId || '';
+                      const newSet = new Set(dismissedUnsubBanners).add(messageId);
+                      setDismissedUnsubBanners(newSet);
+                      localStorage.setItem('dismissed-unsub-banners', JSON.stringify([...newSet]));
+                    }}
+                  />
+                )}
+              </div>
+              {/* Email address under name */}
+              {sender?.email && sender?.name && (
+                <div className="text-xs text-muted-foreground mt-0.5 truncate">{sender.email}</div>
+              )}
+              {/* Row 2: Recipients */}
+              <div className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
+                {email.to && email.to.length > 0 && (
+                  <>
+                    <span>→ {t('recipient_to_prefix')}</span>
+                    {renderClickableRecipients(email.to, currentUserEmail, t, handleViewContactSidebar)}
+                  </>
+                )}
+                {email.cc && email.cc.length > 0 && (
+                  <>
+                    <span className="text-muted-foreground/50">|</span>
+                    <span>CC:</span>
+                    {renderClickableRecipients(email.cc, currentUserEmail, t, handleViewContactSidebar)}
+                    {email.cc.length > 2 && (
+                      <span>+{email.cc.length - 2}</span>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+            {/* Date/time + size on the right (mobile) */}
+            <div className="sm:hidden flex-shrink-0 text-right ml-2">
+              <span className="text-xs text-muted-foreground whitespace-nowrap">
+                {formatDateTime(email.receivedAt, timeFormat, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+              </span>
+              {email.size > 0 && (
+                <div className="text-xs text-muted-foreground/60">
+                  {formatFileSize(email.size)}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* S/MIME Status Banner */}
+        {smimeStatus && (
+          <div className="border-b border-border bg-muted/30">
+            <div className="px-6 py-1.5">
+              <SmimeStatusBanner
+                status={smimeStatus}
+                onUnlockKey={smimeUnlockTargetId ? openSmimeUnlockDialog : undefined}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Draft Banner */}
+        {isDraft && (
+          <div className="border-b border-border bg-warning/10">
+            <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-warning">
+                <File className="w-4 h-4" />
+                <span className="text-sm font-medium">{t('draft_banner')}</span>
+              </div>
+              {onEditDraft && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onEditDraft()}
+                  className="gap-1.5"
+                >
+                  <EditIcon className="w-3.5 h-3.5" />
+                  {t('edit_draft')}
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <SmimePassphraseDialog
+          isOpen={smimeUnlockDialogOpen}
+          onClose={() => {
+            setSmimeUnlockDialogOpen(false);
+            setSmimeUnlockError(null);
+          }}
+          onSubmit={handleSmimeUnlockSubmit}
+          title={tSmime('unlock_key')}
+          description={tSmime('unlock_key_desc')}
+          error={smimeUnlockError}
+        />
+
+        {/* Unified Notification Banner - External Content + Calendar Invitation */}
+        {((hasBlockedContent && !allowExternalContent && externalContentPolicy !== 'allow') ||
+          hasCalendarInvitation) && (
+          <div className="border-b border-border bg-muted/30 isolate">
+            <div className="px-6 py-1.5">
+              <div className="flex flex-col gap-3 isolate">
+                {/* External Content Controls */}
+                {hasBlockedContent && !allowExternalContent && externalContentPolicy !== 'allow' && (
+                  <div className="flex items-center gap-3 flex-wrap md:justify-center rounded-md px-3 py-1 bg-muted/50 dark:bg-muted/30">
+                    {externalContentPolicy === 'ask' && (
+                      <button
+                        onClick={() => setAllowExternalContent(true)}
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground bg-transparent hover:bg-transparent transition-colors min-h-[44px] md:min-h-0"
+                      >
+                        <Image className="w-3.5 h-3.5" />
+                        {t('load_external_content')}
+                      </button>
+                    )}
+                    {email.from?.[0]?.email && (
+                      <button
+                        onClick={() => {
+                          const senderEmail = email.from?.[0]?.email;
+                          if (senderEmail) {
+                            if (trustedSendersAddressBook && client) {
+                              addToTrustedSendersBook(client, senderEmail).catch(console.error);
+                            } else {
+                              addTrustedSender(senderEmail);
+                            }
+                            setAllowExternalContent(true);
+                          }
+                        }}
+                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground bg-transparent hover:bg-transparent transition-colors min-h-[44px] md:min-h-0"
+                      >
+                        {t('trust_sender')}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+
+
+                {/* Calendar Invitation Banner */}
+                {hasCalendarInvitation && (
+                  <div className="py-1">
+                    <CalendarInvitationBanner email={email} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <PluginSlot name="email-banner" extraProps={{ email: emailToReadView(email) }} />
+
       {/* === ATTACHMENTS below header (below-header mode, desktop only) === */}
       {attachmentPosition === 'below-header' && effectiveAttachments.length > 0 && (
         <div className="hidden lg:block bg-background border-b border-border px-4 lg:px-6 py-2">
@@ -4709,184 +4887,7 @@ export function EmailViewer({
           </div>
         )}
 
-        {/* Mobile/Tablet Sender Info - scrolls with content */}
-        <div className="lg:hidden bg-background border-b border-border px-4" style={{ paddingBlock: 'var(--density-header-py)' }}>
-          <div className="flex items-start" style={{ gap: 'var(--density-item-gap)' }}>
-            <button
-              onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
-              className="cursor-pointer group flex-shrink-0"
-              title={sender?.email || undefined}
-            >
-              <Avatar
-                name={sender?.name}
-                email={sender?.email}
-                size="lg"
-                className="shadow-sm w-10 h-10 group-hover:ring-2 group-hover:ring-primary/30 transition-all"
-              />
-            </button>
-            <div className="flex-1 min-w-0">
-              {/* Row 1: Sender name + badges */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  onClick={() => sender?.email && handleViewContactSidebar(null, sender.email)}
-                  className="text-sm font-semibold text-foreground hover:text-primary hover:underline transition-colors cursor-pointer text-left"
-                >
-                  {sender?.name || sender?.email || t('unknown_sender')}
-                </button>
-                <EmailIdentityBadge email={email} identities={identities} />
-                {shouldShowUnsubBanner && listHeaders?.listUnsubscribe && (
-                  <UnsubscribeBanner
-                    listUnsubscribe={listHeaders.listUnsubscribe}
-                    senderEmail={email?.from?.[0]?.email || ''}
-                    onDismiss={() => {
-                      const messageId = email?.messageId || '';
-                      const newSet = new Set(dismissedUnsubBanners).add(messageId);
-                      setDismissedUnsubBanners(newSet);
-                      localStorage.setItem('dismissed-unsub-banners', JSON.stringify([...newSet]));
-                    }}
-                  />
-                )}
-              </div>
-              {/* Email address under name */}
-              {sender?.email && sender?.name && (
-                <div className="text-xs text-muted-foreground mt-0.5 truncate">{sender.email}</div>
-              )}
-              {/* Row 2: Recipients */}
-              <div className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground flex-wrap">
-                {email.to && email.to.length > 0 && (
-                  <>
-                    <span>→ {t('recipient_to_prefix')}</span>
-                    {renderClickableRecipients(email.to, currentUserEmail, t, handleViewContactSidebar)}
-                  </>
-                )}
-                {email.cc && email.cc.length > 0 && (
-                  <>
-                    <span className="text-muted-foreground/50">|</span>
-                    <span>CC:</span>
-                    {renderClickableRecipients(email.cc, currentUserEmail, t, handleViewContactSidebar)}
-                    {email.cc.length > 2 && (
-                      <span>+{email.cc.length - 2}</span>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-            {/* Date/time + size on the right (mobile) */}
-            <div className="sm:hidden flex-shrink-0 text-right ml-2">
-              <span className="text-xs text-muted-foreground whitespace-nowrap">
-                {formatDateTime(email.receivedAt, timeFormat, { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
-              </span>
-              {email.size > 0 && (
-                <div className="text-xs text-muted-foreground/60">
-                  {formatFileSize(email.size)}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* S/MIME Status Banner */}
-        {smimeStatus && (
-          <div className="border-b border-border bg-muted/30">
-            <div className="max-w-4xl mx-auto px-6 py-1.5">
-              <SmimeStatusBanner
-                status={smimeStatus}
-                onUnlockKey={smimeUnlockTargetId ? openSmimeUnlockDialog : undefined}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Draft Banner */}
-        {isDraft && (
-          <div className="border-b border-border bg-warning/10">
-            <div className="max-w-4xl mx-auto px-6 py-2.5 flex items-center justify-between">
-              <div className="flex items-center gap-2 text-warning">
-                <File className="w-4 h-4" />
-                <span className="text-sm font-medium">{t('draft_banner')}</span>
-              </div>
-              {onEditDraft && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => onEditDraft()}
-                  className="gap-1.5"
-                >
-                  <EditIcon className="w-3.5 h-3.5" />
-                  {t('edit_draft')}
-                </Button>
-              )}
-            </div>
-          </div>
-        )}
-
-        <SmimePassphraseDialog
-          isOpen={smimeUnlockDialogOpen}
-          onClose={() => {
-            setSmimeUnlockDialogOpen(false);
-            setSmimeUnlockError(null);
-          }}
-          onSubmit={handleSmimeUnlockSubmit}
-          title={tSmime('unlock_key')}
-          description={tSmime('unlock_key_desc')}
-          error={smimeUnlockError}
-        />
-
-        {/* Unified Notification Banner - External Content + Calendar Invitation */}
-        {((hasBlockedContent && !allowExternalContent && externalContentPolicy !== 'allow') ||
-          hasCalendarInvitation) && (
-          <div className="border-b border-border bg-muted/30 isolate">
-            <div className="max-w-6xl mx-auto px-6 py-1.5">
-              <div className="flex flex-col gap-3 isolate">
-                {/* External Content Controls */}
-                {hasBlockedContent && !allowExternalContent && externalContentPolicy !== 'allow' && (
-                  <div className="flex items-center gap-3 flex-wrap md:justify-center rounded-md px-3 py-1 bg-muted/50 dark:bg-muted/30">
-                    {externalContentPolicy === 'ask' && (
-                      <button
-                        onClick={() => setAllowExternalContent(true)}
-                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground bg-transparent hover:bg-transparent transition-colors min-h-[44px] md:min-h-0"
-                      >
-                        <Image className="w-3.5 h-3.5" />
-                        {t('load_external_content')}
-                      </button>
-                    )}
-                    {email.from?.[0]?.email && (
-                      <button
-                        onClick={() => {
-                          const senderEmail = email.from?.[0]?.email;
-                          if (senderEmail) {
-                            if (trustedSendersAddressBook && client) {
-                              addToTrustedSendersBook(client, senderEmail).catch(console.error);
-                            } else {
-                              addTrustedSender(senderEmail);
-                            }
-                            setAllowExternalContent(true);
-                          }
-                        }}
-                        className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground bg-transparent hover:bg-transparent transition-colors min-h-[44px] md:min-h-0"
-                      >
-                        {t('trust_sender')}
-                      </button>
-                    )}
-                  </div>
-                )}
-
-
-
-                {/* Calendar Invitation Banner */}
-                {hasCalendarInvitation && (
-                  <div className="py-1">
-                    <CalendarInvitationBanner email={email} />
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-
         <div>
-
-          <PluginSlot name="email-banner" extraProps={{ email }} />
 
           {/* Email Body */}
           <div className={cn(

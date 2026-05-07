@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPluginBundle, getPlugin } from '@/lib/admin/plugin-registry';
+import { getDevPlugin, readDevBundle } from '@/lib/admin/plugin-dev';
 
 /**
  * GET /api/admin/plugins/[id]/bundle - Serve plugin JS bundle
@@ -8,7 +9,7 @@ import { getPluginBundle, getPlugin } from '@/lib/admin/plugin-registry';
  * Only serves plugins that exist in the registry and are enabled.
  */
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -17,6 +18,21 @@ export async function GET(
     // Validate ID format to prevent path traversal
     if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(id)) {
       return NextResponse.json({ error: 'Invalid plugin ID' }, { status: 400 });
+    }
+
+    // Dev plugins are read (and optionally bundled) straight from disk and
+    // served with no caching so every refresh picks up the latest source.
+    const devEntry = await getDevPlugin(id);
+    if (devEntry) {
+      const code = await readDevBundle(devEntry);
+      return new NextResponse(code, {
+        headers: {
+          'Content-Type': 'application/javascript; charset=utf-8',
+          'Cache-Control': 'no-store',
+          'ETag': `"${devEntry.plugin.bundleHash}"`,
+          'Content-Length': String(Buffer.byteLength(code, 'utf-8')),
+        },
+      });
     }
 
     const plugin = await getPlugin(id);
@@ -33,13 +49,22 @@ export async function GET(
       return NextResponse.json({ error: 'Bundle not found' }, { status: 404 });
     }
 
-    return new NextResponse(code, {
-      headers: {
-        'Content-Type': 'application/javascript; charset=utf-8',
-        'Cache-Control': 'public, max-age=3600, must-revalidate',
-        'Content-Length': String(Buffer.byteLength(code, 'utf-8')),
-      },
-    });
+    // Use the registry's bundleHash as the ETag so the browser can revalidate
+    // cheaply. Cache-Control: no-cache forces revalidation on every request,
+    // but a matching If-None-Match returns 304 with no body.
+    const etag = plugin.bundleHash ? `"${plugin.bundleHash}"` : undefined;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/javascript; charset=utf-8',
+      'Cache-Control': 'private, no-cache, must-revalidate',
+    };
+    if (etag) headers['ETag'] = etag;
+
+    if (etag && request.headers.get('if-none-match') === etag) {
+      return new NextResponse(null, { status: 304, headers });
+    }
+
+    headers['Content-Length'] = String(Buffer.byteLength(code, 'utf-8'));
+    return new NextResponse(code, { headers });
   } catch {
     return NextResponse.json({ error: 'Not found' }, { status: 404 });
   }

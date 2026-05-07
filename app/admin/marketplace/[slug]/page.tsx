@@ -37,6 +37,8 @@ interface PreviewData {
     githubRepo: string | null;
     license: string | null;
     minAppVersion: string | null;
+    iconUrl: string | null;
+    bannerUrl: string | null;
     author: {
       displayName: string;
       githubLogin: string;
@@ -209,11 +211,30 @@ export default function MarketplacePreviewPage() {
         <ArrowLeft className="w-4 h-4" /> Back to Marketplace
       </Link>
 
+      {/* Banner / hero */}
+      {ext.bannerUrl && (
+        <div className="mb-6 overflow-hidden rounded-lg border border-border bg-muted">
+          <img
+            src={ext.bannerUrl}
+            alt=""
+            className="block w-full max-h-64 object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
         <div className="flex items-start gap-4 flex-1 min-w-0">
-          <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
-            {isPlugin ? (
+          <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0 overflow-hidden">
+            {ext.iconUrl ? (
+              <img
+                src={ext.iconUrl}
+                alt=""
+                className="w-14 h-14 object-cover"
+                loading="lazy"
+              />
+            ) : isPlugin ? (
               <Puzzle className="w-7 h-7 text-muted-foreground" />
             ) : (
               <SwatchBook className="w-7 h-7 text-muted-foreground" />

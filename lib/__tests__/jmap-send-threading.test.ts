@@ -103,7 +103,7 @@ describe('JMAPClient.sendEmail threading headers', () => {
     const create = setCall[1].create as Record<string, Record<string, unknown>>;
     const draft = Object.values(create)[0];
 
-    // Bare msg-ids per RFC 8621 — angle brackets stripped.
+    // Bare msg-ids per RFC 8621 - angle brackets stripped.
     expect(draft.inReplyTo).toEqual(['parent@example.com']);
     expect(draft.references).toEqual(['root@example.com', 'parent@example.com']);
   });

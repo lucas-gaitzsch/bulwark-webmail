@@ -43,7 +43,7 @@ export async function GET() {
 
 /**
  * POST /api/admin/version
- * { action: 'check-now' } — force a fresh upstream fetch.
+ * { action: 'check-now' } - force a fresh upstream fetch.
  */
 export async function POST(req: NextRequest) {
   try {

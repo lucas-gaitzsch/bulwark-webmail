@@ -63,25 +63,7 @@ import { consumePendingMailto, listenForMailtoRequests } from "@/lib/protocol-ha
 import type { ParsedMailto } from "@/lib/protocol-handlers/mailto";
 import { plainTextToComposerBody } from "@/lib/email-composer-utils";
 import { appLifecycleHooks, uiHooks, routerHooks, toastHooks, emailHooks } from "@/lib/plugin-hooks";
-import type { EmailReadView } from "@/lib/plugin-types";
-
-function emailToReadView(email: Email): EmailReadView {
-  return {
-    id: email.id,
-    threadId: email.threadId,
-    mailboxIds: Object.keys(email.mailboxIds || {}).filter(k => email.mailboxIds[k]),
-    from: (email.from || []).map(a => ({ name: a.name || '', email: a.email })),
-    to: (email.to || []).map(a => ({ name: a.name || '', email: a.email })),
-    cc: (email.cc || []).map(a => ({ name: a.name || '', email: a.email })),
-    subject: email.subject || '',
-    receivedAt: email.receivedAt,
-    isRead: !!email.keywords?.['$seen'],
-    isFlagged: !!email.keywords?.['$flagged'],
-    hasAttachment: email.hasAttachment,
-    preview: email.preview || '',
-    keywords: Object.keys(email.keywords || {}).filter(k => email.keywords[k]),
-  };
-}
+import { emailToReadView } from "@/lib/plugin-projection";
 
 
 export default function Home() {
@@ -798,7 +780,7 @@ export default function Home() {
 
   // System-notification click handler. The push SW navigates the user back
   // here with `?email=<id>` (specific email it built the toast from) or
-  // `?openLatestUnread=1` (generic "New mail" toast — happens when the
+  // `?openLatestUnread=1` (generic "New mail" toast - happens when the
   // preview API failed). We resolve those params once after the inbox has
   // finished loading and open the right message, then strip the params so a
   // refresh doesn't re-open it.
@@ -1668,7 +1650,7 @@ export default function Home() {
 
     const originalEmailId = selectedEmail.id;
 
-    // RFC 5322 §3.6.4 threading — keep the conversation stitched together (#234).
+    // RFC 5322 §3.6.4 threading - keep the conversation stitched together (#234).
     const threading = computeReplyThreadingHeaders({
       messageId: selectedEmail.messageId,
       references: selectedEmail.references,
@@ -1732,7 +1714,7 @@ export default function Home() {
     }
 
     // Show the list stub immediately so subject/sender render without
-    // waiting for the body fetch — avoids the loading flicker.
+    // waiting for the body fetch - avoids the loading flicker.
     const listEmail = emails.find(e => e.id === email.id);
     if (listEmail) {
       selectEmail(listEmail);

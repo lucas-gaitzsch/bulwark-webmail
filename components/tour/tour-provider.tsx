@@ -64,7 +64,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     // If the resume step is beyond the current steps, start from 0
     if (resumeStep >= steps.length) resumeStep = 0;
 
-    // Most steps live on the mailbox — navigate there (or to the step's specific page)
+    // Most steps live on the mailbox - navigate there (or to the step's specific page)
     // so we don't start the tour on a page where the targets don't exist.
     const targetPage = steps[resumeStep]?.page ?? "/";
     if (pathname !== targetPage) {

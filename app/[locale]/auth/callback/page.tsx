@@ -43,6 +43,7 @@ function OAuthCallbackInner() {
 
       const codeVerifier = sessionStorage.getItem("oauth_code_verifier");
       const serverUrl = sessionStorage.getItem("oauth_server_url");
+      const serverId = sessionStorage.getItem("oauth_server_id") || undefined;
 
       if (!codeVerifier || !serverUrl) {
         setError("missing_params");
@@ -52,12 +53,13 @@ function OAuthCallbackInner() {
       const prefix = getPathPrefix(params.locale as string);
       const redirectUri = `${window.location.origin}${prefix}/${params.locale}/auth/callback`;
 
-      loginWithOAuth(serverUrl, code, codeVerifier, redirectUri)
+      loginWithOAuth(serverUrl, code, codeVerifier, redirectUri, serverId)
         .then((success) => {
           if (success) {
             sessionStorage.removeItem("oauth_state");
             sessionStorage.removeItem("oauth_code_verifier");
             sessionStorage.removeItem("oauth_server_url");
+            sessionStorage.removeItem("oauth_server_id");
             sessionStorage.removeItem("oauth_add_account_mode");
             let redirectTo = `${prefix}/${params.locale}`;
             try {

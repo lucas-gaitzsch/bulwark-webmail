@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP 서버",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "서버에서 이 도메인의 CORS 요청을 허용해야 해요.",
+    "jmap_server_label": "서버",
+    "jmap_server_auto_picked": "이메일 도메인에서 서버를 선택했습니다.",
     "sign_in": "로그인",
     "signing_in": "로그인 중...",
     "loading": "불러오는 중...",
@@ -407,6 +409,7 @@
       "declined_counter_title": "시간 제안이 거절되었어요",
       "cancelled_title": "일정이 취소되었어요",
       "organizer": "주최자: {name}",
+      "organizer_label": "주최자:",
       "attendees": "{count, plural, other {참석자 #명}}",
       "accept": "수락",
       "maybe": "미정",
@@ -511,8 +514,8 @@
     "send": "보내기",
     "cancel": "취소",
     "attach": "첨부",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "사진 및 동영상",
+    "attach_files": "파일",
     "discard": "삭제",
     "discard_draft_title": "임시보관 메일을 삭제할까요?",
     "discard_draft_confirm": "저장되지 않은 내용이 있어요. 이 메일을 삭제할까요?",
@@ -1379,7 +1382,7 @@
         "description": "여러 브라우저나 기기에서 내 설정을 동기화해요"
       },
       "sender_favicons": {
-        "label": "보낸 사람 파비콘 (실험적 기능)",
+        "label": "보낸 사람 파비콘",
         "description": "비즈니스 메일의 경우 해당 웹사이트의 아이콘을 프로필 사진으로 보여줘요"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "미리보기"
       }
-    }
+    },
+    "search_placeholder": "설정 검색",
+    "search_clear": "검색 지우기",
+    "search_no_results": "일치하는 설정이 없습니다"
   },
   "errors": {
     "page_error_title": "문제가 발생했어요",

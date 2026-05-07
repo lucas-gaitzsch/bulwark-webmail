@@ -71,7 +71,7 @@ async function tick(): Promise<void> {
   await scheduleNext(delay);
 }
 
-// Idempotent — safe to call from instrumentation hot-reload in dev.
+// Idempotent - safe to call from instrumentation hot-reload in dev.
 export async function startScheduler(): Promise<void> {
   if (disabledByEnv()) {
     logger.info('version-check: scheduler not started (disabled by env)');

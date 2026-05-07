@@ -81,7 +81,7 @@ export function ToastItem({ toast, onClose }: ToastProps) {
   return (
     <div
       className={cn(
-        "toast-item group relative flex items-start gap-3 w-[380px] rounded-lg",
+        "toast-item group relative flex items-start gap-3 w-[380px] rounded-r-lg",
         "bg-background/95 dark:bg-neutral-900/95 backdrop-blur-sm",
         "border border-border/60 dark:border-neutral-700/60",
         "shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)]",
@@ -99,7 +99,7 @@ export function ToastItem({ toast, onClose }: ToastProps) {
       }}
     >
       {/* Left accent bar */}
-      <div className={cn("absolute left-0 top-0 bottom-0 w-1 rounded-l-lg", progressBarStyles[toast.type])} />
+      <div className={cn("absolute left-0 top-0 bottom-0 w-1", progressBarStyles[toast.type])} />
 
       <div className="flex items-start gap-3 p-3.5 pl-4.5 flex-1 min-w-0">
         {/* Icon */}

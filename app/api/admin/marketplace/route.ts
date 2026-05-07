@@ -12,6 +12,7 @@ import {
 } from '@/lib/admin/plugin-registry';
 import {
   sanitizeFrameOrigins,
+  sanitizeHttpOrigins,
   invalidateFrameOriginsCache,
 } from '@/lib/admin/csp-frame-origins';
 import JSZip from 'jszip';
@@ -60,9 +61,16 @@ export async function GET(request: NextRequest) {
     const installedPlugins = new Set(pluginRegistry.plugins.map(p => p.id));
     const installedThemes = new Set(themeRegistry.themes.map(t => t.id));
 
+    const fileUrl = (path: unknown): string | null =>
+      typeof path === 'string' && path
+        ? new URL(`/api/v1/files/${path}`, DIRECTORY_URL).toString()
+        : null;
+
     if (data.data) {
       data.data = data.data.map((ext: Record<string, unknown>) => ({
         ...ext,
+        iconUrl: fileUrl(ext.iconPath),
+        bannerUrl: fileUrl(ext.bannerPath),
         installed: ext.type === 'theme'
           ? installedThemes.has(ext.slug as string)
           : installedPlugins.has(ext.slug as string),
@@ -246,6 +254,18 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      const declaredHttpOrigins = sanitizeHttpOrigins(manifest.httpOrigins);
+      const droppedHttpOrigins = Array.isArray(manifest.httpOrigins)
+        ? (manifest.httpOrigins as unknown[]).filter(
+            (v) => typeof v !== 'string' || !declaredHttpOrigins.includes(v),
+          )
+        : [];
+      if (droppedHttpOrigins.length > 0) {
+        warnings.push(
+          `Ignored invalid httpOrigins: ${droppedHttpOrigins.join(', ')}`,
+        );
+      }
+
       const plugin: ServerPlugin = {
         id: (manifest.id as string) || slug,
         name: (manifest.name as string) || slug,
@@ -261,11 +281,14 @@ export async function POST(request: NextRequest) {
         ...(declaredFrameOrigins.length > 0
           ? { frameOrigins: declaredFrameOrigins }
           : {}),
+        ...(declaredHttpOrigins.length > 0
+          ? { httpOrigins: declaredHttpOrigins }
+          : {}),
       };
 
       await savePlugin(plugin, code);
       invalidateFrameOriginsCache();
-      await auditLog('marketplace.install_plugin', { id: plugin.id, name: plugin.name, version: plugin.version, slug, frameOrigins: declaredFrameOrigins }, ip);
+      await auditLog('marketplace.install_plugin', { id: plugin.id, name: plugin.name, version: plugin.version, slug, frameOrigins: declaredFrameOrigins, httpOrigins: declaredHttpOrigins }, ip);
 
       return NextResponse.json({ success: true, plugin, warnings });
     }

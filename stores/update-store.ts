@@ -41,7 +41,7 @@ export const useUpdateStore = create<UpdateState>()((set, get) => ({
           lastFetchedAt: Date.now(),
         });
       } catch {
-        // Silent — banner just won't appear, no need to disrupt the UI.
+        // Silent - banner just won't appear, no need to disrupt the UI.
       } finally {
         set({ loading: false });
         inFlight = null;

@@ -98,6 +98,9 @@ export const usePluginStore = create<PluginStoreState>()(
           adminApproved: false, // Requires admin approval before it can be enabled
           settings: existing?.settings ?? {},
           settingsSchema: manifest.settingsSchema,
+          ...(manifest.httpOrigins && manifest.httpOrigins.length > 0
+            ? { httpOrigins: manifest.httpOrigins }
+            : {}),
         };
 
         // Save code to IndexedDB
@@ -303,6 +306,15 @@ interface ServerPluginInfo {
   permissions: string[];
   entrypoint: string;
   forceEnabled: boolean;
+  /** Content hash of the bundle - changes whenever code changes, even if the version doesn't */
+  bundleHash?: string;
+  updatedAt?: string;
+  /** True when the plugin was loaded from the server's PLUGIN_DEV_DIR */
+  dev?: boolean;
+  /** Allowlist of origins this plugin may target via api.http.fetch(). */
+  httpOrigins?: string[];
+  /** Per-user settings schema, captured from the manifest server-side. */
+  settingsSchema?: InstalledPlugin['settingsSchema'];
 }
 
 const SERVER_MANAGED_KEY = 'server-managed-plugin-ids';
@@ -382,7 +394,7 @@ async function syncServerPlugins(
 
       if (!local) {
         // New server plugin - download and install
-        const code = await downloadPluginBundle(sp.id);
+        const code = await downloadPluginBundle(sp.id, sp.bundleHash);
         if (!code) continue;
 
         await pluginStorage.saveCode(sp.id, code);
@@ -402,6 +414,11 @@ async function syncServerPlugins(
           forceEnabled: sp.forceEnabled,
           adminApproved: true, // Server-managed plugins are always approved
           settings: {},
+          settingsSchema: sp.settingsSchema,
+          bundleHash: sp.bundleHash,
+          ...(sp.httpOrigins && sp.httpOrigins.length > 0
+            ? { httpOrigins: sp.httpOrigins }
+            : {}),
         };
 
         set(state => {
@@ -410,9 +427,15 @@ async function syncServerPlugins(
           }
           return { plugins: [...state.plugins, plugin] };
         });
-      } else if (local.version !== sp.version) {
-        // Version changed - re-download bundle
-        const code = await downloadPluginBundle(sp.id);
+      } else if (
+        local.version !== sp.version ||
+        // bundleHash mismatch covers re-uploads of the same version with new
+        // code. Falsy local hash (older installs that never carried one) also
+        // forces a refresh so we capture the hash on the next sync.
+        (sp.bundleHash && local.bundleHash !== sp.bundleHash)
+      ) {
+        // Version or content changed - re-download bundle
+        const code = await downloadPluginBundle(sp.id, sp.bundleHash);
         if (!code) continue;
 
         await pluginStorage.saveCode(sp.id, code);
@@ -430,6 +453,9 @@ async function syncServerPlugins(
                   entrypoint: sp.entrypoint,
                   managed: true,
                   forceEnabled: sp.forceEnabled,
+                  bundleHash: sp.bundleHash,
+                  httpOrigins: sp.httpOrigins,
+                  settingsSchema: sp.settingsSchema,
                 }
               : p
           ),
@@ -442,8 +468,20 @@ async function syncServerPlugins(
                   ...p,
                   managed: true,
                   forceEnabled: sp.forceEnabled,
+                  settingsSchema: sp.settingsSchema,
                 }
               : p
+          ),
+        }));
+      } else if (
+        JSON.stringify(local.settingsSchema ?? null) !== JSON.stringify(sp.settingsSchema ?? null)
+      ) {
+        // Schema drift: the bundle is current but the persisted plugin record
+        // pre-dates the server passing settingsSchema through, so the per-user
+        // settings UI was rendering empty. Patch the schema in place.
+        set(state => ({
+          plugins: state.plugins.map(p =>
+            p.id === sp.id ? { ...p, settingsSchema: sp.settingsSchema } : p
           ),
         }));
       } else if (sp.forceEnabled && !local.enabled) {
@@ -483,9 +521,12 @@ async function syncServerPlugins(
   }
 }
 
-async function downloadPluginBundle(pluginId: string): Promise<string | null> {
+async function downloadPluginBundle(pluginId: string, bundleHash?: string): Promise<string | null> {
   try {
-    const res = await apiFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/bundle`);
+    // Append the hash as a query string so any intermediary HTTP cache
+    // (browser, service worker, CDN) treats each version as a distinct URL.
+    const suffix = bundleHash ? `?v=${encodeURIComponent(bundleHash)}` : '';
+    const res = await apiFetch(`/api/admin/plugins/${encodeURIComponent(pluginId)}/bundle${suffix}`);
     if (!res.ok) return null;
     return await res.text();
   } catch {

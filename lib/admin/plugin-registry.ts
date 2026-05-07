@@ -1,5 +1,6 @@
 import { readFile, writeFile, mkdir, rename, unlink } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
 
@@ -27,6 +28,21 @@ export interface PluginConfigField {
   options?: { label: string; value: string }[];
 }
 
+/**
+ * Per-user setting field, mirrors the manifest's `settingsSchema` shape
+ * (see lib/plugin-types.ts SettingFieldSchema). The server passes these
+ * through unchanged so the client can render the per-user settings UI.
+ */
+export interface PluginSettingsField {
+  type: 'boolean' | 'string' | 'number' | 'select';
+  label: string;
+  description?: string;
+  default: unknown;
+  options?: string[];
+  min?: number;
+  max?: number;
+}
+
 export interface ServerPlugin {
   id: string;
   name: string;
@@ -39,13 +55,25 @@ export interface ServerPlugin {
   enabled: boolean;
   forceEnabled?: boolean;
   configSchema?: Record<string, PluginConfigField>;
+  settingsSchema?: Record<string, PluginSettingsField>;
   installedAt: string;
   updatedAt: string;
+  /**
+   * SHA-256 hex of the bundle code (first 16 chars). Refreshed every save so
+   * the same version re-uploaded with new code still appears as a change to
+   * the client. Also doubles as the HTTP ETag for the bundle endpoint.
+   */
+  bundleHash?: string;
   /**
    * Validated CSP origins (https-only, single-origin form) the plugin may
    * embed. Merged into the host frame-src by the proxy.
    */
   frameOrigins?: string[];
+  /**
+   * Validated HTTPS origins the plugin may target via `api.http.fetch()`.
+   * Same syntax as `frameOrigins`. Surfaced to clients via /api/plugins.
+   */
+  httpOrigins?: string[];
 }
 
 export interface ServerTheme {
@@ -120,13 +148,24 @@ export async function savePlugin(
   const bundlePath = path.join(dir, `${plugin.id}.js`);
   await writeFile(bundlePath, code, 'utf-8');
 
-  // Update registry
+  // Stamp content hash + updatedAt so clients can detect re-uploads even
+  // when the manifest version hasn't changed. Preserve the original
+  // installedAt across re-uploads.
+  const bundleHash = createHash('sha256').update(code).digest('hex').slice(0, 16);
+  const now = new Date().toISOString();
+
   const registry = await getPluginRegistry();
   const idx = registry.plugins.findIndex(p => p.id === plugin.id);
+  const next: ServerPlugin = {
+    ...plugin,
+    bundleHash,
+    updatedAt: now,
+    installedAt: idx >= 0 ? registry.plugins[idx].installedAt : plugin.installedAt,
+  };
   if (idx >= 0) {
-    registry.plugins[idx] = plugin;
+    registry.plugins[idx] = next;
   } else {
-    registry.plugins.push(plugin);
+    registry.plugins.push(next);
   }
   await writeJsonFile(pluginRegistryPath(), registry);
 }

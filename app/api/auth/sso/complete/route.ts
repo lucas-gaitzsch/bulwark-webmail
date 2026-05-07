@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { logger } from '@/lib/logger';
 import { decryptPayload } from '@/lib/auth/crypto';
 import { exchangeCodeForTokens } from '@/lib/oauth/token-exchange';
-import { refreshTokenCookieName } from '@/lib/oauth/tokens';
+import { refreshTokenCookieName, refreshTokenServerCookieName } from '@/lib/oauth/tokens';
 import { getCookieOptions } from '@/lib/oauth/cookie-config';
 
 const SSO_PENDING_COOKIE = 'sso_pending';
@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
 
     const codeVerifier = pending.code_verifier as string;
     const redirectUri = pending.redirect_uri as string;
+    const pendingServerId = typeof pending.server_id === 'string' ? pending.server_id : null;
 
     if (!codeVerifier || !redirectUri) {
       cookieStore.delete(SSO_PENDING_COOKIE);
@@ -62,12 +63,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Exchange code for tokens
-    const tokens = await exchangeCodeForTokens(code, codeVerifier, redirectUri);
+    const tokens = await exchangeCodeForTokens(code, codeVerifier, redirectUri, pendingServerId);
 
     // Store refresh token in the per-account cookie slot.
     if (tokens.refresh_token) {
       const cookieName = refreshTokenCookieName(slot);
       cookieStore.set(cookieName, tokens.refresh_token, getCookieOptions());
+    }
+    const serverCookieName = refreshTokenServerCookieName(slot);
+    if (pendingServerId) {
+      cookieStore.set(serverCookieName, pendingServerId, getCookieOptions());
+    } else {
+      cookieStore.delete(serverCookieName);
     }
 
     // Delete pending cookie

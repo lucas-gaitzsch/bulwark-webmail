@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowRight,
   Calendar,
@@ -36,6 +37,7 @@ import {
 } from '@/lib/calendar-invitation';
 import { cn } from '@/lib/utils';
 import { sanitizeColor } from '@/components/calendar/event-card';
+import { RecipientPopover } from './recipient-popover';
 
 interface InvitationChangeItem {
   label: string;
@@ -326,25 +328,26 @@ function buildParticipantsForRsvp(
   );
 }
 
-function getMethodAccentClass(method: InvitationMethod, actorStatus?: string | null): string {
+function getMethodIconTone(method: InvitationMethod, actorStatus?: string | null): string {
   switch (method) {
     case 'cancel':
     case 'declinecounter':
-      return 'border-l-red-500 dark:border-l-red-400';
-    case 'request':
-    case 'add':
-      return 'border-l-blue-500 dark:border-l-blue-400';
+      return 'bg-destructive/15 text-destructive';
     case 'counter':
-      return 'border-l-amber-500 dark:border-l-amber-400';
+      return 'bg-warning/15 text-warning';
     case 'reply':
       switch (actorStatus) {
-        case 'accepted': return 'border-l-green-500 dark:border-l-green-400';
-        case 'tentative': return 'border-l-amber-500 dark:border-l-amber-400';
-        case 'declined': return 'border-l-red-500 dark:border-l-red-400';
-        default: return 'border-l-blue-500 dark:border-l-blue-400';
+        case 'accepted': return 'bg-success/15 text-success';
+        case 'tentative': return 'bg-warning/15 text-warning';
+        case 'declined': return 'bg-destructive/15 text-destructive';
+        default: return 'bg-primary/15 text-primary';
       }
+    case 'request':
+    case 'add':
+    case 'publish':
+      return 'bg-primary/15 text-primary';
     default:
-      return 'border-l-slate-400 dark:border-l-slate-500';
+      return 'bg-muted text-muted-foreground';
   }
 }
 
@@ -371,9 +374,11 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
   const [actionError, setActionError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
+  const [pickerPosition, setPickerPosition] = useState<{ top: number; left: number } | null>(null);
+  const pickerTriggerRef = useRef<HTMLButtonElement>(null);
   const [selectedCalendarId, setSelectedCalendarId] = useState<string>('');
   const [rawIcsMethod, setRawIcsMethod] = useState<InvitationMethod>('unknown');
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   const attachment = findCalendarAttachment(email);
 
@@ -437,6 +442,17 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
     }
   }, [calendars, selectedCalendarId]);
 
+  useEffect(() => {
+    if (!showCalendarPicker) return;
+    const close = () => setShowCalendarPicker(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [showCalendarPicker]);
+
   if (!attachment || !calendarInvitationParsingEnabled) return null;
 
   const detectedMethod = parsedEvent ? getInvitationMethod(parsedEvent, { email, attachment }) : 'unknown';
@@ -444,8 +460,7 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
   const summary = parsedEvent ? formatEventSummary(parsedEvent) : null;
   const isCancellation = method === 'cancel';
   const isResponseOnly = method === 'reply' || method === 'refresh' || method === 'counter' || method === 'declinecounter';
-  const canCollapse = method === 'reply';
-  const showDetails = !canCollapse || !isCollapsed;
+  const showDetails = !isCollapsed;
   const allowsRsvp = method === 'request';
   const allowsImport = method === 'request' || method === 'publish' || method === 'add' || method === 'unknown';
 
@@ -486,7 +501,6 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
   const actorName = actorSummary?.name || actorSummary?.email || t('actor_unknown');
   const actorStatus = getParticipationLabel(t, actorSummary?.participationStatus ?? null);
   const actorMessage = actorSummary ? getActorMessage(t, method, actorName, actorStatus) : null;
-  const actionFeedback = actionNotice;
   // For REQUEST method, allow RSVP even if we can't find the user in participants:
   // the email was sent TO the user, so they are an attendee. handleRsvp handles
   // the import-then-find-participant flow for this case.
@@ -721,130 +735,167 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
     }
   };
 
-  const accentClass = getMethodAccentClass(method, actorSummary?.participationStatus);
-
   if (state === 'loading') {
     return (
-      <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 flex items-center gap-2.5">
-        <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
-        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-        <span className="text-sm text-muted-foreground">{t('loading')}</span>
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-muted text-muted-foreground flex items-center justify-center flex-shrink-0 shadow-sm">
+          <Calendar className="w-5 h-5" />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <span>{t('loading')}</span>
+        </div>
       </div>
     );
   }
 
   if (state === 'error') {
     return (
-      <div className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 flex items-center gap-2.5">
-        <AlertCircle className="w-4 h-4 text-destructive flex-shrink-0" />
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-full bg-destructive/15 text-destructive flex items-center justify-center flex-shrink-0 shadow-sm">
+          <AlertCircle className="w-5 h-5" />
+        </div>
         <span className="text-sm text-destructive">{t('parse_error')}</span>
       </div>
     );
   }
 
+  const iconTone = getMethodIconTone(method, actorSummary?.participationStatus);
+
+  const hasStatusPills = Boolean(
+    existingEvent
+    || userIsOrganizer
+    || (participationLabel && myParticipant)
+    || actionNotice
+    || (parsedEvent?.status && parsedEvent.status !== 'confirmed')
+  );
+
+  const showActionsRow = showDetails && (
+    canRespond
+    || (supportsCalendar && !existingEvent && allowsImport && !isResponseOnly && !isCancellation)
+    || canApplyProposal
+    || (supportsCalendar && (existingEvent || parsedEvent))
+    || !supportsCalendar
+  );
+
   return (
-    <div className={cn("rounded-lg border border-border overflow-hidden border-l-4", accentClass)}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
-          {isCancellation ? (
-            <CalendarX className="w-4 h-4 text-destructive flex-shrink-0" />
-          ) : (
-            <Calendar className="w-4 h-4 text-primary flex-shrink-0" />
-          )}
-          <span className="text-sm font-medium text-foreground truncate">{bannerTitle}</span>
-        </div>
-        {canCollapse && (
-          <button
-            type="button"
-            onClick={() => setIsCollapsed((prev) => !prev)}
-            aria-expanded={!isCollapsed}
-            aria-label={isCollapsed ? t('expand') : t('collapse')}
-            title={isCollapsed ? t('expand') : t('collapse')}
-            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors flex-shrink-0"
-          >
-            {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-          </button>
+    <div
+      className={cn(
+        "flex items-start gap-3 rounded-md transition-colors",
+        isCollapsed && "cursor-pointer hover:bg-muted/50",
+      )}
+      onClick={isCollapsed ? () => setIsCollapsed(false) : undefined}
+      onKeyDown={isCollapsed ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setIsCollapsed(false);
+        }
+      } : undefined}
+      role={isCollapsed ? 'button' : undefined}
+      tabIndex={isCollapsed ? 0 : undefined}
+      aria-expanded={isCollapsed ? false : undefined}
+    >
+      {/* Avatar-style icon */}
+      <div className={cn(
+        "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 shadow-sm",
+        iconTone,
+      )}>
+        {isCancellation ? (
+          <CalendarX className="w-5 h-5" />
+        ) : (
+          <Calendar className="w-5 h-5" />
         )}
       </div>
 
-      {/* Content */}
-      {showDetails && (
-      <div className="px-4 py-3 space-y-2.5">
-        <div className="lg:flex lg:gap-6">
-          {/* Left: Event info */}
-          <div className="lg:flex-1 space-y-2.5 min-w-0">
-            {/* Event title */}
-            {summary?.title && (
-              <div className="flex items-start justify-between gap-2">
-                <h3 className={cn(
-                  "text-base font-semibold leading-snug",
-                  isCancellation ? "line-through text-muted-foreground" : "text-foreground"
-                )}>
-                  {summary.title}
-                </h3>
-                {parsedEvent?.sequence != null && parsedEvent.sequence > 0 && (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground flex-shrink-0 whitespace-nowrap">
-                    {t('event_updated', { sequence: parsedEvent.sequence })}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Event details */}
-            <div className="lg:flex lg:items-center lg:gap-4 lg:flex-wrap space-y-1 lg:space-y-0">
-              {summary?.start && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Clock className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>
-                    {formatDateTime(summary.start)}
-                    {summary.end && ` – ${formatDateTime(summary.end)}`}
-                  </span>
-                </div>
-              )}
-              {summary?.location && (
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
-                  <span>{summary.location}</span>
-                </div>
-              )}
-              {summary?.organizer && (
-                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                  {t('organizer', { name: summary.organizer })}
-                </span>
-              )}
-              {summary && summary.attendeeCount > 0 && (
-                <span className="text-sm text-muted-foreground">{t('attendees', { count: summary.attendeeCount })}</span>
-              )}
+      {/* Content column */}
+      <div className="flex-1 min-w-0 space-y-2">
+        {/* Eyebrow + title + collapse */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {bannerTitle}
             </div>
+            {summary?.title && (
+              <h3 className={cn(
+                "text-sm font-semibold leading-snug break-words",
+                isCancellation ? "line-through text-muted-foreground" : "text-foreground",
+              )}>
+                {summary.title}
+              </h3>
+            )}
           </div>
 
-          {/* Right: Info & actor messages on large screens */}
-          <div className="lg:flex-shrink-0 lg:text-right lg:max-w-xs mt-2.5 lg:mt-0 space-y-1">
-            {bannerInfo && (
-              <p className="text-xs text-muted-foreground leading-relaxed">{bannerInfo}</p>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {parsedEvent?.sequence != null && parsedEvent.sequence > 0 && (
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                {t('event_updated', { sequence: parsedEvent.sequence })}
+              </span>
             )}
-            {actorMessage && (
-              <p className="text-xs text-muted-foreground">{actorMessage}</p>
-            )}
-            {actorSummary?.participationComment && (
-              <p className="text-xs text-muted-foreground italic">
-                {t('actor_note', { comment: actorSummary.participationComment })}
-              </p>
-            )}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsCollapsed((prev) => !prev);
+              }}
+              aria-expanded={!isCollapsed}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition-colors"
+            >
+              {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
+              {isCollapsed ? t('expand') : t('collapse')}
+            </button>
           </div>
         </div>
 
-        {/* Status badges */}
-        {(existingEvent || userIsOrganizer || (participationLabel && myParticipant) || actionFeedback || (parsedEvent?.status && parsedEvent.status !== 'confirmed')) && (
-          <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Meta rows */}
+        {showDetails && summary && (summary.start || summary.location || summary.attendeeCount > 0) && (
+          <div className="flex flex-col gap-1 text-sm text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4 sm:gap-y-1">
+            {summary.start && (
+              <span className="flex items-center gap-1.5 min-w-0">
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {formatDateTime(summary.start)}
+                  {summary.end && ` – ${formatDateTime(summary.end)}`}
+                </span>
+              </span>
+            )}
+            {summary.location && (
+              <span className="flex items-center gap-1.5 min-w-0">
+                <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{summary.location}</span>
+              </span>
+            )}
+            {summary.attendeeCount > 0 && (
+              <span className="text-muted-foreground/80">{t('attendees', { count: summary.attendeeCount })}</span>
+            )}
+          </div>
+        )}
+
+        {/* Organizer row (clickable, left-aligned) */}
+        {showDetails && summary?.organizer && (
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground min-w-0">
+            <Users className="w-3.5 h-3.5 flex-shrink-0" />
+            <span className="flex-shrink-0">{t('organizer_label')}</span>
+            {summary.organizerEmail ? (
+              <RecipientPopover
+                name={summary.organizer}
+                email={summary.organizerEmail}
+                className="text-sm truncate"
+              />
+            ) : (
+              <span className="truncate text-foreground">{summary.organizer}</span>
+            )}
+          </div>
+        )}
+
+        {/* Status pills */}
+        {showDetails && hasStatusPills && (
+          <div className="flex flex-wrap items-center gap-1.5">
             {parsedEvent?.status && parsedEvent.status !== 'confirmed' && (
               <span className={cn(
                 "rounded-full px-2 py-0.5 text-[11px] font-medium",
                 parsedEvent.status === 'cancelled'
                   ? "bg-destructive/15 text-destructive"
-                  : "bg-warning/15 text-warning"
+                  : "bg-warning/15 text-warning",
               )}>
                 {t(`event_status_${parsedEvent.status}`)}
               </span>
@@ -862,21 +913,45 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
             {participationLabel && myParticipant && (
               <span className={cn(
                 'rounded-full px-2 py-0.5 text-[11px] font-medium',
-                getParticipationTone(currentRsvp)
+                getParticipationTone(currentRsvp),
               )}>
                 {t('your_response', { status: participationLabel })}
               </span>
             )}
-            {actionFeedback && (
+            {actionNotice && (
               <span className="rounded-full bg-success/15 px-2 py-0.5 text-[11px] font-medium text-success">
-                {actionFeedback}
+                {actionNotice}
               </span>
             )}
           </div>
         )}
 
+        {/* Info / actor messages */}
+        {showDetails && (bannerInfo || actorMessage || actorSummary?.participationComment) && (
+          <div className="space-y-0.5 text-xs text-muted-foreground">
+            {bannerInfo && <p className="leading-relaxed">{bannerInfo}</p>}
+            {actorMessage && <p>{actorMessage}</p>}
+            {actorSummary?.participationComment && (
+              <p className="italic">{t('actor_note', { comment: actorSummary.participationComment })}</p>
+            )}
+          </div>
+        )}
+
+        {/* Trust warning */}
+        {showDetails && trustMessage && trustAssessment && (
+          <div className={cn(
+            'flex items-start gap-2 text-sm rounded-md px-3 py-2 border',
+            trustAssessment.level === 'warning'
+              ? 'bg-destructive/10 text-destructive border-destructive/30'
+              : 'bg-warning/10 text-warning border-warning/30',
+          )}>
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span className="flex-1">{trustMessage}</span>
+          </div>
+        )}
+
         {/* Proposed changes */}
-        {proposedChanges.length > 0 && (
+        {showDetails && proposedChanges.length > 0 && (
           <div className="rounded-md border border-border bg-muted/30 px-3 py-2.5 text-xs">
             <div className="font-medium text-foreground mb-1.5">{t('proposed_changes')}</div>
             <div className="space-y-1.5">
@@ -890,156 +965,154 @@ export function CalendarInvitationBanner({ email }: CalendarInvitationBannerProp
           </div>
         )}
 
-        {/* Trust warning */}
-        {trustMessage && trustAssessment && (
-          <div className={cn(
-            'flex items-start gap-1.5 text-xs rounded-md px-3 py-2',
-            trustAssessment.level === 'warning'
-              ? 'bg-destructive/10 text-destructive border border-destructive/20'
-              : 'bg-warning/10 text-warning border border-warning/20'
-          )}>
-            <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>{trustMessage}</span>
-          </div>
-        )}
-
         {/* Action error */}
-        {actionError && (
-          <div className="flex items-start gap-1.5 text-xs text-destructive rounded-md px-3 py-2 bg-destructive/10 border border-destructive/20">
-            <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-            <span>{actionError}</span>
+        {showDetails && actionError && (
+          <div className="flex items-start gap-2 text-sm rounded-md px-3 py-2 bg-destructive/10 text-destructive border border-destructive/30">
+            <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span className="flex-1">{actionError}</span>
           </div>
         )}
-      </div>
-      )}
 
-      {/* Actions */}
-      {showDetails && (
-      <div className="px-4 py-2.5 border-t border-border bg-muted/20 flex items-center gap-2 flex-wrap">
-        {canRespond && (
-          <>
-            <button
-              onClick={() => handleRsvp('accepted')}
-              disabled={isProcessing}
-              aria-pressed={currentRsvp === 'accepted'}
-              className={cn(
-                "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors min-h-[36px] disabled:opacity-50 border",
-                currentRsvp === 'accepted'
-                  ? "bg-success/15 text-success border-success/20"
-                  : "text-muted-foreground hover:text-success border-border hover:border-success/30 hover:bg-success/10"
-              )}
-            >
-              <Check className="w-3.5 h-3.5" />
-              {t('accept')}
-            </button>
-            <button
-              onClick={() => handleRsvp('tentative')}
-              disabled={isProcessing}
-              aria-pressed={currentRsvp === 'tentative'}
-              className={cn(
-                "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors min-h-[36px] disabled:opacity-50 border",
-                currentRsvp === 'tentative'
-                  ? "bg-warning/15 text-warning border-warning/20"
-                  : "text-muted-foreground hover:text-warning border-border hover:border-warning/30 hover:bg-warning/10"
-              )}
-            >
-              <HelpCircle className="w-3.5 h-3.5" />
-              {t('maybe')}
-            </button>
-            <button
-              onClick={() => handleRsvp('declined')}
-              disabled={isProcessing}
-              aria-pressed={currentRsvp === 'declined'}
-              className={cn(
-                "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors min-h-[36px] disabled:opacity-50 border",
-                currentRsvp === 'declined'
-                  ? "bg-destructive/15 text-destructive border-destructive/20"
-                  : "text-muted-foreground hover:text-destructive border-border hover:border-destructive/30 hover:bg-destructive/10"
-              )}
-            >
-              <X className="w-3.5 h-3.5" />
-              {t('decline')}
-            </button>
+        {/* Actions */}
+        {showActionsRow && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+          {canRespond && (
+            <>
+              <button
+                onClick={() => handleRsvp('accepted')}
+                disabled={isProcessing}
+                aria-pressed={currentRsvp === 'accepted'}
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors min-h-[36px] disabled:opacity-50 border",
+                  currentRsvp === 'accepted'
+                    ? "bg-success/15 text-success border-success/30"
+                    : "text-muted-foreground hover:text-success border-border hover:border-success/30 hover:bg-success/10",
+                )}
+              >
+                <Check className="w-3.5 h-3.5" />
+                {t('accept')}
+              </button>
+              <button
+                onClick={() => handleRsvp('tentative')}
+                disabled={isProcessing}
+                aria-pressed={currentRsvp === 'tentative'}
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors min-h-[36px] disabled:opacity-50 border",
+                  currentRsvp === 'tentative'
+                    ? "bg-warning/15 text-warning border-warning/30"
+                    : "text-muted-foreground hover:text-warning border-border hover:border-warning/30 hover:bg-warning/10",
+                )}
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+                {t('maybe')}
+              </button>
+              <button
+                onClick={() => handleRsvp('declined')}
+                disabled={isProcessing}
+                aria-pressed={currentRsvp === 'declined'}
+                className={cn(
+                  "inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-md transition-colors min-h-[36px] disabled:opacity-50 border",
+                  currentRsvp === 'declined'
+                    ? "bg-destructive/15 text-destructive border-destructive/30"
+                    : "text-muted-foreground hover:text-destructive border-border hover:border-destructive/30 hover:bg-destructive/10",
+                )}
+              >
+                <X className="w-3.5 h-3.5" />
+                {t('decline')}
+              </button>
+              <div className="w-px h-5 bg-border mx-1" />
+            </>
+          )}
 
-            <div className="w-px h-5 bg-border" />
-          </>
-        )}
+          {supportsCalendar && !existingEvent && allowsImport && !isResponseOnly && !isCancellation && (
+            <>
+              <button
+                ref={pickerTriggerRef}
+                onClick={() => {
+                  if (calendars.length <= 1) {
+                    handleImport();
+                    return;
+                  }
+                  if (showCalendarPicker) {
+                    setShowCalendarPicker(false);
+                    return;
+                  }
+                  if (pickerTriggerRef.current) {
+                    const rect = pickerTriggerRef.current.getBoundingClientRect();
+                    setPickerPosition({ top: rect.bottom + 4, left: rect.left });
+                  }
+                  setShowCalendarPicker(true);
+                }}
+                disabled={isProcessing}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted transition-colors min-h-[36px] disabled:opacity-50"
+              >
+                <CalendarCheck className="w-3.5 h-3.5" />
+                {t('add_to_calendar')}
+                {calendars.length > 1 && <ChevronDown className="w-3 h-3" />}
+              </button>
 
-        {supportsCalendar && !existingEvent && allowsImport && !isResponseOnly && !isCancellation && (
-          <div className="relative">
+              {showCalendarPicker && calendars.length > 1 && pickerPosition && typeof document !== 'undefined' && createPortal(
+                <div
+                  className="fixed w-52 bg-background rounded-lg shadow-lg border border-border z-50 py-1"
+                  style={{ top: pickerPosition.top, left: pickerPosition.left }}
+                >
+                  <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
+                    {t('select_calendar')}
+                  </div>
+                  {calendars.map((cal) => (
+                    <button
+                      key={cal.id}
+                      onClick={() => {
+                        setShowCalendarPicker(false);
+                        handleImport(cal.id);
+                      }}
+                      className="w-full px-3 py-1.5 text-sm text-left hover:bg-muted flex items-center gap-2"
+                    >
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: sanitizeColor(cal.color) }}
+                      />
+                      <span className="truncate text-foreground">{cal.name}</span>
+                    </button>
+                  ))}
+                </div>,
+                document.body,
+              )}
+            </>
+          )}
+
+          {canApplyProposal && (
             <button
-              onClick={() => {
-                if (calendars.length <= 1) {
-                  handleImport();
-                } else {
-                  setShowCalendarPicker(!showCalendarPicker);
-                }
-              }}
+              onClick={handleApplyProposal}
               disabled={isProcessing}
               className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted transition-colors min-h-[36px] disabled:opacity-50"
             >
               <CalendarCheck className="w-3.5 h-3.5" />
-              {t('add_to_calendar')}
-              {calendars.length > 1 && <ChevronDown className="w-3 h-3" />}
+              {t('apply_proposal')}
             </button>
+          )}
 
-            {showCalendarPicker && calendars.length > 1 && (
-              <div className="absolute left-0 top-full mt-1 w-52 bg-background rounded-lg shadow-lg border border-border z-10 py-1">
-                <div className="px-3 py-1.5 text-xs font-medium text-muted-foreground">
-                  {t('select_calendar')}
-                </div>
-                {calendars.map((cal) => (
-                  <button
-                    key={cal.id}
-                    onClick={() => {
-                      setShowCalendarPicker(false);
-                      handleImport(cal.id);
-                    }}
-                    className="w-full px-3 py-1.5 text-sm text-left hover:bg-muted flex items-center gap-2"
-                  >
-                    <span
-                      className="w-3 h-3 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: sanitizeColor(cal.color) }}
-                    />
-                    <span className="truncate text-foreground">{cal.name}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+          {supportsCalendar && (existingEvent || parsedEvent) && (
+            <button
+              onClick={handleViewInCalendar}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors min-h-[36px]"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              {viewActionLabel}
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
 
-        {canApplyProposal && (
-          <button
-            onClick={handleApplyProposal}
-            disabled={isProcessing}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md border border-border hover:bg-muted transition-colors min-h-[36px] disabled:opacity-50"
-          >
-            <CalendarCheck className="w-3.5 h-3.5" />
-            {t('apply_proposal')}
-          </button>
-        )}
+          {!supportsCalendar && (
+            <span className="text-xs text-muted-foreground italic">{t('no_calendar')}</span>
+          )}
 
-        {supportsCalendar && (existingEvent || parsedEvent) && (
-          <button
-            onClick={handleViewInCalendar}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground px-3 py-1.5 rounded-md hover:bg-muted transition-colors min-h-[36px]"
-          >
-            <Calendar className="w-3.5 h-3.5" />
-            {viewActionLabel}
-            <ArrowRight className="w-3 h-3" />
-          </button>
-        )}
-
-        {!supportsCalendar && (
-          <span className="text-xs text-muted-foreground italic">{t('no_calendar')}</span>
-        )}
-
-        {isProcessing && (
-          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground ml-auto" />
+          {isProcessing && (
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground ml-auto" />
+          )}
+        </div>
         )}
       </div>
-      )}
     </div>
   );
 }

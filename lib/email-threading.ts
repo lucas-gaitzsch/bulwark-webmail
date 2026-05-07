@@ -7,7 +7,7 @@
  *   In-Reply-To = parent.Message-ID
  *   References  = parent.References (if any) + parent.Message-ID
  *
- * Bare msg-ids only — angle brackets are stripped because JMAP RFC 8621
+ * Bare msg-ids only - angle brackets are stripped because JMAP RFC 8621
  * §4.1.2.3 stores Message-IDs without them.
  */
 

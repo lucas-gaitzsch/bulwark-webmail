@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAPサーバー",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "サーバーはこのドメインからのCORSリクエストを許可する必要があります。",
+    "jmap_server_label": "サーバー",
+    "jmap_server_auto_picked": "メールドメインからサーバーを選択しました。",
     "sign_in": "サインイン",
     "signing_in": "サインイン中...",
     "loading": "読み込み中...",
@@ -405,6 +407,7 @@
       "declined_counter_title": "対案は拒否されました",
       "cancelled_title": "イベントがキャンセルされました",
       "organizer": "{name} が主催",
+      "organizer_label": "主催者:",
       "attendees": "{count}名の参加者",
       "accept": "承諾",
       "maybe": "未定",
@@ -511,8 +514,8 @@
     "send": "送信",
     "cancel": "キャンセル",
     "attach": "添付",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "写真と動画",
+    "attach_files": "ファイル",
     "discard": "破棄",
     "discard_draft_title": "下書きを破棄しますか？",
     "discard_draft_confirm": "未保存の変更があります。この下書きを破棄しますか？",
@@ -1379,7 +1382,7 @@
         "description": "ブラウザーやデバイス間で設定を同期します"
       },
       "sender_favicons": {
-        "label": "送信者ファビコン（実験的）",
+        "label": "送信者ファビコン",
         "description": "ビジネス送信者のプロフィール画像としてウェブサイトアイコンを表示"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "プレビュー"
       }
-    }
+    },
+    "search_placeholder": "設定を検索",
+    "search_clear": "検索をクリア",
+    "search_no_results": "一致する設定はありません"
   },
   "errors": {
     "page_error_title": "問題が発生しました",

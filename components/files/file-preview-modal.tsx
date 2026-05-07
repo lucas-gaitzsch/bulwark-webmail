@@ -159,10 +159,13 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        e.stopPropagation();
+        onClose();
+      }
     };
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, { capture: true });
+    return () => window.removeEventListener("keydown", handleKeyDown, { capture: true });
   }, [onClose]);
 
   return (
@@ -221,12 +224,17 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
         )}
 
         {!loading && !error && fileType === "pdf" && objectUrl && (
-          <iframe
-            src={objectUrl}
-            sandbox="allow-scripts"
+          <object
+            data={objectUrl}
+            type="application/pdf"
             className="w-full max-w-5xl h-full rounded-lg bg-white"
-            title={name}
-          />
+            aria-label={name}
+          >
+            <Button onClick={() => void onDownload()}>
+              <Download className="w-4 h-4 mr-2" />
+              {t("download")}
+            </Button>
+          </object>
         )}
 
         {!loading && !error && fileType === "audio" && objectUrl && (

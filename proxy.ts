@@ -43,7 +43,7 @@ export async function proxy(request: NextRequest) {
     `font-src 'self'`,
     `connect-src ${connectSrc}`,
     frameSrc,
-    `object-src 'none'`,
+    `object-src 'self' blob:`,
     `base-uri 'self'`,
     `form-action 'self'`,
     `frame-ancestors ${frameAncestors}`,

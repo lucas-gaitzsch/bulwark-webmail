@@ -184,7 +184,9 @@ export function NavigationRail({
 
   // Account list for rail
   const accounts = useAccountStore((s) => s.accounts);
-  const activeAccountId = useAccountStore((s) => s.activeAccountId);
+  // Read activeAccountId from authStore so the rail's account row matches the actually-loaded
+  // session - accountStore has its own persisted copy that can drift out of sync.
+  const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const switchAccount = useAuthStore((s) => s.switchAccount);
   const logout = useAuthStore((s) => s.logout);
   const logoutAll = useAuthStore((s) => s.logoutAll);

@@ -40,8 +40,11 @@ export function AccountSwitcher({ variant = "rail", className }: AccountSwitcher
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 
   const accounts = useAccountStore((s) => s.accounts);
-  const activeAccountId = useAccountStore((s) => s.activeAccountId);
   const setDefaultAccount = useAccountStore((s) => s.setDefaultAccount);
+  // Read activeAccountId from authStore so the selector matches the actually-loaded
+  // session (primaryIdentity, JMAP client). accountStore.activeAccountId is a separate
+  // persisted copy that can drift out of sync across hydration / partial persist writes.
+  const activeAccountId = useAuthStore((s) => s.activeAccountId);
   const activeAccount = accounts.find((a) => a.id === activeAccountId);
   const switchAccount = useAuthStore((s) => s.switchAccount);
   const logout = useAuthStore((s) => s.logout);

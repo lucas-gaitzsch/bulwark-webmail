@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.6.2 (2026-05-06)
+
+### Features
+
+- **Plugins**: Hot-reload and dev-folder loading for live plugin development
+- **Plugins**: On-demand `src/` bundling via esbuild
+- **Plugins**: New `http:fetch` permission and `httpOrigins` manifest field
+- **Plugins**: `onBeforeEmailSend` hook with `fromEmail` exposed on `OutgoingEmail`
+- **Plugins**: Project `EmailReadView` for the email-banner slot and expose auth results
+- **Plugins**: Ingest icon, banner, and screenshots from the source repo
+- **Plugins**: Restrict plugin and theme install/uninstall to the admin dashboard
+- **Mail**: Multi-server JMAP support
+- **Settings**: Fulltext search across the settings sidebar
+- **Settings**: Sub-result rows with highlight in settings search
+- **Settings**: Surface plugin settings as search sub-results
+- **Settings**: Remove experimental tags from themes, plugins, and sender favicons
+- **Viewer**: Redesigned external-mail banner above attachments
+- **Calendar**: Calendar invitation banner expands on row click
+- **Calendar**: Calendar invitation banner is now collapsible
+
+### Fixes
+
+- **Admin**: Collapse admin panel into a single tabbed page
+- **Plugins**: Inline plugin configure panel to avoid dev-mode hang
+- **Plugins**: Resolve `PLUGIN_DEV_DIR` plugins in admin config route
+- **Plugins**: Add missing body type assertion in `createPluginAPI` fetch options
+- **Plugins**: Propagate `settingsSchema`
+- **Settings**: Highlight plugin and theme cards in search results
+- **Settings**: Open plugin card on first click of a setting sub-result
+- **Settings**: Drop ghost sub-results from account and language search
+- **Settings**: Improve search highlight styling
+- **Viewer**: Show notification banners above attachments
+- **Viewer**: Rework S/MIME banner to match calendar invitation
+- **Viewer**: Close PDF preview on Escape before email viewer
+- **Viewer**: Render PDF previews via `<object>` with `blob:` in object-src CSP (#253)
+- **Calendar**: Align invitation icon with sender avatar column
+- **Calendar**: Fix invitation picker clipping (#250)
+- **Auth**: Read `activeAccountId` from authStore in account selectors
+- **UI**: Adjust toast item border radius and progress bar styles
+- **UI**: Remove fly-in animation from context menu submenus
+- **i18n**: Add missing Czech flag icon
+
+### i18n
+
+- Add missing translation keys across 15 locales
+
 ## 1.6.1 (2026-05-04)
 
 ### Features

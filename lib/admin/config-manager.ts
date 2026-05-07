@@ -13,6 +13,12 @@ function parseEnvValue(value: string, type: string): unknown {
   switch (type) {
     case 'boolean':
       return value === 'true';
+    case 'json':
+      try {
+        return JSON.parse(value);
+      } catch {
+        return null;
+      }
     case 'string':
     case 'url':
     case 'enum':

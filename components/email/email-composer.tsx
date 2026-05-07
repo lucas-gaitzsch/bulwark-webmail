@@ -963,7 +963,7 @@ export function EmailComposer({
       return '';
     };
 
-    // RFC 5322 §3.6.4 threading — only continues the chain on a reply, not a forward.
+    // RFC 5322 §3.6.4 threading - only continues the chain on a reply, not a forward.
     const threadingHeaders = (mode === 'reply' || mode === 'replyAll')
       ? computeReplyThreadingHeaders(replyTo)
       : null;
@@ -980,6 +980,26 @@ export function EmailComposer({
     const inlineAttachments = rewritten?.attachments ?? [];
 
     try {
+      // Let plugins veto the send (external-mail warning, mistyped-domain
+      // guards, etc.). Returning false from any handler aborts before either
+      // the S/MIME or standard JMAP path runs.
+      const sendablePreview: OutgoingEmail = {
+        to: toAddresses,
+        cc: ccAddresses,
+        bcc: bccAddresses,
+        subject,
+        htmlBody: finalHtmlBody || '',
+        textBody: finalBody,
+        identityId: currentIdentity?.id || '',
+        fromEmail,
+        attachments: attachments
+          .filter(att => att.blobId && !att.uploading && !att.error)
+          .map(a => ({ name: a.name, type: a.type || 'application/octet-stream', size: a.size })),
+        inReplyTo: threadingHeaders?.inReplyTo?.[0],
+      };
+      const sendAllowed = await emailHooks.onBeforeEmailSend.intercept(sendablePreview);
+      if (!sendAllowed) return;
+
       // S/MIME send pipeline: build raw MIME → sign → encrypt → sendRawEmail
       if ((smimeSign_ || smimeEncrypt_) && client && currentIdentity?.id) {
         // 1. Resolve S/MIME key
@@ -1115,6 +1135,7 @@ export function EmailComposer({
           htmlBody: finalHtmlBody || '',
           textBody: finalBody,
           identityId: currentIdentity?.id || '',
+          fromEmail,
           attachments: uploadedAttachments.map(a => ({ name: a.name, type: a.type, size: a.size })),
           inReplyTo: threadingHeaders?.inReplyTo?.[0],
         };

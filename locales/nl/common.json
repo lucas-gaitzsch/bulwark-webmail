@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP-server",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "De server moet CORS-verzoeken van dit domein toestaan.",
+    "jmap_server_label": "Server",
+    "jmap_server_auto_picked": "Server geselecteerd op basis van je e-maildomein.",
     "sign_in": "Aanmelden",
     "signing_in": "Aanmelden...",
     "loading": "Laden...",
@@ -405,6 +407,7 @@
       "declined_counter_title": "Tegenvoorstel afgewezen",
       "cancelled_title": "Evenement geannuleerd",
       "organizer": "Georganiseerd door {name}",
+      "organizer_label": "Georganiseerd door",
       "attendees": "{count, plural, one {# deelnemer} other {# deelnemers}}",
       "accept": "Accepteren",
       "maybe": "Misschien",
@@ -511,8 +514,8 @@
     "send": "Verzenden",
     "cancel": "Annuleren",
     "attach": "Bijlage toevoegen",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "Foto's en video's",
+    "attach_files": "Bestanden",
     "discard": "Verwijderen",
     "discard_draft_title": "Concept verwijderen?",
     "discard_draft_confirm": "Je hebt niet-opgeslagen wijzigingen. Wil je dit concept verwijderen?",
@@ -1379,7 +1382,7 @@
         "description": "Synchroniseer uw instellingen tussen browsers en apparaten"
       },
       "sender_favicons": {
-        "label": "Afzender-favicons (Experimenteel)",
+        "label": "Afzender-favicons",
         "description": "Toon websitepictogrammen als profielfoto's voor zakelijke afzenders"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Voorbeeld"
       }
-    }
+    },
+    "search_placeholder": "Instellingen zoeken",
+    "search_clear": "Zoekopdracht wissen",
+    "search_no_results": "Geen overeenkomende instellingen"
   },
   "errors": {
     "page_error_title": "Er is iets misgegaan",

@@ -53,7 +53,23 @@ export interface ThemeManifest {
   author: string;
   description: string;
   type: 'theme';
+  /** @deprecated kept as alias for `banner` so existing themes still work. */
   preview?: string;
+  /**
+   * Path inside the source repo (relative to manifest.json) to a square
+   * brand icon shown in marketplace cards and the host's theme picker.
+   */
+  icon?: string;
+  /**
+   * Path to a wide promo image shown as the hero on the theme detail
+   * page. PNG/JPG/WebP, ≤512 KB.
+   */
+  banner?: string;
+  /**
+   * Up to 6 screenshot paths shown in the gallery on the detail page.
+   * Themes typically use this to show light + dark variants.
+   */
+  screenshots?: string[];
   variants: ThemeVariant[];
   minAppVersion?: string;
 
@@ -100,6 +116,36 @@ export interface PluginManifest {
    * Validated at install time and merged into the host CSP `frame-src`.
    */
   frameOrigins?: string[];
+  /**
+   * External HTTPS origins this plugin may make `api.http.fetch()` requests
+   * to. Same syntax as `frameOrigins`. Validated at install time. Each
+   * `api.http.fetch` call's URL must resolve to one of these origins (exact
+   * host or a `*.host` wildcard match).
+   *
+   * Use for plugins that talk directly to a third-party service (e.g.
+   * Nextcloud, Slack) instead of going through a same-origin /api/* route.
+   * The remote host must serve CORS headers permitting the webmail origin.
+   */
+  httpOrigins?: string[];
+
+  // ─── Marketplace media (NOT shipped in the runtime zip) ──────
+  /**
+   * Path inside the source repo (relative to manifest.json) to a square
+   * brand icon. PNG/SVG/WebP, ≤256 KB, 128×128 or larger recommended.
+   * The extension directory ingests this from git and serves it on
+   * marketplace cards and the host's plugin admin UI.
+   */
+  icon?: string;
+  /**
+   * Path to a wide promo image (16:9 recommended), shown as the hero on
+   * the extension detail page. PNG/JPG/WebP, ≤512 KB.
+   */
+  banner?: string;
+  /**
+   * Up to 6 screenshot paths shown in the gallery on the detail page.
+   * Each ≤512 KB; total ≤2 MB. Order is preserved.
+   */
+  screenshots?: string[];
 }
 
 export interface SettingFieldSchema {
@@ -168,6 +214,16 @@ export interface InstalledPlugin {
   settings: Record<string, unknown>;
   /** Bundled translations, carried over from the manifest on install. */
   locales?: Record<string, Record<string, string>>;
+  /**
+   * Content hash of the installed bundle, mirrored from the server. Used to
+   * detect re-uploads of the same version so clients re-download the JS.
+   */
+  bundleHash?: string;
+  /**
+   * Validated allowlist of external HTTPS origins this plugin may target via
+   * `api.http.fetch()`. Carried over from the manifest at install time.
+   */
+  httpOrigins?: string[];
 }
 
 // ─── UI Slots ────────────────────────────────────────────────
@@ -295,6 +351,17 @@ export interface EmailReadView {
   hasAttachment: boolean;
   preview: string;
   keywords: string[];
+  /**
+   * Parsed Authentication-Results header (SPF, DKIM, DMARC, reverse-DNS).
+   * Absent on stores that didn't parse the header (e.g. bodies not yet
+   * fetched). Mirrors the structured shape exposed by the host.
+   */
+  auth?: {
+    spf?: { result: 'pass' | 'fail' | 'softfail' | 'neutral' | 'none' | 'temperror' | 'permerror'; domain?: string };
+    dkim?: { result: 'pass' | 'fail' | 'policy' | 'neutral' | 'temperror' | 'permerror'; domain?: string; selector?: string };
+    dmarc?: { result: 'pass' | 'fail' | 'none'; policy?: 'reject' | 'quarantine' | 'none'; domain?: string };
+    iprev?: { result: 'pass' | 'fail'; ip?: string };
+  };
 }
 
 export interface DraftView {
@@ -536,6 +603,8 @@ export interface OutgoingEmail {
   htmlBody: string;
   textBody: string;
   identityId: string;
+  /** Sender email derived from the active identity (incl. sub-address tag, when set) */
+  fromEmail?: string;
   attachments: { name: string; type: string; size: number }[];
   /** Original message id when this is a reply or forward */
   inReplyTo?: string;
@@ -609,7 +678,7 @@ export interface SelectionContext {
 export interface ConflictWarning {
   /** Stable unique key per warning, used as React key */
   key: string;
-  /** Short message — e.g. "Conflicts with: Team Standup" */
+  /** Short message - e.g. "Conflicts with: Team Standup" */
   message: string;
   severity?: 'info' | 'warning' | 'error';
 }
@@ -708,7 +777,7 @@ export const ALL_PERMISSIONS = [
   'settings:read', 'settings:write',
   'security:read',
   'auth:observe',
-  'http:post',
+  'http:post', 'http:fetch',
   'ui:observe', 'ui:toolbar', 'ui:email-banner', 'ui:email-footer',
   'ui:composer-toolbar', 'ui:composer-sidebar',
   'ui:sidebar-widget', 'ui:settings-section',

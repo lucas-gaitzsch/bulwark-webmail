@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
 import { configManager } from '@/lib/admin/config-manager';
 import { readFileEnv } from '@/lib/read-file-env';
+import { parseJmapServers, redactJmapServers } from '@/lib/admin/jmap-servers';
 
 /**
  * Runtime configuration endpoint
@@ -49,6 +50,8 @@ export async function GET() {
     loginWebsiteUrl: configManager.get<string>('loginWebsiteUrl', ''),
     demoMode: configManager.get<boolean>('demoMode', false),
     allowCustomJmapEndpoint: configManager.get<boolean>('allowCustomJmapEndpoint', false),
+    jmapServers: redactJmapServers(parseJmapServers(configManager.get<unknown>('jmapServers', []))),
+    jmapServerAutoPickByDomain: configManager.get<boolean>('jmapServerAutoPickByDomain', false),
     autoSsoEnabled: configManager.get<boolean>('autoSsoEnabled', false),
     embeddedMode: !!allowedFrameAncestors && allowedFrameAncestors !== "'none'",
     parentOrigin: configManager.get<string>('parentOrigin', ''),

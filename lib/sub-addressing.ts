@@ -19,7 +19,7 @@ export function isSupportedSubAddressDelimiter(value: string): value is SubAddre
 }
 
 // RFC 5321 atext "special" characters, minus alphanumerics and "@". A custom
-// delimiter must be exactly one of these — they're safe to embed in a local
+// delimiter must be exactly one of these - they're safe to embed in a local
 // part and unambiguously separate the user from the tag.
 const VALID_DELIMITER_REGEX = /^[!#$%&'*+\-./=?^_`{|}~]$/;
 

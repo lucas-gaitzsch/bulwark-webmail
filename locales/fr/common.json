@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "Serveur JMAP",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "Le serveur doit autoriser les requêtes CORS depuis ce domaine.",
+    "jmap_server_label": "Serveur",
+    "jmap_server_auto_picked": "Serveur sélectionné à partir de votre domaine de messagerie.",
     "sign_in": "Se connecter",
     "signing_in": "Connexion en cours...",
     "loading": "Chargement...",
@@ -405,6 +407,7 @@
       "declined_counter_title": "Contre-proposition refusée",
       "cancelled_title": "Événement annulé",
       "organizer": "Organisé par {name}",
+      "organizer_label": "Organisé par",
       "attendees": "{count, plural, one {# participant} other {# participants}}",
       "accept": "Accepter",
       "maybe": "Peut-être",
@@ -511,8 +514,8 @@
     "send": "Envoyer",
     "cancel": "Annuler",
     "attach": "Joindre",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "Photos et vidéos",
+    "attach_files": "Fichiers",
     "discard": "Supprimer",
     "discard_draft_title": "Supprimer le brouillon ?",
     "discard_draft_confirm": "Vous avez des modifications non enregistrées. Voulez-vous supprimer ce brouillon ?",
@@ -1379,7 +1382,7 @@
         "description": "Synchronisez vos paramètres entre navigateurs et appareils"
       },
       "sender_favicons": {
-        "label": "Favicons des expéditeurs (Expérimental)",
+        "label": "Favicons des expéditeurs",
         "description": "Afficher les icônes de sites web comme photos de profil pour les expéditeurs professionnels"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Aperçu"
       }
-    }
+    },
+    "search_placeholder": "Rechercher dans les paramètres",
+    "search_clear": "Effacer la recherche",
+    "search_no_results": "Aucun paramètre correspondant"
   },
   "errors": {
     "page_error_title": "Une erreur s'est produite",

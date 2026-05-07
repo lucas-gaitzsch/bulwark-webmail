@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP server",
     "jmap_endpoint_placeholder": "https://mail.example.com",
     "jmap_endpoint_cors_hint": "Server musí povolovat požadavky CORS z této domény.",
+    "jmap_server_label": "Server",
+    "jmap_server_auto_picked": "Server vybrán podle domény vašeho e-mailu.",
     "sign_in": "Přihlásit se",
     "signing_in": "Přihlašování...",
     "loading": "Načítání...",
@@ -407,6 +409,7 @@
       "declined_counter_title": "Návrh na změnu zamítnut",
       "cancelled_title": "Událost zrušena",
       "organizer": "Organizátor: {name}",
+      "organizer_label": "Organizátor:",
       "attendees": "{count, plural, one {1 účastník} few {# účastníci} other {# účastníků}}",
       "accept": "Přijmout",
       "maybe": "Možná",
@@ -511,8 +514,8 @@
     "send": "Odeslat",
     "cancel": "Zrušit",
     "attach": "Připojit",
-    "attach_photos": "Photos & Videos",
-    "attach_files": "Files",
+    "attach_photos": "Fotky a videa",
+    "attach_files": "Soubory",
     "discard": "Zahodit",
     "discard_draft_title": "Zahodit koncept?",
     "discard_draft_confirm": "Máte neuložené změny. Chcete tento koncept zahodit?",
@@ -1379,7 +1382,7 @@
         "description": "Synchronizovat nastavení mezi prohlížeči a zařízeními"
       },
       "sender_favicons": {
-        "label": "Favikony odesílatelů (experimentální)",
+        "label": "Favikony odesílatelů",
         "description": "Zobrazovat ikony webových stránek jako profilové obrázky firemních odesílatelů"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Náhled"
       }
-    }
+    },
+    "search_placeholder": "Hledat nastavení",
+    "search_clear": "Vymazat hledání",
+    "search_no_results": "Žádná odpovídající nastavení"
   },
   "errors": {
     "page_error_title": "Něco se pokazilo",

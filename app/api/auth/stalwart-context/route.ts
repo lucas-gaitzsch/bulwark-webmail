@@ -5,6 +5,7 @@ import { setStalwartAuthContext } from '@/lib/stalwart/auth-context';
 import { configManager } from '@/lib/admin/config-manager';
 import { isPublicHttpUrl } from '@/lib/security/url-guard';
 import { recordLogin } from '@/lib/telemetry/login-tracker';
+import { parseJmapServers, resolveTrustedJmapUrl } from '@/lib/admin/jmap-servers';
 
 function getSlot(request: NextRequest, bodySlot: unknown): number {
   if (typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot <= 4) {
@@ -26,10 +27,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Pin the upstream URL to the configured JMAP server so an unauthenticated
-    // caller cannot point this route at internal hosts. Only when no server URL
-    // is configured AND the deployment explicitly allows custom JMAP endpoints
-    // do we honor the body URL — and even then it must be a public URL.
+    // Pin the upstream URL to a configured JMAP server (single `jmapServerUrl`
+    // or any entry in `jmapServers`). Falls back to the request URL only when
+    // `allowCustomJmapEndpoint` is enabled, and even then it must be public.
     await configManager.ensureLoaded();
     const configuredServerUrl =
       configManager.get<string>('jmapServerUrl', '') ||
@@ -37,11 +37,13 @@ export async function POST(request: NextRequest) {
       process.env.NEXT_PUBLIC_JMAP_SERVER_URL ||
       '';
     const allowCustomEndpoint = configManager.get<boolean>('allowCustomJmapEndpoint', false);
+    const serverList = parseJmapServers(configManager.get<unknown>('jmapServers', []));
+    const trustedUrl = resolveTrustedJmapUrl(serverUrl, configuredServerUrl, serverList);
 
     let upstreamUrl: string;
     let upstreamTrusted: boolean;
-    if (configuredServerUrl) {
-      upstreamUrl = configuredServerUrl;
+    if (trustedUrl) {
+      upstreamUrl = trustedUrl;
       upstreamTrusted = true;
     } else if (allowCustomEndpoint) {
       if (!(await isPublicHttpUrl(serverUrl))) {

@@ -8,8 +8,10 @@ import {
   deletePlugin as removePlugin,
   type ServerPlugin,
 } from '@/lib/admin/plugin-registry';
+import { listDevPlugins } from '@/lib/admin/plugin-dev';
 import {
   sanitizeFrameOrigins,
+  sanitizeHttpOrigins,
   invalidateFrameOriginsCache,
 } from '@/lib/admin/csp-frame-origins';
 
@@ -34,8 +36,20 @@ export async function GET() {
     const result = await requireAdminAuth();
     if ('error' in result) return result.error;
 
-    const registry = await getPluginRegistry();
-    return NextResponse.json(registry.plugins, {
+    const [registry, devEntries] = await Promise.all([
+      getPluginRegistry(),
+      listDevPlugins(),
+    ]);
+
+    // Dev plugins win on id collision so admins see what users actually load.
+    const devIds = new Set(devEntries.map(e => e.plugin.id));
+    const merged = [
+      ...devEntries.map(e => ({ ...e.plugin, dev: true as const })),
+      ...registry.plugins
+        .filter(p => !devIds.has(p.id))
+        .map(p => ({ ...p, dev: false as const })),
+    ];
+    return NextResponse.json(merged, {
       headers: { 'Cache-Control': 'no-store' },
     });
   } catch (error) {
@@ -157,6 +171,7 @@ export async function POST(request: NextRequest) {
     }
 
     const declaredFrameOrigins = sanitizeFrameOrigins(manifest.frameOrigins);
+    const declaredHttpOrigins = sanitizeHttpOrigins(manifest.httpOrigins);
 
     const now = new Date().toISOString();
     const plugin: ServerPlugin = {
@@ -172,8 +187,14 @@ export async function POST(request: NextRequest) {
       ...(manifest.configSchema && typeof manifest.configSchema === 'object'
         ? { configSchema: manifest.configSchema as ServerPlugin['configSchema'] }
         : {}),
+      ...(manifest.settingsSchema && typeof manifest.settingsSchema === 'object'
+        ? { settingsSchema: manifest.settingsSchema as ServerPlugin['settingsSchema'] }
+        : {}),
       ...(declaredFrameOrigins.length > 0
         ? { frameOrigins: declaredFrameOrigins }
+        : {}),
+      ...(declaredHttpOrigins.length > 0
+        ? { httpOrigins: declaredHttpOrigins }
         : {}),
       installedAt: now,
       updatedAt: now,
@@ -181,7 +202,7 @@ export async function POST(request: NextRequest) {
 
     await savePlugin(plugin, code);
     invalidateFrameOriginsCache();
-    await auditLog('plugin.install', { id: plugin.id, name: plugin.name, version: plugin.version, frameOrigins: declaredFrameOrigins }, ip);
+    await auditLog('plugin.install', { id: plugin.id, name: plugin.name, version: plugin.version, frameOrigins: declaredFrameOrigins, httpOrigins: declaredHttpOrigins }, ip);
 
     return NextResponse.json({ plugin });
   } catch (error) {

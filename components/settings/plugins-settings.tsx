@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { usePluginStore } from '@/stores/plugin-store';
 import { usePolicyStore } from '@/stores/policy-store';
-import { SettingsSection, SettingItem, ToggleSwitch } from './settings-section';
+import { SettingsSection, ToggleSwitch } from './settings-section';
 import { cn } from '@/lib/utils';
-import { Upload, Trash2, AlertTriangle, Puzzle, Lock, Server } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { AlertTriangle, Puzzle, Lock, Server } from 'lucide-react';
 import { toast } from '@/stores/toast-store';
 import type { InstalledPlugin, PluginStatus, SettingFieldSchema } from '@/lib/plugin-types';
 
@@ -19,11 +18,9 @@ const STATUS_COLORS: Record<PluginStatus, string> = {
 };
 
 export function PluginsSettings() {
-  const { plugins, installPlugin, uninstallPlugin, enablePlugin, disablePlugin, updatePluginSettings, initializePlugins, initialized } = usePluginStore();
+  const { plugins, enablePlugin, disablePlugin, updatePluginSettings, initializePlugins, initialized } = usePluginStore();
   const { isFeatureEnabled, isPluginForceEnabled, isPluginApproved, fetchPolicy, loaded } = usePolicyStore();
-  const [isUploading, setIsUploading] = useState(false);
   const [expandedPlugin, setExpandedPlugin] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!loaded) {
@@ -32,39 +29,21 @@ export function PluginsSettings() {
     initializePlugins();
   }, [fetchPolicy, initializePlugins, loaded]);
 
+  // Listen for "expand this plugin" events fired by the settings search when
+  // the user clicks a plugin-setting sub-result. Expanding the card mounts
+  // the per-field rows so the highlight effect can find them.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<{ pluginId: string }>).detail?.pluginId;
+      if (id) setExpandedPlugin(id);
+    };
+    window.addEventListener('settings-plugin-expand', handler);
+    return () => window.removeEventListener('settings-plugin-expand', handler);
+  }, []);
+
   if (!isFeatureEnabled('pluginsEnabled')) {
     return null;
   }
-
-  const pluginUploadsEnabled = isFeatureEnabled('pluginsUploadEnabled');
-
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!pluginUploadsEnabled) {
-      toast.info('Plugin uploads are disabled by your administrator');
-      return;
-    }
-
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const result = await installPlugin(file);
-      if (result.success) {
-        toast.success('Plugin installed');
-        if (result.warnings?.length) {
-          toast.warning('Plugin warnings', { message: result.warnings.join('\n') });
-        }
-      } else {
-        toast.error('Plugin installation failed', { message: result.error });
-      }
-    } catch (err) {
-      toast.error('Plugin installation failed', { message: err instanceof Error ? err.message : 'Unknown error' });
-    } finally {
-      setIsUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
 
   const handleToggle = async (plugin: InstalledPlugin) => {
     if (!initialized) return;
@@ -91,27 +70,14 @@ export function PluginsSettings() {
     }
   };
 
-  const handleUninstall = (plugin: InstalledPlugin) => {
-    if (!initialized) return;
-
-    const isForceEnabled = plugin.forceEnabled || isPluginForceEnabled(plugin.id);
-    if (isForceEnabled) {
-      toast.info(`Plugin "${plugin.name}" is forced by admin and cannot be uninstalled`);
-      return;
-    }
-
-    uninstallPlugin(plugin.id);
-    toast.success(`Plugin "${plugin.name}" removed`);
-  };
-
   return (
-    <SettingsSection title="Plugins" description="Manage installed plugins. Upload plugin .zip files to add new functionality." experimental experimentalDescription="Plugins is an experimental feature. The plugin API is not yet stable and may change between releases, which could break existing plugins. Plugins run in a sandboxed environment but have access to your data within the application. Only install plugins from sources you trust.">
+    <SettingsSection title="Plugins" description="Plugins deployed by your administrator. Toggle to enable or disable for your account.">
       {/* Plugin List */}
       {plugins.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-12 text-center">
           <Puzzle className="w-12 h-12 text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground mb-1">No plugins installed</p>
-          <p className="text-xs text-muted-foreground/70">Upload a plugin .zip file to get started</p>
+          <p className="text-sm text-muted-foreground mb-1">No plugins available</p>
+          <p className="text-xs text-muted-foreground/70">Your administrator has not deployed any plugins</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -130,7 +96,6 @@ export function PluginsSettings() {
               controlsDisabled={!initialized}
               onToggleExpand={() => setExpandedPlugin(expandedPlugin === plugin.id ? null : plugin.id)}
               onToggle={() => handleToggle(plugin)}
-              onUninstall={() => handleUninstall(plugin)}
               onUpdateSettings={(settings) => updatePluginSettings(plugin.id, settings)}
             />
             );
@@ -140,33 +105,6 @@ export function PluginsSettings() {
 
       {!initialized && plugins.length > 0 && (
         <p className="text-xs text-muted-foreground">Syncing plugin policy and managed state...</p>
-      )}
-
-      {/* Upload */}
-      {pluginUploadsEnabled ? (
-        <SettingItem label="Upload Plugin" description="Install a new plugin from a .zip file">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".zip"
-            onChange={handleUpload}
-            className="hidden"
-            aria-label="Upload plugin file"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={isUploading}
-          >
-            <Upload className="w-4 h-4 mr-1.5" />
-            {isUploading ? 'Installing...' : 'Upload .zip'}
-          </Button>
-        </SettingItem>
-      ) : (
-        <SettingItem label="Upload Plugin" description="Install a new plugin from a .zip file">
-          <span className="text-xs text-muted-foreground">Disabled by administrator policy</span>
-        </SettingItem>
       )}
     </SettingsSection>
   );
@@ -183,16 +121,18 @@ interface PluginCardProps {
   controlsDisabled: boolean;
   onToggleExpand: () => void;
   onToggle: () => void;
-  onUninstall: () => void;
   onUpdateSettings: (settings: Record<string, unknown>) => void;
 }
 
-function PluginCard({ plugin, isExpanded, isForceEnabled, isManaged, needsApproval, controlsDisabled, onToggleExpand, onToggle, onUninstall, onUpdateSettings }: PluginCardProps) {
+function PluginCard({ plugin, isExpanded, isForceEnabled, isManaged, needsApproval, controlsDisabled, onToggleExpand, onToggle, onUpdateSettings }: PluginCardProps) {
   return (
-    <div className={cn(
-      'rounded-lg border transition-colors',
-      plugin.status === 'error' ? 'border-destructive/40' : 'border-border',
-    )}>
+    <div
+      data-search-label={plugin.name}
+      className={cn(
+        'rounded-lg border transition-colors',
+        plugin.status === 'error' ? 'border-destructive/40' : 'border-border',
+      )}
+    >
       {/* Header */}
       <div className="flex items-center gap-3 p-3">
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onToggleExpand}>
@@ -233,7 +173,7 @@ function PluginCard({ plugin, isExpanded, isForceEnabled, isManaged, needsApprov
       {isExpanded && (
         <div className="border-t border-border p-3 space-y-3">
           {isForceEnabled && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">This plugin is forced by an administrator and cannot be disabled or uninstalled.</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">This plugin is forced by an administrator and cannot be disabled.</p>
           )}
 
           {needsApproval && (
@@ -282,14 +222,6 @@ function PluginCard({ plugin, isExpanded, isForceEnabled, isManaged, needsApprov
               ))}
             </div>
           )}
-
-          {/* Uninstall */}
-          <div className="flex justify-end pt-2 border-t border-border">
-            <Button variant="destructive" size="sm" onClick={onUninstall} disabled={controlsDisabled || isForceEnabled}>
-              <Trash2 className="w-3.5 h-3.5 mr-1" />
-              Uninstall
-            </Button>
-          </div>
         </div>
       )}
     </div>
@@ -309,7 +241,7 @@ function PluginSettingField({ schema, value, onChange }: PluginSettingFieldProps
   switch (schema.type) {
     case 'boolean':
       return (
-        <div className="flex items-center justify-between">
+        <div data-search-label={schema.label} className="flex items-center justify-between">
           <div>
             <span className="text-xs text-foreground">{schema.label}</span>
             {schema.description && <p className="text-[10px] text-muted-foreground">{schema.description}</p>}
@@ -320,7 +252,7 @@ function PluginSettingField({ schema, value, onChange }: PluginSettingFieldProps
 
     case 'select':
       return (
-        <div className="flex items-center justify-between">
+        <div data-search-label={schema.label} className="flex items-center justify-between">
           <div>
             <span className="text-xs text-foreground">{schema.label}</span>
             {schema.description && <p className="text-[10px] text-muted-foreground">{schema.description}</p>}
@@ -339,7 +271,7 @@ function PluginSettingField({ schema, value, onChange }: PluginSettingFieldProps
 
     case 'string':
       return (
-        <div>
+        <div data-search-label={schema.label}>
           <span className="text-xs text-foreground">{schema.label}</span>
           {schema.description && <p className="text-[10px] text-muted-foreground">{schema.description}</p>}
           <input
@@ -353,7 +285,7 @@ function PluginSettingField({ schema, value, onChange }: PluginSettingFieldProps
 
     case 'number':
       return (
-        <div className="flex items-center justify-between">
+        <div data-search-label={schema.label} className="flex items-center justify-between">
           <div>
             <span className="text-xs text-foreground">{schema.label}</span>
             {schema.description && <p className="text-[10px] text-muted-foreground">{schema.description}</p>}

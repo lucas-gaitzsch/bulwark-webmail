@@ -190,6 +190,17 @@ export function FlagCN(props: FlagProps) {
   );
 }
 
+/** Czech Republic - White and red horizontal bands with a blue triangle */
+export function FlagCS(props: FlagProps) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 3 2" width={W} height={H} className={flagClass} {...props}>
+      <rect width="3" height="2" fill="#fff" />
+      <rect y="1" width="3" height="1" fill="#D7141A" />
+      <polygon points="0,0 1.5,1 0,2" fill="#11457E" />
+    </svg>
+  );
+}
+
 /** Map locale codes to flag components */
 export const flagComponents: Record<string, (props: FlagProps) => ReactElement> = {
   en: FlagGB,
@@ -207,4 +218,5 @@ export const flagComponents: Record<string, (props: FlagProps) => ReactElement> 
   tr: FlagTR,
   uk: FlagUA,
   zh: FlagCN,
+  cs: FlagCS,
 };

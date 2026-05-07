@@ -1,21 +1,16 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useThemeStore } from '@/stores/theme-store';
-import { SettingsSection, SettingItem } from './settings-section';
+import { SettingsSection } from './settings-section';
 import { cn } from '@/lib/utils';
-import { Upload, Trash2, Check, Palette, Lock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Check, Palette, Lock } from 'lucide-react';
 import { toast } from '@/stores/toast-store';
-import type { InstalledTheme } from '@/lib/plugin-types';
 import { usePolicyStore } from '@/stores/policy-store';
 
 export function ThemesSettings() {
-  const { installedThemes, activeThemeId, installTheme, uninstallTheme, activateTheme } = useThemeStore();
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { isFeatureEnabled, isThemeDisabled, getThemePolicy, getForcedThemeId, isThemeForceEnabled } = usePolicyStore();
-  const canUpload = isFeatureEnabled('userThemesEnabled');
+  const { installedThemes, activeThemeId, activateTheme } = useThemeStore();
+  const { isThemeDisabled, getThemePolicy, getForcedThemeId, isThemeForceEnabled } = usePolicyStore();
   const themePolicy = getThemePolicy();
   const forcedThemeId = getForcedThemeId(installedThemes.map((theme) => theme.id));
 
@@ -40,30 +35,6 @@ export function ThemesSettings() {
     }
   }, [activeThemeId, activateTheme, forcedThemeId, installedThemes, isThemeDisabled]);
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      const result = await installTheme(file);
-      if (result.success) {
-        toast.success('Theme installed');
-        if (result.warnings?.length) {
-          toast.warning('Theme warnings', { message: result.warnings.join('\n') });
-        }
-      } else {
-        toast.error('Theme installation failed', { message: result.error });
-      }
-    } catch (err) {
-      toast.error('Theme installation failed', { message: err instanceof Error ? err.message : 'Unknown error' });
-    } finally {
-      setIsUploading(false);
-      // Reset file input
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
   const handleActivate = (id: string | null) => {
     if (forcedThemeId && id !== forcedThemeId) {
       const forcedTheme = installedThemes.find((theme) => theme.id === forcedThemeId);
@@ -75,19 +46,8 @@ export function ThemesSettings() {
     toast.success(id ? 'Theme activated' : 'Default theme restored');
   };
 
-  const handleUninstall = (theme: InstalledTheme) => {
-    if (theme.builtIn) return;
-    if (theme.id === forcedThemeId || theme.forceEnabled || isThemeForceEnabled(theme.id)) {
-      toast.info(`Theme "${theme.name}" is forced by admin and cannot be removed`);
-      return;
-    }
-
-    uninstallTheme(theme.id);
-    toast.success('Theme removed');
-  };
-
   return (
-    <SettingsSection title="Themes" description="Customize the appearance with color themes. Upload .zip theme files or activate built-in presets." experimental experimentalDescription="Themes is an experimental feature. Custom themes may not cover all UI elements, and theme formats could change in future updates. Built-in presets are stable, but uploaded themes may require updates after application upgrades.">
+    <SettingsSection title="Themes" description="Choose from themes deployed by your administrator and built-in presets.">
 
       {forcedThemeId && (
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
@@ -124,34 +84,10 @@ export function ThemesSettings() {
               disabled={Boolean(forcedThemeId) && !isForceEnabled}
               variants={theme.variants}
               onActivate={() => handleActivate(theme.id)}
-              onRemove={!theme.builtIn && !isForceEnabled ? () => handleUninstall(theme) : undefined}
             />
           );
         })}
       </div>
-
-      {/* Upload */}
-      {canUpload && (
-      <SettingItem label="Upload Theme" description="Install a custom theme from a .zip file containing manifest.json and theme.css">
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".zip"
-          onChange={handleUpload}
-          className="hidden"
-          aria-label="Upload theme file"
-        />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fileInputRef.current?.click()}
-          disabled={isUploading}
-        >
-          <Upload className="w-4 h-4 mr-1.5" />
-          {isUploading ? 'Installing...' : 'Upload .zip'}
-        </Button>
-      </SettingItem>
-      )}
     </SettingsSection>
   );
 }
@@ -169,12 +105,11 @@ interface ThemeCardProps {
   disabled?: boolean;
   variants?: ('light' | 'dark')[];
   onActivate: () => void;
-  onRemove?: () => void;
 }
 
-function ThemeCard({ name, author, preview, isActive, isDefault, isForceEnabled, disabled, variants, onActivate, onRemove }: ThemeCardProps) {
+function ThemeCard({ name, author, preview, isActive, isDefault, isForceEnabled, disabled, variants, onActivate }: ThemeCardProps) {
   return (
-    <div className="relative">
+    <div data-search-label={name} className="relative">
       <button
         type="button"
         onClick={onActivate}
@@ -224,18 +159,6 @@ function ThemeCard({ name, author, preview, isActive, isDefault, isForceEnabled,
           )}
         </div>
       </button>
-
-      {/* Remove button */}
-      {onRemove && !isActive && (
-        <button
-          type="button"
-          onClick={onRemove}
-          className="absolute top-2 right-2 p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-          title="Remove theme"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
-      )}
     </div>
   );
 }

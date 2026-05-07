@@ -8,6 +8,8 @@
     "jmap_endpoint_label": "JMAP Sunucusu",
     "jmap_endpoint_placeholder": "https://mail.ornek.com",
     "jmap_endpoint_cors_hint": "Sunucu, bu etki alanından gelen CORS isteklerine izin vermelidir.",
+    "jmap_server_label": "Sunucu",
+    "jmap_server_auto_picked": "Sunucu, e-posta etki alanınıza göre seçildi.",
     "sign_in": "Giriş yap",
     "signing_in": "Giriş yapılıyor...",
     "loading": "Yükleniyor...",
@@ -407,6 +409,7 @@
       "declined_counter_title": "Karşı Teklif Reddedildi",
       "cancelled_title": "Etkinlik İptal Edildi",
       "organizer": "{name} tarafından düzenleniyor",
+      "organizer_label": "Düzenleyen:",
       "attendees": "{count, plural, one {# katılımcı} other {# katılımcı}}",
       "accept": "Kabul et",
       "maybe": "Belki",
@@ -511,7 +514,7 @@
     "send": "Gönder",
     "cancel": "İptal",
     "attach": "Ekle",
-    "attach_photos": "Fotoğraflar ve Videolar",
+    "attach_photos": "Fotoğraflar ve videolar",
     "attach_files": "Dosyalar",
     "discard": "Vazgeç",
     "discard_draft_title": "Taslaktan vazgeçilsin mi?",
@@ -1379,7 +1382,7 @@
         "description": "Ayarlarınızı tarayıcılar ve cihazlar arasında senkronize edin"
       },
       "sender_favicons": {
-        "label": "Gönderici Favorikonları (Deneysel)",
+        "label": "Gönderici Favorikonları",
         "description": "İş göndericileri için profil resmi olarak web sitesi simgelerini göster"
       },
       "show_avatars_in_junk": {
@@ -1652,7 +1655,10 @@
       "preview": {
         "label": "Önizleme"
       }
-    }
+    },
+    "search_placeholder": "Ayarlarda ara",
+    "search_clear": "Aramayı temizle",
+    "search_no_results": "Eşleşen ayar yok"
   },
   "errors": {
     "page_error_title": "Bir şeyler ters gitti",
