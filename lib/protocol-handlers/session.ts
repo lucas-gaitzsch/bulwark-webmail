@@ -40,6 +40,22 @@ function consumePending<T>(key: string, validate: (value: unknown) => value is T
   }
 }
 
+function hasPending<T>(key: string, validate: (value: unknown) => value is T): boolean {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return false;
+
+    const parsed = JSON.parse(raw) as PendingValue<unknown>;
+    if (typeof parsed.createdAt !== "number" || Date.now() - parsed.createdAt > PENDING_TTL_MS) {
+      sessionStorage.removeItem(key);
+      return false;
+    }
+    return validate(parsed);
+  } catch {
+    return false;
+  }
+}
+
 function isParsedMailto(value: unknown): value is ParsedMailto {
   if (!value || typeof value !== "object") return false;
   const candidate = value as Partial<ParsedMailto>;
@@ -206,4 +222,8 @@ export function savePendingWebcal(value: ParsedWebcal) {
 
 export function consumePendingWebcal(): ParsedWebcal | null {
   return consumePending(WEBCAL_KEY, isParsedWebcal);
+}
+
+export function hasPendingWebcal(): boolean {
+  return hasPending(WEBCAL_KEY, isParsedWebcal);
 }

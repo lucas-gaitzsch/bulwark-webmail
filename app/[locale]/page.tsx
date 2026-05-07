@@ -8,6 +8,7 @@ import { EmailList } from "@/components/email/email-list";
 import { EmailViewer } from "@/components/email/email-viewer";
 import { EmailComposer } from "@/components/email/email-composer";
 import type { ComposerDraftData } from "@/components/email/email-composer";
+import { ProtocolAccountPicker } from "@/components/protocol/protocol-account-picker";
 import { ThreadConversationView } from "@/components/email/thread-conversation-view";
 import { MobileHeader } from "@/components/layout/mobile-header";
 import { ThreadGroup, Email, isUnifiedMailboxId, UNIFIED_ROLE_BY_ID } from "@/lib/jmap/types";
@@ -76,6 +77,7 @@ export default function Home() {
   const [composerDraftText, setComposerDraftText] = useState("");
   const [pendingDraft, setPendingDraft] = useState<ComposerDraftData | null>(null);
   const [composerSessionId, setComposerSessionId] = useState(0);
+  const suppressComposerStateSaveSessionRef = useRef<number | null>(null);
   const { dialogProps: confirmDialogProps, confirm: confirmDialog } = useConfirmDialog();
   const { dialogProps: promptDialogProps, prompt: promptDialog } = usePromptDialog();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
@@ -91,8 +93,10 @@ export default function Home() {
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const [rateLimitSecondsLeft, setRateLimitSecondsLeft] = useState<number | null>(null);
   const [previewAttachment, setPreviewAttachment] = useState<{ blobId: string; name: string; type?: string } | null>(null);
+  const [pendingMailtoAccountChoice, setPendingMailtoAccountChoice] = useState<ParsedMailto | null>(null);
+  const [isProtocolAccountSwitching, setIsProtocolAccountSwitching] = useState(false);
   const markAsReadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { isAuthenticated, client, logout, checkAuth, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil } = useAuthStore();
+  const { isAuthenticated, client, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading, connectionLost, isRateLimited, rateLimitUntil } = useAuthStore();
   const { identities } = useIdentityStore();
   useIdentitySync();
   const trustedSendersAddressBook = useSettingsStore((state) => state.trustedSendersAddressBook);
@@ -309,6 +313,13 @@ export default function Home() {
     },
     [],
   );
+
+  const getMailtoProtocolAccounts = useCallback(() => {
+    const connectedClients = useAuthStore.getState().getAllConnectedClients();
+    return useAccountStore.getState().accounts.filter((account) =>
+      account.isConnected && connectedClients.has(account.id)
+    );
+  }, []);
 
   // Browser back / forward integration. The restore handler reads the
   // latest values from a ref so we don't have to recreate the callback on
@@ -657,6 +668,9 @@ export default function Home() {
       ? pending.body
       : plainTextToComposerBody(pending.body);
 
+    if (showComposer) {
+      suppressComposerStateSaveSessionRef.current = composerSessionId;
+    }
     setComposerSessionId((id) => id + 1);
     setPendingDraft({
       to: pending.to.join(", "),
@@ -674,20 +688,49 @@ export default function Home() {
     setComposerMode("compose");
     setShowComposer(true);
     if (isMobile) setActiveView("viewer");
-  }, [isMobile, setActiveView]);
+  }, [composerSessionId, isMobile, setActiveView, showComposer]);
+
+  const openMailtoForAccount = useCallback(async (pending: ParsedMailto, accountId: string) => {
+    setIsProtocolAccountSwitching(true);
+    try {
+      if (useAuthStore.getState().activeAccountId !== accountId) {
+        await switchAccount(accountId);
+      }
+      setPendingMailtoAccountChoice(null);
+      openMailtoDraft(pending);
+    } finally {
+      setIsProtocolAccountSwitching(false);
+    }
+  }, [openMailtoDraft, switchAccount]);
+
+  const handleMailtoProtocolRequest = useCallback((pending: ParsedMailto) => {
+    const protocolAccounts = getMailtoProtocolAccounts();
+    if (protocolAccounts.length > 1) {
+      setPendingMailtoAccountChoice(pending);
+      return;
+    }
+
+    const accountId = protocolAccounts[0]?.id ?? activeAccountId;
+    if (accountId) {
+      void openMailtoForAccount(pending, accountId);
+      return;
+    }
+
+    openMailtoDraft(pending);
+  }, [activeAccountId, getMailtoProtocolAccounts, openMailtoDraft, openMailtoForAccount]);
 
   useEffect(() => {
     if (!isAuthenticated || !client) return;
 
     const pending = consumePendingMailto();
-    if (pending) openMailtoDraft(pending);
-  }, [isAuthenticated, client, openMailtoDraft]);
+    if (pending) handleMailtoProtocolRequest(pending);
+  }, [isAuthenticated, client, handleMailtoProtocolRequest]);
 
   useEffect(() => {
     if (!isAuthenticated || !client) return;
 
-    return listenForMailtoRequests(openMailtoDraft);
-  }, [isAuthenticated, client, openMailtoDraft]);
+    return listenForMailtoRequests(handleMailtoProtocolRequest);
+  }, [isAuthenticated, client, handleMailtoProtocolRequest]);
 
   // Load mailboxes and emails when authenticated (only if not already loaded)
   useEffect(() => {
@@ -2333,7 +2376,13 @@ export default function Home() {
                   } : undefined)}
                   initialDraftText={composerDraftText}
                   initialData={pendingDraft}
-                  onSaveState={(data) => setPendingDraft(data)}
+                  onSaveState={(data) => {
+                    if (suppressComposerStateSaveSessionRef.current === composerSessionId) {
+                      suppressComposerStateSaveSessionRef.current = null;
+                      return;
+                    }
+                    setPendingDraft(data);
+                  }}
                   onSend={async (data) => {
                     await handleEmailSend(data);
                     setPendingDraft(null);
@@ -2488,6 +2537,16 @@ export default function Home() {
         <div className="sr-only" aria-live="polite" aria-atomic="true" id="sr-status" />
 
         <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
+        {pendingMailtoAccountChoice && (
+          <ProtocolAccountPicker
+            kind="mailto"
+            accounts={getMailtoProtocolAccounts()}
+            activeAccountId={activeAccountId}
+            isSwitching={isProtocolAccountSwitching}
+            onSelect={(accountId) => void openMailtoForAccount(pendingMailtoAccountChoice, accountId)}
+            onCancel={() => setPendingMailtoAccountChoice(null)}
+          />
+        )}
         <ConfirmDialog {...confirmDialogProps} />
         <PromptDialog {...promptDialogProps} />
         <TotpReauthDialog />

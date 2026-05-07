@@ -15,6 +15,7 @@ import { useAuthStore, redirectToLogin } from "@/stores/auth-store";
 import { useEmailStore } from "@/stores/email-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { useIdentityStore } from "@/stores/identity-store";
+import { useAccountStore } from "@/stores/account-store";
 import { toast } from "@/stores/toast-store";
 import { useIsMobile } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import { useRefreshGesture } from "@/hooks/use-refresh-gesture";
 import { downloadEventICS } from "@/lib/calendar-ics-export";
 import { ICalImportModal } from "@/components/calendar/ical-import-modal";
 import { ICalSubscriptionModal } from "@/components/calendar/ical-subscription-modal";
+import { ProtocolAccountPicker } from "@/components/protocol/protocol-account-picker";
 import { RecurrenceScopeDialog, type RecurrenceEditScope } from "@/components/calendar/recurrence-scope-dialog";
 import { NavigationRail } from "@/components/layout/navigation-rail";
 import { SidebarAppsModal } from "@/components/layout/sidebar-apps-modal";
@@ -56,7 +58,8 @@ import { CreateCalendarModal } from "@/components/calendar/create-calendar-modal
 import { getUserParticipantId } from "@/lib/calendar-participants";
 import { generateBirthdayEvents, createBirthdayCalendar, BIRTHDAY_CALENDAR_ID } from "@/lib/birthday-calendar";
 import { debug } from "@/lib/debug";
-import { consumePendingWebcal } from "@/lib/protocol-handlers/session";
+import { consumePendingWebcal, hasPendingWebcal } from "@/lib/protocol-handlers/session";
+import type { ParsedWebcal } from "@/lib/protocol-handlers/webcal";
 
 type PendingScopeAction =
   | { type: "edit"; event: CalendarEvent; updates: Partial<CalendarEvent>; sendScheduling?: boolean }
@@ -71,7 +74,7 @@ export default function CalendarPage() {
   const t = useTranslations("calendar");
   const isMobile = useIsMobile();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
-  const { client, isAuthenticated, logout, checkAuth, isLoading: authLoading } = useAuthStore();
+  const { client, isAuthenticated, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading } = useAuthStore();
   const [initialCheckDone, setInitialCheckDone] = useState(() => useAuthStore.getState().isAuthenticated && !!useAuthStore.getState().client);
   const { quota, isPushConnected } = useEmailStore();
   const {
@@ -98,6 +101,8 @@ export default function CalendarPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [pendingSubscription, setPendingSubscription] = useState<{ url: string; name: string } | null>(null);
+  const [pendingWebcalAccountChoice, setPendingWebcalAccountChoice] = useState<ParsedWebcal | null>(null);
+  const [isProtocolAccountSwitching, setIsProtocolAccountSwitching] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<string | null>(null);
   const [sharingCalendarId, setSharingCalendarId] = useState<string | null>(null);
   const [defaultCalendarIdForCreate, setDefaultCalendarIdForCreate] = useState<string | undefined>(undefined);
@@ -158,10 +163,10 @@ export default function CalendarPage() {
     if (initialCheckDone && !isAuthenticated && !authLoading) {
       try { sessionStorage.setItem('redirect_after_login', window.location.pathname); } catch { /* ignore */ }
       redirectToLogin();
-    } else if (client && !supportsCalendar) {
+    } else if (client && !supportsCalendar && !pendingWebcalAccountChoice && !hasPendingWebcal()) {
       router.push("/");
     }
-  }, [initialCheckDone, isAuthenticated, authLoading, client, supportsCalendar, router]);
+  }, [initialCheckDone, isAuthenticated, authLoading, client, supportsCalendar, pendingWebcalAccountChoice, router]);
 
   useEffect(() => {
     if (error) {
@@ -169,18 +174,63 @@ export default function CalendarPage() {
     }
   }, [error]);
 
-  useEffect(() => {
-    if (!isAuthenticated || !client || !supportsCalendar) return;
+  const getWebcalProtocolAccounts = useCallback(() => {
+    const connectedClients = useAuthStore.getState().getAllConnectedClients();
+    return useAccountStore.getState().accounts.filter((account) => {
+      if (!account.isConnected) return false;
+      return connectedClients.get(account.id)?.supportsCalendars() === true;
+    });
+  }, []);
 
-    const pending = consumePendingWebcal();
-    if (!pending) return;
+  const openWebcalForAccount = useCallback(async (pending: ParsedWebcal, accountId: string) => {
+    setIsProtocolAccountSwitching(true);
+    try {
+      if (useAuthStore.getState().activeAccountId !== accountId) {
+        await switchAccount(accountId);
+      }
+      setPendingWebcalAccountChoice(null);
+      setPendingSubscription({
+        url: pending.subscriptionUrl,
+        name: pending.suggestedName,
+      });
+      setShowSubscriptionModal(true);
+    } finally {
+      setIsProtocolAccountSwitching(false);
+    }
+  }, [switchAccount]);
+
+  const handleWebcalProtocolRequest = useCallback((pending: ParsedWebcal) => {
+    const protocolAccounts = getWebcalProtocolAccounts();
+    if (protocolAccounts.length > 1) {
+      setPendingWebcalAccountChoice(pending);
+      return;
+    }
+
+    if (protocolAccounts.length === 0 && !supportsCalendar) {
+      return;
+    }
+
+    const accountId = protocolAccounts[0]?.id ?? activeAccountId;
+    if (accountId) {
+      void openWebcalForAccount(pending, accountId);
+      return;
+    }
 
     setPendingSubscription({
       url: pending.subscriptionUrl,
       name: pending.suggestedName,
     });
     setShowSubscriptionModal(true);
-  }, [isAuthenticated, client, supportsCalendar]);
+  }, [activeAccountId, getWebcalProtocolAccounts, openWebcalForAccount, supportsCalendar]);
+
+  useEffect(() => {
+    if (!isAuthenticated || !client) return;
+
+    const pending = consumePendingWebcal();
+    if (!pending) return;
+
+    handleWebcalProtocolRequest(pending);
+  }, [isAuthenticated, client, handleWebcalProtocolRequest]);
 
   useEffect(() => {
     if (client && !hasFetched.current) {
@@ -970,7 +1020,19 @@ export default function CalendarPage() {
     });
   }, [events, selectedCalendarIds, visibleEvents]);
 
-  if (!isAuthenticated || !supportsCalendar) return null;
+  const renderWebcalAccountPicker = () => pendingWebcalAccountChoice ? (
+    <ProtocolAccountPicker
+      kind="webcal"
+      accounts={getWebcalProtocolAccounts()}
+      activeAccountId={activeAccountId}
+      isSwitching={isProtocolAccountSwitching}
+      onSelect={(accountId) => void openWebcalForAccount(pendingWebcalAccountChoice, accountId)}
+      onCancel={() => setPendingWebcalAccountChoice(null)}
+    />
+  ) : null;
+
+  if (!isAuthenticated) return null;
+  if (!supportsCalendar) return renderWebcalAccountPicker();
 
   const renderView = () => {
     if (isLoading && calendars.length === 0) {
@@ -1422,6 +1484,7 @@ export default function CalendarPage() {
       })()}
 
       <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
+      {renderWebcalAccountPicker()}
       <RecurrenceScopeDialog
         isOpen={!!pendingScopeAction}
         actionType={pendingScopeAction?.type || "edit"}

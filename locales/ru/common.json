@@ -149,7 +149,13 @@
     "registration_failed": "Protocol handler registration failed",
     "opening_mailto": "Opening composer...",
     "opening_webcal": "Opening calendar...",
-    "browser_note": "Your browser or operating system may ask you to confirm this and may require Bulwark to be installed before it can be selected as the default app."
+    "browser_note": "Your browser or operating system may ask you to confirm this and may require Bulwark to be installed before it can be selected as the default app.",
+    "select_account_title": "Choose account",
+    "select_mailto_account": "Choose which account should open this email link.",
+    "select_webcal_account": "Choose which account should open this calendar link.",
+    "select_account_note": "This only applies to this protocol link.",
+    "active_account": "Active",
+    "switching_account": "Switching account..."
   },
   "sidebar_apps": {
     "modal_title": "Приложения боковой панели",

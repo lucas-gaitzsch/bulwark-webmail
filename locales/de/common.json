@@ -149,7 +149,13 @@
     "registration_failed": "Protokoll-Handler konnte nicht registriert werden",
     "opening_mailto": "Editor wird geöffnet...",
     "opening_webcal": "Kalender wird geöffnet...",
-    "browser_note": "Ihr Browser oder Betriebssystem kann eine Bestätigung verlangen. Eventuell muss Bulwark installiert sein, bevor es als Standard-App ausgewählt werden kann."
+    "browser_note": "Ihr Browser oder Betriebssystem kann eine Bestätigung verlangen. Eventuell muss Bulwark installiert sein, bevor es als Standard-App ausgewählt werden kann.",
+    "select_account_title": "Account auswählen",
+    "select_mailto_account": "Wähle aus, mit welchem Account dieser E-Mail-Link geöffnet werden soll.",
+    "select_webcal_account": "Wähle aus, mit welchem Account dieser Kalender-Link geöffnet werden soll.",
+    "select_account_note": "Diese Auswahl gilt nur für diesen Protokoll-Link.",
+    "active_account": "Aktiv",
+    "switching_account": "Account wird gewechselt..."
   },
   "sidebar_apps": {
     "modal_title": "Sidebar-Apps",

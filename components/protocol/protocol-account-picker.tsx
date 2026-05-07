@@ -1,0 +1,124 @@
+"use client";
+
+import { Loader2, X } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { getInitials } from "@/lib/account-utils";
+import type { AccountEntry } from "@/stores/account-store";
+import { cn } from "@/lib/utils";
+
+interface ProtocolAccountPickerProps {
+  kind: "mailto" | "webcal";
+  accounts: AccountEntry[];
+  activeAccountId: string | null;
+  isSwitching?: boolean;
+  onSelect: (accountId: string) => void;
+  onCancel: () => void;
+}
+
+export function ProtocolAccountPicker({
+  kind,
+  accounts,
+  activeAccountId,
+  isSwitching = false,
+  onSelect,
+  onCancel,
+}: ProtocolAccountPickerProps) {
+  const t = useTranslations("protocol_handlers");
+  const tCommon = useTranslations("common");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" onClick={onCancel} aria-hidden="true" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("select_account_title")}
+        className="relative w-full max-w-md rounded-lg border border-border bg-background shadow-xl animate-in zoom-in-95 duration-200"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-border px-5 py-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">{t("select_account_title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {kind === "mailto" ? t("select_mailto_account") : t("select_webcal_account")}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label={tCommon("close")}
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="max-h-80 overflow-y-auto p-2">
+          {accounts.map((account) => {
+            const isActive = account.id === activeAccountId;
+            const initials = getInitials(account.displayName || account.label, account.email || account.username);
+            let host = account.serverUrl;
+            try {
+              host = new URL(account.serverUrl).hostname;
+            } catch {
+              // Keep the configured value when it is not an absolute URL.
+            }
+
+            return (
+              <button
+                key={account.id}
+                type="button"
+                disabled={isSwitching}
+                onClick={() => onSelect(account.id)}
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors",
+                  isActive ? "bg-accent/50" : "hover:bg-muted",
+                  isSwitching && "cursor-wait opacity-70"
+                )}
+              >
+                <div
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-medium text-white"
+                  style={{ backgroundColor: account.avatarColor }}
+                >
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate text-sm font-medium text-foreground">
+                      {account.displayName || account.label}
+                    </span>
+                    {isActive && (
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                        {t("active_account")}
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-muted-foreground">{account.email || account.username}</p>
+                  <p className="truncate text-[10px] text-muted-foreground">{host}</p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center justify-between border-t border-border px-5 py-3">
+          {isSwitching ? (
+            <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("switching_account")}
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">{t("select_account_note")}</span>
+          )}
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isSwitching}
+            className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            {tCommon("cancel")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

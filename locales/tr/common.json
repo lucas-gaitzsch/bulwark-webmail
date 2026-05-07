@@ -149,7 +149,13 @@
     "registration_failed": "Protokol işleyicisi kaydı başarısız oldu",
     "opening_mailto": "Düzenleyici açılıyor...",
     "opening_webcal": "Takvim açılıyor...",
-    "browser_note": "Tarayıcınız veya işletim sisteminiz bunu onaylamanızı isteyebilir ve Bulwark'ın varsayılan uygulama olarak seçilebilmesi için yüklenmiş olmasını gerektirebilir."
+    "browser_note": "Tarayıcınız veya işletim sisteminiz bunu onaylamanızı isteyebilir ve Bulwark'ın varsayılan uygulama olarak seçilebilmesi için yüklenmiş olmasını gerektirebilir.",
+    "select_account_title": "Choose account",
+    "select_mailto_account": "Choose which account should open this email link.",
+    "select_webcal_account": "Choose which account should open this calendar link.",
+    "select_account_note": "This only applies to this protocol link.",
+    "active_account": "Active",
+    "switching_account": "Switching account..."
   },
   "sidebar_apps": {
     "modal_title": "Kenar Çubuğu Uygulamaları",
