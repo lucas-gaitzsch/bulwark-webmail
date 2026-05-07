@@ -4,12 +4,13 @@ import { logger } from '@/lib/logger';
 import { refreshTokenCookieName, refreshTokenServerCookieName } from '@/lib/oauth/tokens';
 import { exchangeCodeForTokens, buildOAuthParams, getMetadata, getTokenEndpoint } from '@/lib/oauth/token-exchange';
 import { getCookieOptions } from '@/lib/oauth/cookie-config';
+import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 
 function getSlot(request: NextRequest): number {
   const raw = request.nextUrl.searchParams.get('slot');
   if (raw === null) return 0;
   const slot = parseInt(raw, 10);
-  if (isNaN(slot) || slot < 0 || slot > 4) return 0;
+  if (isNaN(slot) || slot < 0 || slot >= MAX_ACCOUNT_SLOTS) return 0;
   return slot;
 }
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot <= 4 ? bodySlot : getSlot(request);
+    const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot < MAX_ACCOUNT_SLOTS ? bodySlot : getSlot(request);
     const serverId = typeof bodyServerId === 'string' && bodyServerId ? bodyServerId : null;
 
     const tokens = await exchangeCodeForTokens(code, code_verifier, redirect_uri, serverId);
@@ -112,9 +113,9 @@ export async function DELETE(request: NextRequest) {
     const all = request.nextUrl.searchParams.get('all') === 'true';
 
     if (all) {
-      // Revoke and delete all refresh token cookies (slots 0-4)
+      // Revoke and delete all refresh token cookies across every slot.
       const cookieStore = await cookies();
-      for (let i = 0; i <= 4; i++) {
+      for (let i = 0; i < MAX_ACCOUNT_SLOTS; i++) {
         const name = refreshTokenCookieName(i);
         const serverCookieName = refreshTokenServerCookieName(i);
         const token = cookieStore.get(name)?.value;

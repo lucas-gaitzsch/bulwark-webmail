@@ -6,7 +6,7 @@ import { Check, Plus, LogOut, Star, ChevronDown, AlertCircle } from "lucide-reac
 import { useTranslations } from "next-intl";
 import { useAccountStore, type AccountEntry } from "@/stores/account-store";
 import { useAuthStore } from "@/stores/auth-store";
-import { getInitials, MAX_ACCOUNTS } from "@/lib/account-utils";
+import { getInitials, getMaxAccounts } from "@/lib/account-utils";
 import { cn } from "@/lib/utils";
 import { useRouter } from "@/i18n/navigation";
 
@@ -220,7 +220,7 @@ export function AccountSwitcher({ variant = "rail", className }: AccountSwitcher
           </div>
 
           {/* Separator + Add Account */}
-          {accounts.length < MAX_ACCOUNTS && (
+          {accounts.length < getMaxAccounts() && (
             <div className="border-t border-border">
               <button
                 onClick={handleAddAccount}

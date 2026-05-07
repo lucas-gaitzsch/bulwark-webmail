@@ -6,9 +6,10 @@ import { configManager } from '@/lib/admin/config-manager';
 import { isPublicHttpUrl } from '@/lib/security/url-guard';
 import { recordLogin } from '@/lib/telemetry/login-tracker';
 import { parseJmapServers, resolveTrustedJmapUrl } from '@/lib/admin/jmap-servers';
+import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 
 function getSlot(request: NextRequest, bodySlot: unknown): number {
-  if (typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot <= 4) {
+  if (typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot < MAX_ACCOUNT_SLOTS) {
     return bodySlot;
   }
 
@@ -16,7 +17,7 @@ function getSlot(request: NextRequest, bodySlot: unknown): number {
   if (raw === null) return 0;
 
   const slot = parseInt(raw, 10);
-  return Number.isNaN(slot) || slot < 0 || slot > 4 ? 0 : slot;
+  return Number.isNaN(slot) || slot < 0 || slot >= MAX_ACCOUNT_SLOTS ? 0 : slot;
 }
 
 export async function POST(request: NextRequest) {

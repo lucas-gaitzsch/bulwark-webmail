@@ -7,6 +7,7 @@ import { readStalwartAuthContextFromStore } from '@/lib/stalwart/auth-context';
 import { saveUserSettings, loadUserSettings, deleteUserSettings } from '@/lib/settings-sync';
 import { configManager } from '@/lib/admin/config-manager';
 import { readFileEnv } from '@/lib/read-file-env';
+import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 
 function classifyError(error: unknown): { message: string; status: number } {
   const code = (error as NodeJS.ErrnoException).code;
@@ -59,7 +60,7 @@ function normalizeUrl(url: string): string {
 
 /**
  * Verify identity against session cookies across all account slots.
- * With multi-account, the requesting account may be on any slot (0-4).
+ * With multi-account, the requesting account may be on any slot.
  * Checks both basic-auth session cookies and stalwart auth context cookies
  * (used by OAuth/SSO and TOTP-upgraded sessions).
  * Returns true only if a matching cookie is found.
@@ -68,7 +69,7 @@ async function verifyIdentity(username: string, serverUrl: string): Promise<bool
   const cookieStore = await cookies();
   const normalizedServerUrl = normalizeUrl(serverUrl);
 
-  for (let slot = 0; slot <= 4; slot++) {
+  for (let slot = 0; slot < MAX_ACCOUNT_SLOTS; slot++) {
     // Check basic-auth session cookie
     const token = cookieStore.get(sessionCookieName(slot))?.value;
     if (token) {

@@ -9,6 +9,7 @@ import { configManager } from '@/lib/admin/config-manager';
 import { isPublicHttpUrl } from '@/lib/security/url-guard';
 import { recordLogin } from '@/lib/telemetry/login-tracker';
 import { parseJmapServers, findServerByUrl, findServerById } from '@/lib/admin/jmap-servers';
+import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 
 /**
  * Exchange basic auth credentials (with TOTP appended) for OAuth tokens.
@@ -85,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
-    const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot <= 4 ? bodySlot : 0;
+    const slot = typeof bodySlot === 'number' && bodySlot >= 0 && bodySlot < MAX_ACCOUNT_SLOTS ? bodySlot : 0;
     const requestedServerId = typeof bodyServerId === 'string' && bodyServerId ? bodyServerId : null;
 
     // Pin the upstream URL to a configured JMAP server. The list of allowed

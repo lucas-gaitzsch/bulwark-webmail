@@ -62,5 +62,43 @@ export function getAccountScopedKey(baseKey: string, accountId: string): string 
   return `${baseKey}::${accountId}`;
 }
 
-/** Maximum number of accounts allowed */
-export const MAX_ACCOUNTS = 5;
+/**
+ * Hard upper bound on cookie slots. Each slot can hold up to ~3 cookies
+ * (session, refresh token, server id, auth context), so 50 slots ≈ 125
+ * cookies on average — within Firefox's per-domain limit of 150.
+ */
+export const MAX_ACCOUNT_SLOTS = 50;
+
+/**
+ * UX cap for browsers using HTTP/1.1. Each account holds one persistent
+ * SSE connection for JMAP push; HTTP/1.1 caps origins at 6 concurrent
+ * connections, so 5 accounts leave one connection free for normal traffic.
+ * On HTTP/2+ this cap doesn't apply because streams are multiplexed.
+ */
+export const MAX_ACCOUNTS_HTTP1 = 5;
+
+/**
+ * Detect whether the page has observed any HTTP/2 or HTTP/3 traffic.
+ *
+ * We walk recent resource-timing entries and treat a single h2/h3 sighting
+ * as a positive signal. Cross-origin entries may report an empty
+ * `nextHopProtocol` without `Timing-Allow-Origin`, in which case we
+ * under-detect and fall back to the conservative cap — that's safe.
+ */
+export function isHttp2Available(): boolean {
+  if (typeof performance === 'undefined') return false;
+  const entries = performance.getEntriesByType('resource') as PerformanceResourceTiming[];
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const proto = entries[i].nextHopProtocol;
+    if (proto === 'h2' || proto === 'h3') return true;
+  }
+  return false;
+}
+
+/**
+ * Effective per-browser account cap. Lifts to {@link MAX_ACCOUNT_SLOTS}
+ * once HTTP/2+ is observed, otherwise returns {@link MAX_ACCOUNTS_HTTP1}.
+ */
+export function getMaxAccounts(): number {
+  return isHttp2Available() ? MAX_ACCOUNT_SLOTS : MAX_ACCOUNTS_HTTP1;
+}

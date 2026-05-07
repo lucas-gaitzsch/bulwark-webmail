@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { generateAccountId, generateAvatarColor, MAX_ACCOUNTS } from '@/lib/account-utils';
+import { generateAccountId, generateAvatarColor, getMaxAccounts } from '@/lib/account-utils';
 
 export interface AccountEntry {
   /** Unique key: `${username}@${serverHostname}` */
@@ -13,7 +13,7 @@ export interface AccountEntry {
   username: string;
   /** Authentication mode */
   authMode: 'basic' | 'oauth';
-  /** Cookie slot index (0–4) for session/token cookies */
+  /** Cookie slot index for session/token cookies (0 ≤ slot < MAX_ACCOUNT_SLOTS) */
   cookieSlot: number;
   /** Whether "Remember Me" was checked (basic auth only) */
   rememberMe: boolean;
@@ -80,8 +80,9 @@ export const useAccountStore = create<AccountState>()(
           return id;
         }
 
-        if (state.accounts.length >= MAX_ACCOUNTS) {
-          throw new Error(`Maximum of ${MAX_ACCOUNTS} accounts reached`);
+        const max = getMaxAccounts();
+        if (state.accounts.length >= max) {
+          throw new Error(`Maximum of ${max} accounts reached`);
         }
 
         const cookieSlot = state.getNextCookieSlot();
@@ -178,10 +179,9 @@ export const useAccountStore = create<AccountState>()(
 
       getNextCookieSlot: () => {
         const used = new Set(get().accounts.map((a) => a.cookieSlot));
-        for (let i = 0; i < MAX_ACCOUNTS; i++) {
-          if (!used.has(i)) return i;
-        }
-        return 0; // fallback, shouldn't happen if max is enforced
+        let i = 0;
+        while (used.has(i)) i++;
+        return i;
       },
 
       hasAccount: (username, serverUrl) => {

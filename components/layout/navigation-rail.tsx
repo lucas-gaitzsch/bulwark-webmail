@@ -11,14 +11,13 @@ import { usePathname, Link, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useCalendarStore } from "@/stores/calendar-store";
 import { useEmailStore } from "@/stores/email-store";
-import { useWebDAVStore } from "@/stores/webdav-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import { usePolicyStore } from "@/stores/policy-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useAccountStore } from "@/stores/account-store";
 import { useUpdateStore, selectHasUpdate } from "@/stores/update-store";
 import { getActiveAccountSlotHeaders } from "@/lib/auth/active-account-slot";
-import { getInitials, MAX_ACCOUNTS } from "@/lib/account-utils";
+import { getInitials, getMaxAccounts } from "@/lib/account-utils";
 import { cn, formatFileSize } from "@/lib/utils";
 import { PluginSlot } from "@/components/plugins/plugin-slot";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
@@ -168,7 +167,9 @@ export function NavigationRail({
   const resolvedTheme = useThemeStore((s) => s.resolvedTheme);
   const { supportsCalendar } = useCalendarStore();
   const { mailboxes } = useEmailStore();
-  const { supportsWebDAV } = useWebDAVStore();
+  const client = useAuthStore((s) => s.client);
+  const supportsFiles = client?.supportsFiles() ?? false;
+  const supportsContacts = client?.supportsContacts() ?? false;
   const sidebarApps = useSettingsStore((s) => s.sidebarApps);
   const showRailAccountList = useSettingsStore((s) => s.showRailAccountList);
   const sidebarAppsEnabled = usePolicyStore((s) => s.isFeatureEnabled('sidebarAppsEnabled'));
@@ -252,8 +253,8 @@ export function NavigationRail({
   const navItems: NavItem[] = [
     { id: "mail", icon: Mail, labelKey: "mail", href: "/", badge: inboxUnread },
     { id: "calendar", icon: Calendar, labelKey: "calendar", href: "/calendar", hidden: !supportsCalendar },
-    { id: "contacts", icon: BookUser, labelKey: "contacts", href: "/contacts" },
-    { id: "files", icon: HardDrive, labelKey: "files", href: "/files", hidden: supportsWebDAV === false || !filesEnabled },
+    { id: "contacts", icon: BookUser, labelKey: "contacts", href: "/contacts", hidden: !supportsContacts },
+    { id: "files", icon: HardDrive, labelKey: "files", href: "/files", hidden: !supportsFiles || !filesEnabled },
   ];
 
   const isSettingsActive = !activeAppId && pathname.startsWith("/settings");
@@ -634,7 +635,7 @@ export function NavigationRail({
                 </button>
               );
             })}
-            {accounts.length < MAX_ACCOUNTS && (
+            {accounts.length < getMaxAccounts() && (
               <button
                 onClick={() => router.push(`/login?mode=add-account` as never)}
                 className="flex items-center justify-center w-8 h-8 rounded-full border border-dashed border-muted-foreground/50 text-muted-foreground hover:border-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0"

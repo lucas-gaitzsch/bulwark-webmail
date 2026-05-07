@@ -4,7 +4,7 @@ export const OAUTH_SCOPES = process.env.OAUTH_SCOPES || (EXTRA_SCOPES ? `${DEFAU
 export const REFRESH_TOKEN_COOKIE = 'jmap_rt';
 export const REFRESH_TOKEN_SERVER_COOKIE = 'jmap_rts';
 
-/** Get the cookie name for a given account slot (0-4). Slot 0 uses the legacy name. */
+/** Get the cookie name for a given account slot. Slot 0 uses the legacy name. */
 export function refreshTokenCookieName(slot: number): string {
   return slot === 0 ? REFRESH_TOKEN_COOKIE : `${REFRESH_TOKEN_COOKIE}_${slot}`;
 }

@@ -6,6 +6,7 @@ import type { HoverAction } from "@/stores/settings-store";
 import { cn } from "@/lib/utils";
 import { Trash2, Star, Mail, MailOpen, Archive, Tag, ShieldAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useIsMobile } from "@/hooks/use-media-query";
 
 interface EmailHoverActionsProps {
   email: Email;
@@ -76,11 +77,13 @@ export function EmailHoverActions({
   const hoverActionsMode = useSettingsStore((state) => state.hoverActionsMode);
   const hoverActionsCorner = useSettingsStore((state) => state.hoverActionsCorner);
   const t = useTranslations("settings.email_behavior.hover_actions");
+  const isMobile = useIsMobile();
 
   const isUnread = !email.keywords?.$seen;
   const isStarred = email.keywords?.$flagged;
   const hoverBackgroundClassName = backgroundClassName;
 
+  if (isMobile) return null;
   if (hoverActions.length === 0) return null;
 
   const handleAction = (e: React.MouseEvent, action: HoverAction) => {

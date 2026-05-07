@@ -189,9 +189,16 @@ export function Avatar({ name, email, contactPhotoUri, size = "md", className, d
 
   const getInitials = () => {
     if (name) {
-      const parts = name.trim().split(/\s+/);
+      const parts = name
+        .trim()
+        .split(/\s+/)
+        .map((p) => p.replace(/^[^\p{L}\p{N}]+/u, ""))
+        .filter((p) => p.length > 0);
       if (parts.length >= 2) {
         return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+      }
+      if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
       }
       return name.slice(0, 2).toUpperCase();
     }
