@@ -160,11 +160,11 @@
     "select_mailto_account": "Bu e-posta bağlantısını hangi hesabın açacağını seçin.",
     "select_webcal_account": "Bu takvim bağlantısını hangi hesabın açacağını seçin.",
     "select_account_note": "Bu seçim yalnızca bu protokol bağlantısı için geçerlidir.",
-    "detail_to": "To",
-    "detail_subject": "Subject",
-    "detail_no_subject": "No subject",
-    "detail_calendar": "Calendar",
-    "detail_source": "Source",
+    "detail_to": "Kime",
+    "detail_subject": "Konu",
+    "detail_no_subject": "Konu yok",
+    "detail_calendar": "Takvim",
+    "detail_source": "Kaynak",
     "active_account": "Etkin",
     "switching_account": "Hesap değiştiriliyor..."
   },
@@ -2459,13 +2459,13 @@
       "invalid_format": "Geçersiz takvim dosyası biçimi"
     },
     "webcal_action": {
-      "title": "Open calendar link",
-      "description": "How would you like to use \"{name}\"?",
-      "import_title": "Import once",
-      "import_description": "Fetch the events now and copy them into one of your calendars.",
-      "subscribe_title": "Subscribe",
-      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
-      "cancel": "Cancel"
+      "title": "Takvim bağlantısını aç",
+      "description": "\"{name}\" öğesini nasıl kullanmak istersiniz?",
+      "import_title": "Bir kez içe aktar",
+      "import_description": "Etkinlikleri şimdi alıp takvimlerinizden birine kopyalayın.",
+      "subscribe_title": "Abone ol",
+      "subscribe_description": "Bu takvimi ayrı bir takvim olarak otomatik eşitlenmiş tutun.",
+      "cancel": "İptal"
     },
     "management": {
       "title": "Takvim Yönetimi",

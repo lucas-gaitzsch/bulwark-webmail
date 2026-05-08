@@ -160,11 +160,11 @@
     "select_mailto_account": "이 이메일 링크를 열 계정을 선택하세요.",
     "select_webcal_account": "이 캘린더 링크를 열 계정을 선택하세요.",
     "select_account_note": "이 선택은 이 프로토콜 링크에만 적용됩니다.",
-    "detail_to": "To",
-    "detail_subject": "Subject",
-    "detail_no_subject": "No subject",
-    "detail_calendar": "Calendar",
-    "detail_source": "Source",
+    "detail_to": "받는 사람",
+    "detail_subject": "제목",
+    "detail_no_subject": "제목 없음",
+    "detail_calendar": "캘린더",
+    "detail_source": "출처",
     "active_account": "활성",
     "switching_account": "계정 전환 중..."
   },
@@ -2445,13 +2445,13 @@
       "invalid_format": "캘린더 파일 형식이 올바르지 않아요"
     },
     "webcal_action": {
-      "title": "Open calendar link",
-      "description": "How would you like to use \"{name}\"?",
-      "import_title": "Import once",
-      "import_description": "Fetch the events now and copy them into one of your calendars.",
-      "subscribe_title": "Subscribe",
-      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
-      "cancel": "Cancel"
+      "title": "캘린더 링크 열기",
+      "description": "\"{name}\"을 어떻게 사용할까요?",
+      "import_title": "한 번 가져오기",
+      "import_description": "지금 일정을 가져와 내 캘린더 중 하나에 복사합니다.",
+      "subscribe_title": "구독",
+      "subscribe_description": "이 캘린더를 별도의 캘린더로 자동 동기화합니다.",
+      "cancel": "취소"
     },
     "management": {
       "title": "캘린더 관리",

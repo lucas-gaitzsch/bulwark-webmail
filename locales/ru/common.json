@@ -160,11 +160,11 @@
     "select_mailto_account": "Выберите, в каком аккаунте открыть эту ссылку электронной почты.",
     "select_webcal_account": "Выберите, в каком аккаунте открыть эту ссылку календаря.",
     "select_account_note": "Этот выбор применяется только к этой ссылке протокола.",
-    "detail_to": "To",
-    "detail_subject": "Subject",
-    "detail_no_subject": "No subject",
-    "detail_calendar": "Calendar",
-    "detail_source": "Source",
+    "detail_to": "Кому",
+    "detail_subject": "Тема",
+    "detail_no_subject": "Без темы",
+    "detail_calendar": "Календарь",
+    "detail_source": "Источник",
     "active_account": "Активен",
     "switching_account": "Переключение аккаунта..."
   },
@@ -2445,13 +2445,13 @@
       "invalid_format": "Неверный формат файла календаря"
     },
     "webcal_action": {
-      "title": "Open calendar link",
-      "description": "How would you like to use \"{name}\"?",
-      "import_title": "Import once",
-      "import_description": "Fetch the events now and copy them into one of your calendars.",
-      "subscribe_title": "Subscribe",
-      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
-      "cancel": "Cancel"
+      "title": "Открыть ссылку календаря",
+      "description": "Как вы хотите использовать \"{name}\"?",
+      "import_title": "Импортировать один раз",
+      "import_description": "Загрузить события сейчас и скопировать их в один из ваших календарей.",
+      "subscribe_title": "Подписаться",
+      "subscribe_description": "Автоматически синхронизировать этот календарь как отдельный календарь.",
+      "cancel": "Отмена"
     },
     "management": {
       "title": "Управление календарями",

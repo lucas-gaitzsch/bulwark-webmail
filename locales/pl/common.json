@@ -160,11 +160,11 @@
     "select_mailto_account": "Wybierz konto, które ma otworzyć ten link e-mail.",
     "select_webcal_account": "Wybierz konto, które ma otworzyć ten link kalendarza.",
     "select_account_note": "Ten wybór dotyczy tylko tego linku protokołu.",
-    "detail_to": "To",
-    "detail_subject": "Subject",
-    "detail_no_subject": "No subject",
-    "detail_calendar": "Calendar",
-    "detail_source": "Source",
+    "detail_to": "Do",
+    "detail_subject": "Temat",
+    "detail_no_subject": "Bez tematu",
+    "detail_calendar": "Kalendarz",
+    "detail_source": "Źródło",
     "active_account": "Aktywne",
     "switching_account": "Przełączanie konta..."
   },
@@ -2445,13 +2445,13 @@
       "invalid_format": "Nieprawidłowy format pliku kalendarza"
     },
     "webcal_action": {
-      "title": "Open calendar link",
-      "description": "How would you like to use \"{name}\"?",
-      "import_title": "Import once",
-      "import_description": "Fetch the events now and copy them into one of your calendars.",
-      "subscribe_title": "Subscribe",
-      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
-      "cancel": "Cancel"
+      "title": "Otwórz link kalendarza",
+      "description": "Jak chcesz użyć \"{name}\"?",
+      "import_title": "Importuj jednorazowo",
+      "import_description": "Pobierz wydarzenia teraz i skopiuj je do jednego ze swoich kalendarzy.",
+      "subscribe_title": "Subskrybuj",
+      "subscribe_description": "Automatycznie synchronizuj ten kalendarz jako oddzielny kalendarz.",
+      "cancel": "Anuluj"
     },
     "management": {
       "title": "Zarządzanie kalendarzem",

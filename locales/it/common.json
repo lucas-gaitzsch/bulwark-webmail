@@ -160,11 +160,11 @@
     "select_mailto_account": "Scegli quale account deve aprire questo link e-mail.",
     "select_webcal_account": "Scegli quale account deve aprire questo link calendario.",
     "select_account_note": "Questa scelta si applica solo a questo link di protocollo.",
-    "detail_to": "To",
-    "detail_subject": "Subject",
-    "detail_no_subject": "No subject",
-    "detail_calendar": "Calendar",
-    "detail_source": "Source",
+    "detail_to": "A",
+    "detail_subject": "Oggetto",
+    "detail_no_subject": "Senza oggetto",
+    "detail_calendar": "Calendario",
+    "detail_source": "Fonte",
     "active_account": "Attivo",
     "switching_account": "Cambio account..."
   },
@@ -2445,13 +2445,13 @@
       "invalid_format": "Formato del file calendario non valido"
     },
     "webcal_action": {
-      "title": "Open calendar link",
-      "description": "How would you like to use \"{name}\"?",
-      "import_title": "Import once",
-      "import_description": "Fetch the events now and copy them into one of your calendars.",
-      "subscribe_title": "Subscribe",
-      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
-      "cancel": "Cancel"
+      "title": "Apri link calendario",
+      "description": "Come vuoi usare \"{name}\"?",
+      "import_title": "Importa una volta",
+      "import_description": "Recupera subito gli eventi e copiali in uno dei tuoi calendari.",
+      "subscribe_title": "Abbonati",
+      "subscribe_description": "Mantieni questo calendario sincronizzato automaticamente come calendario separato.",
+      "cancel": "Annulla"
     },
     "management": {
       "title": "Gestione calendari",

@@ -160,11 +160,11 @@
     "select_mailto_account": "Izvēlieties, kurā kontā atvērt šo e-pasta saiti.",
     "select_webcal_account": "Izvēlieties, kurā kontā atvērt šo kalendāra saiti.",
     "select_account_note": "Šī izvēle attiecas tikai uz šo protokola saiti.",
-    "detail_to": "To",
-    "detail_subject": "Subject",
-    "detail_no_subject": "No subject",
-    "detail_calendar": "Calendar",
-    "detail_source": "Source",
+    "detail_to": "Kam",
+    "detail_subject": "Temats",
+    "detail_no_subject": "Bez temata",
+    "detail_calendar": "Kalendārs",
+    "detail_source": "Avots",
     "active_account": "Aktīvs",
     "switching_account": "Notiek konta pārslēgšana..."
   },
@@ -2444,13 +2444,13 @@
       "invalid_format": "Nederīgs kalendāra faila formāts"
     },
     "webcal_action": {
-      "title": "Open calendar link",
-      "description": "How would you like to use \"{name}\"?",
-      "import_title": "Import once",
-      "import_description": "Fetch the events now and copy them into one of your calendars.",
-      "subscribe_title": "Subscribe",
-      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
-      "cancel": "Cancel"
+      "title": "Atvērt kalendāra saiti",
+      "description": "Kā vēlaties izmantot \"{name}\"?",
+      "import_title": "Importēt vienreiz",
+      "import_description": "Ielādēt notikumus tagad un kopēt tos vienā no jūsu kalendāriem.",
+      "subscribe_title": "Abonēt",
+      "subscribe_description": "Automātiski sinhronizēt šo kalendāru kā atsevišķu kalendāru.",
+      "cancel": "Atcelt"
     },
     "management": {
       "title": "Kalendāru pārvaldība",
