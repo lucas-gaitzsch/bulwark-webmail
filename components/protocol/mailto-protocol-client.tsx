@@ -61,7 +61,7 @@ export function MailtoProtocolClient({ openingText }: MailtoProtocolClientProps)
       const params = new URLSearchParams(window.location.search);
       const raw = params.get("url");
       const isFallbackAppTab = params.get("fallback") === "1";
-      const openMode = useSettingsStore.getState().protocolMailtoOpenMode;
+      const openMode = useSettingsStore.getState().protocolOpenMode;
       const parsed = raw ? parseMailto(raw) : null;
 
       if (parsed) {

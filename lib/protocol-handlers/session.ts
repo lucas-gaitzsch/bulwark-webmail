@@ -24,7 +24,13 @@ type OpenMailtoInClientRequest = {
   value: ParsedMailto;
   clientId?: string;
 };
-type ProtocolClientInfo = { path: string; standalone: boolean; clientId?: string };
+type ProtocolClientInfo = {
+  path: string;
+  standalone: boolean;
+  clientId?: string;
+  focusNotificationTitle?: string;
+  focusNotificationBody?: string;
+};
 
 function savePending<T>(key: string, value: T) {
   try {

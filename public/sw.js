@@ -52,6 +52,8 @@ self.addEventListener("message", (event) => {
         path: typeof data.path === "string" ? data.path : "",
         standalone: data.standalone === true,
         clientId: typeof data.clientId === "string" ? data.clientId : "",
+        focusNotificationTitle: typeof data.focusNotificationTitle === "string" ? data.focusNotificationTitle : "",
+        focusNotificationBody: typeof data.focusNotificationBody === "string" ? data.focusNotificationBody : "",
       });
     }
     return;
@@ -254,17 +256,17 @@ async function handleOpenMailtoInClient(event) {
       await client.focus();
     } catch (_) {
       // Delivery succeeded; focusing can still be blocked by browser policy.
-      await showMailtoFocusNotification();
+      await showMailtoFocusNotification(state);
     }
   }
 
   responsePort && responsePort.postMessage({ delivered: true });
 }
 
-async function showMailtoFocusNotification() {
+async function showMailtoFocusNotification(state) {
   try {
-    await self.registration.showNotification("Bulwark", {
-      body: "Composer opened in Bulwark. Click to bring it to the front.",
+    await self.registration.showNotification(state.focusNotificationTitle || "Bulwark", {
+      body: state.focusNotificationBody || "The request was opened in Bulwark. Click to bring it to the front.",
       tag: "bulwark-mailto-focus",
       icon: `${BASE_PATH}/icon-192x192.png`,
       badge: `${BASE_PATH}/icon-192x192.png`,

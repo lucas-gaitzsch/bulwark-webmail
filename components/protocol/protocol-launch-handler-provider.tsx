@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { getPathPrefix } from "@/lib/browser-navigation";
 import { parseMailto } from "@/lib/protocol-handlers/mailto";
@@ -53,8 +54,8 @@ function isStandaloneDisplayMode() {
     || (navigator as StandaloneNavigator).standalone === true;
 }
 
-function openMailtoInNewTab(raw: string): boolean {
-  const url = `${getPathPrefix()}/protocol/mailto?url=${encodeURIComponent(raw)}&fallback=1`;
+function openProtocolInNewTab(protocol: "mailto" | "webcal", raw: string): boolean {
+  const url = `${getPathPrefix()}/protocol/${protocol}?url=${encodeURIComponent(raw)}&fallback=1`;
   const opened = window.open(url, "_blank");
   if (!opened) return false;
   opened.opener = null;
@@ -66,6 +67,7 @@ interface ProtocolLaunchHandlerProviderProps {
 }
 
 export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandlerProviderProps) {
+  const t = useTranslations("protocol_handlers");
   const router = useRouter();
   const pathname = usePathname();
 
@@ -76,8 +78,13 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
       savePendingMailto(pending);
       notifyPendingMailto();
       if (pathname !== "/") router.push("/");
-    }, () => ({ path: pathname, standalone: isStandaloneDisplayMode() }));
-  }, [pathname, router]);
+    }, () => ({
+      path: pathname,
+      standalone: isStandaloneDisplayMode(),
+      focusNotificationTitle: t("focus_notification_title"),
+      focusNotificationBody: t("focus_notification_body"),
+    }));
+  }, [pathname, router, t]);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.launchQueue) return;
@@ -92,8 +99,8 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
         const parsed = parseMailto(launch.raw);
         if (!parsed) return;
 
-        if (useSettingsStore.getState().protocolMailtoOpenMode === "new-tab") {
-          if (openMailtoInNewTab(launch.raw)) return;
+        if (useSettingsStore.getState().protocolOpenMode === "new-tab") {
+          if (openProtocolInNewTab("mailto", launch.raw)) return;
           savePendingMailto(parsed);
           notifyPendingMailto();
           if (pathname !== "/") router.push("/");
@@ -111,6 +118,11 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
 
       const parsed = parseWebcal(launch.raw);
       if (!parsed) return;
+
+      if (useSettingsStore.getState().protocolOpenMode === "new-tab") {
+        if (openProtocolInNewTab("webcal", launch.raw)) return;
+      }
+
       savePendingWebcal(parsed);
       notifyPendingWebcal();
       if (pathname !== "/calendar") router.push("/calendar");

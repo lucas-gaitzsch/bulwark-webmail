@@ -5,9 +5,9 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { getPathPrefix } from "@/lib/browser-navigation";
 import { useSettingsStore } from "@/stores/settings-store";
-import type { ProtocolMailtoOpenMode } from "@/stores/settings-store";
+import type { ProtocolOpenMode } from "@/stores/settings-store";
 import { toast } from "@/stores/toast-store";
-import { SettingsSection, SettingItem, RadioGroup } from "./settings-section";
+import { SettingsSection, SettingItem, Select } from "./settings-section";
 
 const REGISTRATION_STORAGE_KEY = "bulwark:verified-protocol-handler-registrations";
 type Protocol = "mailto" | "webcal";
@@ -77,7 +77,7 @@ interface ProtocolHandlerSettingsProps {
 
 export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSettingsProps) {
   const t = useTranslations("protocol_handlers");
-  const protocolMailtoOpenMode = useSettingsStore((state) => state.protocolMailtoOpenMode);
+  const protocolOpenMode = useSettingsStore((state) => state.protocolOpenMode);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [supported, setSupported] = useState(false);
   const [registrations, setRegistrations] = useState<RegistrationState>(EMPTY_REGISTRATION_STATE);
@@ -85,11 +85,26 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
   useEffect(() => {
     setSupported(canRegisterProtocolHandler());
     const stored = loadRegistrationState();
+    const mailtoStatus = readBrowserRegistrationStatus("mailto");
+    const webcalStatus = readBrowserRegistrationStatus("webcal");
     setRegistrations({
-      mailto: readBrowserRegistrationStatus("mailto") ?? stored.mailto,
-      webcal: readBrowserRegistrationStatus("webcal") ?? stored.webcal,
+      mailto: mailtoStatus ?? stored.mailto,
+      webcal: webcalStatus ?? stored.webcal,
     });
   }, []);
+
+  const handleOpenModeChange = async (value: string) => {
+    const openMode = value as ProtocolOpenMode;
+
+    if (openMode === "active-session"
+      && typeof window !== "undefined"
+      && "Notification" in window
+      && Notification.permission === "default") {
+      await Notification.requestPermission();
+    }
+
+    updateSetting("protocolOpenMode", openMode);
+  };
 
   const handleRegister = (protocol: Protocol) => {
     try {
@@ -137,13 +152,13 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
         {renderRegistrationControl("mailto")}
       </SettingItem>
 
-      <SettingItem label={t("mailto_open_mode_label")} description={t("mailto_open_mode_description")}>
-        <RadioGroup
-          value={protocolMailtoOpenMode}
-          onChange={(value) => updateSetting("protocolMailtoOpenMode", value as ProtocolMailtoOpenMode)}
+      <SettingItem label={t("protocol_open_mode_label")} description={t("protocol_open_mode_description")}>
+        <Select
+          value={protocolOpenMode}
+          onChange={handleOpenModeChange}
           options={[
-            { value: "active-session", label: t("mailto_open_mode_active_session") },
-            { value: "new-tab", label: t("mailto_open_mode_new_tab") },
+            { value: "new-tab", label: t("protocol_open_mode_new_tab") },
+            { value: "active-session", label: t("protocol_open_mode_active_session") },
           ]}
         />
       </SettingItem>
