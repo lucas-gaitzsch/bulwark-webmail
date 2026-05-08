@@ -2539,6 +2539,7 @@ export default function Home() {
         {pendingMailtoAccountChoice && (
           <ProtocolAccountPicker
             kind="mailto"
+            operation={pendingMailtoAccountChoice}
             accounts={getMailtoProtocolAccounts()}
             activeAccountId={activeAccountId}
             isSwitching={isProtocolAccountSwitching}

@@ -3,16 +3,28 @@
 import { Loader2, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { getInitials } from "@/lib/account-utils";
+import type { ParsedMailto } from "@/lib/protocol-handlers/mailto";
+import type { ParsedWebcal } from "@/lib/protocol-handlers/webcal";
 import type { AccountEntry } from "@/stores/account-store";
 import { cn } from "@/lib/utils";
 
-interface ProtocolAccountPickerProps {
-  kind: "mailto" | "webcal";
+type ProtocolAccountPickerProps = {
   accounts: AccountEntry[];
   activeAccountId: string | null;
   isSwitching?: boolean;
   onSelect: (accountId: string) => void;
   onCancel: () => void;
+} & (
+  | { kind: "mailto"; operation?: ParsedMailto }
+  | { kind: "webcal"; operation?: ParsedWebcal }
+);
+
+function getHost(value: string): string {
+  try {
+    return new URL(value).hostname;
+  } catch {
+    return value;
+  }
 }
 
 export function ProtocolAccountPicker({
@@ -22,9 +34,21 @@ export function ProtocolAccountPicker({
   isSwitching = false,
   onSelect,
   onCancel,
+  operation,
 }: ProtocolAccountPickerProps) {
   const t = useTranslations("protocol_handlers");
   const tCommon = useTranslations("common");
+  const details = operation
+    ? kind === "mailto"
+      ? [
+          { label: t("detail_to"), value: operation.to.join(", ") || "-" },
+          { label: t("detail_subject"), value: operation.subject || t("detail_no_subject") },
+        ]
+      : [
+          { label: t("detail_calendar"), value: operation.suggestedName },
+          { label: t("detail_source"), value: getHost(operation.subscriptionUrl) },
+        ]
+    : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -51,6 +75,19 @@ export function ProtocolAccountPicker({
             <X className="h-5 w-5" />
           </button>
         </div>
+
+        {details.length > 0 && (
+          <div className="border-b border-border bg-muted/40 px-5 py-3">
+            <dl className="space-y-1.5 text-sm">
+              {details.map((detail) => (
+                <div key={detail.label} className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3">
+                  <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{detail.label}</dt>
+                  <dd className="truncate text-foreground" title={detail.value}>{detail.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
 
         <div className="max-h-80 overflow-y-auto p-2">
           {accounts.map((account) => {

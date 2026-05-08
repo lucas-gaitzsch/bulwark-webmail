@@ -160,6 +160,11 @@
     "select_mailto_account": "选择用于打开此电子邮件链接的账户。",
     "select_webcal_account": "选择用于打开此日历链接的账户。",
     "select_account_note": "此选择仅适用于此协议链接。",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "活动",
     "switching_account": "正在切换账户..."
   },

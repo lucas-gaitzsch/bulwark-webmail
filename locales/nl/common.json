@@ -160,6 +160,11 @@
     "select_mailto_account": "Kies welk account deze e-maillink moet openen.",
     "select_webcal_account": "Kies welk account deze kalenderlink moet openen.",
     "select_account_note": "Deze keuze geldt alleen voor deze protocol-link.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "Actief",
     "switching_account": "Account wisselen..."
   },

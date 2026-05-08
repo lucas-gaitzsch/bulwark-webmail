@@ -160,6 +160,11 @@
     "select_mailto_account": "Виберіть акаунт, у якому слід відкрити це посилання електронної пошти.",
     "select_webcal_account": "Виберіть акаунт, у якому слід відкрити це посилання календаря.",
     "select_account_note": "Цей вибір застосовується лише до цього посилання протоколу.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "Активний",
     "switching_account": "Перемикання акаунта..."
   },

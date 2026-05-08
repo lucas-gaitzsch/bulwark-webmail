@@ -1028,6 +1028,7 @@ export default function CalendarPage() {
   const renderWebcalAccountPicker = () => pendingWebcalAccountChoice ? (
     <ProtocolAccountPicker
       kind="webcal"
+      operation={pendingWebcalAccountChoice}
       accounts={getWebcalProtocolAccounts()}
       activeAccountId={activeAccountId}
       isSwitching={isProtocolAccountSwitching}

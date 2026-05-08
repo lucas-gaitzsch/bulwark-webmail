@@ -160,6 +160,11 @@
     "select_mailto_account": "Izvēlieties, kurā kontā atvērt šo e-pasta saiti.",
     "select_webcal_account": "Izvēlieties, kurā kontā atvērt šo kalendāra saiti.",
     "select_account_note": "Šī izvēle attiecas tikai uz šo protokola saiti.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "Aktīvs",
     "switching_account": "Notiek konta pārslēgšana..."
   },

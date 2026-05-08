@@ -160,6 +160,11 @@
     "select_mailto_account": "Выберите, в каком аккаунте открыть эту ссылку электронной почты.",
     "select_webcal_account": "Выберите, в каком аккаунте открыть эту ссылку календаря.",
     "select_account_note": "Этот выбор применяется только к этой ссылке протокола.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "Активен",
     "switching_account": "Переключение аккаунта..."
   },

@@ -160,6 +160,11 @@
     "select_mailto_account": "Choisissez le compte qui doit ouvrir ce lien e-mail.",
     "select_webcal_account": "Choisissez le compte qui doit ouvrir ce lien de calendrier.",
     "select_account_note": "Cette sélection s'applique uniquement à ce lien de protocole.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "Actif",
     "switching_account": "Changement de compte..."
   },

@@ -160,6 +160,11 @@
     "select_mailto_account": "このメールリンクを開くアカウントを選択してください。",
     "select_webcal_account": "このカレンダーリンクを開くアカウントを選択してください。",
     "select_account_note": "この選択は、このプロトコル リンクにのみ適用されます。",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "アクティブ",
     "switching_account": "アカウントを切り替えています..."
   },

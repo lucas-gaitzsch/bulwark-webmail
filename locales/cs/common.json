@@ -160,6 +160,11 @@
     "select_mailto_account": "Vyberte účet, ve kterém se má tento e-mailový odkaz otevřít.",
     "select_webcal_account": "Vyberte účet, ve kterém se má tento kalendářový odkaz otevřít.",
     "select_account_note": "Tato volba platí jen pro tento odkaz protokolu.",
+    "detail_to": "To",
+    "detail_subject": "Subject",
+    "detail_no_subject": "No subject",
+    "detail_calendar": "Calendar",
+    "detail_source": "Source",
     "active_account": "Aktivní",
     "switching_account": "Přepínání účtu..."
   },
