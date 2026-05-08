@@ -2444,6 +2444,15 @@
       "file_too_large": "ファイルサイズが10MBを超えています",
       "invalid_format": "無効なカレンダーファイル形式"
     },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
+    },
     "management": {
       "title": "カレンダー管理",
       "description": "カレンダーの作成、名前変更、カスタマイズができます。サイドバーのカレンダーを右クリックして色を素早く変更できます。",

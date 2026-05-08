@@ -2458,6 +2458,15 @@
       "file_too_large": "Arquivo excede o limite de 10 MB",
       "invalid_format": "Formato de arquivo de calendário inválido"
     },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
+    },
     "management": {
       "title": "Gerenciamento de calendários",
       "description": "Crie, renomeie e personalize seus calendários. Clique com o botão direito em um calendário na barra lateral para alterar rapidamente sua cor.",

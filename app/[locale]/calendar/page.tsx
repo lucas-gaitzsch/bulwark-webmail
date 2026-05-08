@@ -72,6 +72,7 @@ function isRecurringEvent(event: CalendarEvent): boolean {
 export default function CalendarPage() {
   const router = useRouter();
   const t = useTranslations("calendar");
+  const tWebcalAction = useTranslations("calendar.webcal_action");
   const isMobile = useIsMobile();
   const { showAppsModal, inlineApp, loadedApps, handleManageApps, handleInlineApp, closeInlineApp, closeAppsModal } = useSidebarApps();
   const { client, isAuthenticated, logout, checkAuth, switchAccount, activeAccountId, isLoading: authLoading } = useAuthStore();
@@ -101,6 +102,7 @@ export default function CalendarPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [pendingSubscription, setPendingSubscription] = useState<{ url: string; name: string } | null>(null);
+  const [showWebcalActionChoice, setShowWebcalActionChoice] = useState(false);
   const [pendingWebcalAccountChoice, setPendingWebcalAccountChoice] = useState<ParsedWebcal | null>(null);
   const [isProtocolAccountSwitching, setIsProtocolAccountSwitching] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState<string | null>(null);
@@ -193,7 +195,7 @@ export default function CalendarPage() {
         url: pending.subscriptionUrl,
         name: pending.suggestedName,
       });
-      setShowSubscriptionModal(true);
+      setShowWebcalActionChoice(true);
     } finally {
       setIsProtocolAccountSwitching(false);
     }
@@ -220,8 +222,23 @@ export default function CalendarPage() {
       url: pending.subscriptionUrl,
       name: pending.suggestedName,
     });
-    setShowSubscriptionModal(true);
+    setShowWebcalActionChoice(true);
   }, [activeAccountId, getWebcalProtocolAccounts, openWebcalForAccount, supportsCalendar]);
+
+  const closeWebcalActionChoice = useCallback(() => {
+    setShowWebcalActionChoice(false);
+    setPendingSubscription(null);
+  }, []);
+
+  const handleImportWebcal = useCallback(() => {
+    setShowWebcalActionChoice(false);
+    setShowImportModal(true);
+  }, []);
+
+  const handleSubscribeWebcal = useCallback(() => {
+    setShowWebcalActionChoice(false);
+    setShowSubscriptionModal(true);
+  }, []);
 
   useEffect(() => {
     if (!isAuthenticated || !client) return;
@@ -1037,6 +1054,40 @@ export default function CalendarPage() {
     />
   ) : null;
 
+  const renderWebcalActionChoice = () => showWebcalActionChoice && pendingSubscription ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" onClick={closeWebcalActionChoice} aria-hidden="true" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={tWebcalAction("title")}
+        className="relative bg-background border border-border rounded-lg shadow-xl w-full max-w-md mx-4 animate-in zoom-in-95 duration-200"
+      >
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-lg font-semibold">{tWebcalAction("title")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{tWebcalAction("description", { name: pendingSubscription.name })}</p>
+        </div>
+        <div className="px-6 py-4 space-y-3">
+          <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={handleImportWebcal}>
+            <span className="text-left">
+              <span className="block font-medium">{tWebcalAction("import_title")}</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">{tWebcalAction("import_description")}</span>
+            </span>
+          </Button>
+          <Button variant="outline" className="w-full justify-start h-auto py-3" onClick={handleSubscribeWebcal}>
+            <span className="text-left">
+              <span className="block font-medium">{tWebcalAction("subscribe_title")}</span>
+              <span className="block text-xs text-muted-foreground mt-0.5">{tWebcalAction("subscribe_description")}</span>
+            </span>
+          </Button>
+        </div>
+        <div className="flex items-center justify-end gap-2 px-6 py-4 border-t border-border">
+          <Button variant="ghost" onClick={closeWebcalActionChoice}>{tWebcalAction("cancel")}</Button>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   if (!isAuthenticated) return null;
   if (!supportsCalendar) return renderWebcalAccountPicker();
 
@@ -1461,7 +1512,11 @@ export default function CalendarPage() {
         <ICalImportModal
           calendars={calendars}
           client={client}
-          onClose={() => setShowImportModal(false)}
+          initialUrl={pendingSubscription?.url}
+          onClose={() => {
+            setShowImportModal(false);
+            setPendingSubscription(null);
+          }}
         />
       )}
 
@@ -1491,6 +1546,7 @@ export default function CalendarPage() {
 
       <SidebarAppsModal isOpen={showAppsModal} onClose={closeAppsModal} />
       {renderWebcalAccountPicker()}
+      {renderWebcalActionChoice()}
       <RecurrenceScopeDialog
         isOpen={!!pendingScopeAction}
         actionType={pendingScopeAction?.type || "edit"}

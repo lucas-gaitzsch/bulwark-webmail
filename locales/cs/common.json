@@ -2444,6 +2444,15 @@
       "file_too_large": "Soubor překračuje limit 10 MB",
       "invalid_format": "Neplatný formát souboru kalendáře"
     },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
+    },
     "management": {
       "title": "Správa kalendáře",
       "description": "Vytvářejte, přejmenovávejte a přizpůsobujte si své kalendáře. Klikněte pravým tlačítkem na kalendář v postranním panelu pro rychlou změnu jeho barvy.",

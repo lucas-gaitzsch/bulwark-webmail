@@ -2444,6 +2444,15 @@
       "file_too_large": "Datei überschreitet das 10-MB-Limit",
       "invalid_format": "Ungültiges Kalenderdateiformat"
     },
+    "webcal_action": {
+      "title": "Kalender-Link öffnen",
+      "description": "Wie möchten Sie \"{name}\" verwenden?",
+      "import_title": "Einmal importieren",
+      "import_description": "Termine jetzt abrufen und in einen Ihrer Kalender kopieren.",
+      "subscribe_title": "Abonnieren",
+      "subscribe_description": "Diesen Kalender automatisch als separaten Kalender synchronisieren.",
+      "cancel": "Abbrechen"
+    },
     "management": {
       "title": "Kalenderverwaltung",
       "description": "Erstellen, umbenennen und anpassen Ihrer Kalender. Rechtsklick auf einen Kalender in der Seitenleiste, um die Farbe schnell zu ändern.",

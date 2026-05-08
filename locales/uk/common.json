@@ -2444,6 +2444,15 @@
       "file_too_large": "Файл перевищує обмеження в 10 Мб",
       "invalid_format": "Недійсний формат файлу календаря"
     },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
+    },
     "management": {
       "title": "Управління календарем",
       "description": "Створюйте, перейменовуйте та налаштовуйте свої календарі. Клацніть правою кнопкою миші календар на бічній панелі, щоб швидко змінити його колір.",

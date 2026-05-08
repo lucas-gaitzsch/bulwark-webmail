@@ -2443,6 +2443,15 @@
       "file_too_large": "Fails pārsniedz 10 MB limitu",
       "invalid_format": "Nederīgs kalendāra faila formāts"
     },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
+    },
     "management": {
       "title": "Kalendāru pārvaldība",
       "description": "Izveidojiet, pārdēvējiet un konfigurējiet kalendārus. Ar labo klikšķi varat mainīt kalendāra krāsu.",

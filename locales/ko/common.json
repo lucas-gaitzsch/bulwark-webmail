@@ -2444,6 +2444,15 @@
       "file_too_large": "파일이 10MB 제한을 넘었어요",
       "invalid_format": "캘린더 파일 형식이 올바르지 않아요"
     },
+    "webcal_action": {
+      "title": "Open calendar link",
+      "description": "How would you like to use \"{name}\"?",
+      "import_title": "Import once",
+      "import_description": "Fetch the events now and copy them into one of your calendars.",
+      "subscribe_title": "Subscribe",
+      "subscribe_description": "Keep this calendar synced automatically as a separate calendar.",
+      "cancel": "Cancel"
+    },
     "management": {
       "title": "캘린더 관리",
       "description": "캘린더를 만들고 이름을 바꾸거나 색상을 꾸며보세요. 사이드바에서 캘린더를 우클릭하면 색상을 빠르게 바꿀 수 있어요.",
