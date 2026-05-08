@@ -135,8 +135,8 @@
     "add_app": "Apps"
   },
   "protocol_handlers": {
-    "title": "Protocol handlers",
-    "description": "Register Bulwark with supported browsers for email and calendar links.",
+    "title": "Default apps",
+    "description": "Choose whether email and calendar links open in Bulwark. Technically, Bulwark registers as a protocol handler for mailto: and webcal: links.",
     "unsupported": "This browser or connection does not support manual protocol-handler registration. You may still be able to use the installed PWA via browser or OS settings.",
     "mailto_label": "Email links",
     "mailto_description": "Open mailto: links in Bulwark with a prefilled composer.",
@@ -750,7 +750,7 @@
       "files": "Files",
       "contacts": "Contacts",
       "encryption": "Encryption",
-      "protocol_handlers": "Protocol handlers",
+      "protocol_handlers": "Default apps",
       "sidebar_apps": "Sidebar Apps",
       "notifications": "Notifications",
       "layout": "Layout",

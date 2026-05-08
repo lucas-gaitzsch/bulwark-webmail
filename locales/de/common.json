@@ -135,8 +135,8 @@
     "shared": "Geteilt"
   },
   "protocol_handlers": {
-    "title": "Protokoll-Handler",
-    "description": "Registrieren Sie Bulwark in unterstützten Browsern für E-Mail- und Kalender-Links.",
+    "title": "Standard-Apps",
+    "description": "Legen Sie fest, ob E-Mail- und Kalender-Links in Bulwark geöffnet werden. Technisch registriert sich Bulwark dafür als Protokoll-Handler für mailto: und webcal:.",
     "unsupported": "Dieser Browser oder diese Verbindung unterstützt die manuelle Registrierung von Protokoll-Handlern nicht. Möglicherweise können Sie die installierte PWA trotzdem über Browser- oder Systemeinstellungen verwenden.",
     "mailto_label": "E-Mail-Links",
     "mailto_description": "Öffnet mailto:-Links in Bulwark mit vorausgefülltem Editor.",
@@ -747,7 +747,7 @@
       "encryption": "Verschlüsselung",
       "files": "Dateien",
       "contacts": "Kontakte",
-      "protocol_handlers": "Protokoll-Handler",
+      "protocol_handlers": "Standard-Apps",
       "sidebar_apps": "Sidebar-Apps",
       "notifications": "Benachrichtigungen",
       "layout": "Layout",
