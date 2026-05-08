@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { getPathPrefix } from "@/lib/browser-navigation";
+import { useSettingsStore } from "@/stores/settings-store";
+import type { ProtocolMailtoOpenMode } from "@/stores/settings-store";
 import { toast } from "@/stores/toast-store";
-import { SettingsSection, SettingItem } from "./settings-section";
+import { SettingsSection, SettingItem, RadioGroup } from "./settings-section";
 
 const REGISTRATION_STORAGE_KEY = "bulwark:verified-protocol-handler-registrations";
 type Protocol = "mailto" | "webcal";
@@ -75,6 +77,8 @@ interface ProtocolHandlerSettingsProps {
 
 export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSettingsProps) {
   const t = useTranslations("protocol_handlers");
+  const protocolMailtoOpenMode = useSettingsStore((state) => state.protocolMailtoOpenMode);
+  const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [supported, setSupported] = useState(false);
   const [registrations, setRegistrations] = useState<RegistrationState>(EMPTY_REGISTRATION_STATE);
 
@@ -131,6 +135,17 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
 
       <SettingItem label={t("mailto_label")} description={t("mailto_description")}>
         {renderRegistrationControl("mailto")}
+      </SettingItem>
+
+      <SettingItem label={t("mailto_open_mode_label")} description={t("mailto_open_mode_description")}>
+        <RadioGroup
+          value={protocolMailtoOpenMode}
+          onChange={(value) => updateSetting("protocolMailtoOpenMode", value as ProtocolMailtoOpenMode)}
+          options={[
+            { value: "active-session", label: t("mailto_open_mode_active_session") },
+            { value: "new-tab", label: t("mailto_open_mode_new_tab") },
+          ]}
+        />
       </SettingItem>
 
       {supportsCalendar && (

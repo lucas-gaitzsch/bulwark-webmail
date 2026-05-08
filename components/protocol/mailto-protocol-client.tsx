@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { parseMailto } from "@/lib/protocol-handlers/mailto";
 import { requestOpenMailtoInExistingClient, savePendingMailto } from "@/lib/protocol-handlers/session";
+import { useSettingsStore } from "@/stores/settings-store";
 
 type StandaloneNavigator = Navigator & { standalone?: boolean };
 
@@ -60,10 +61,16 @@ export function MailtoProtocolClient({ openingText }: MailtoProtocolClientProps)
       const params = new URLSearchParams(window.location.search);
       const raw = params.get("url");
       const isFallbackAppTab = params.get("fallback") === "1";
+      const openMode = useSettingsStore.getState().protocolMailtoOpenMode;
       const parsed = raw ? parseMailto(raw) : null;
 
       if (parsed) {
-        if (!isFallbackAppTab) {
+        if (!isFallbackAppTab && openMode === "new-tab") {
+          if (raw && shouldOpenFallbackAppTab() && openFallbackAppTab(raw)) {
+            returnToSourcePage();
+            return;
+          }
+        } else if (!isFallbackAppTab) {
           const delivered = await requestOpenMailtoInExistingClient(parsed);
           if (cancelled) return;
 

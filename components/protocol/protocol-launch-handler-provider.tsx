@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
+import { getPathPrefix } from "@/lib/browser-navigation";
 import { parseMailto } from "@/lib/protocol-handlers/mailto";
 import { parseWebcal } from "@/lib/protocol-handlers/webcal";
 import {
@@ -13,6 +14,7 @@ import {
   savePendingMailto,
   savePendingWebcal,
 } from "@/lib/protocol-handlers/session";
+import { useSettingsStore } from "@/stores/settings-store";
 
 type LaunchParams = { targetURL?: string };
 type StandaloneNavigator = Navigator & { standalone?: boolean };
@@ -51,6 +53,14 @@ function isStandaloneDisplayMode() {
     || (navigator as StandaloneNavigator).standalone === true;
 }
 
+function openMailtoInNewTab(raw: string): boolean {
+  const url = `${getPathPrefix()}/protocol/mailto?url=${encodeURIComponent(raw)}&fallback=1`;
+  const opened = window.open(url, "_blank");
+  if (!opened) return false;
+  opened.opener = null;
+  return true;
+}
+
 interface ProtocolLaunchHandlerProviderProps {
   children: ReactNode;
 }
@@ -81,6 +91,14 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
       if (launch.kind === "mailto") {
         const parsed = parseMailto(launch.raw);
         if (!parsed) return;
+
+        if (useSettingsStore.getState().protocolMailtoOpenMode === "new-tab") {
+          if (openMailtoInNewTab(launch.raw)) return;
+          savePendingMailto(parsed);
+          notifyPendingMailto();
+          if (pathname !== "/") router.push("/");
+          return;
+        }
 
         void requestOpenMailtoInExistingClient(parsed).then((delivered) => {
           if (delivered) return;

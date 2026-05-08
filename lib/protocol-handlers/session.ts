@@ -15,7 +15,7 @@ const PENDING_MAILTO_EVENT = "bulwark:pending-mailto";
 const PENDING_WEBCAL_EVENT = "bulwark:pending-webcal";
 
 type PendingValue<T> = T & { createdAt: number };
-type PendingMailtoRequest = { type: typeof MAILTO_REQUEST; id: string; value: ParsedMailto };
+type PendingMailtoRequest = { type: typeof MAILTO_REQUEST; id: string; value: ParsedMailto; clientId?: string };
 type PendingMailtoCandidate = { type: typeof MAILTO_CANDIDATE; id: string; clientId: string; priority: number };
 type PendingMailtoAck = { type: typeof MAILTO_ACK; id: string };
 type OpenMailtoInClientRequest = {
@@ -24,7 +24,7 @@ type OpenMailtoInClientRequest = {
   value: ParsedMailto;
   clientId?: string;
 };
-type ProtocolClientInfo = { path: string; standalone: boolean };
+type ProtocolClientInfo = { path: string; standalone: boolean; clientId?: string };
 
 function savePending<T>(key: string, value: T) {
   try {
@@ -81,7 +81,8 @@ function isPendingMailtoRequest(value: unknown): value is PendingMailtoRequest {
   const candidate = value as Partial<PendingMailtoRequest>;
   return candidate.type === MAILTO_REQUEST
     && typeof candidate.id === "string"
-    && isParsedMailto(candidate.value);
+    && isParsedMailto(candidate.value)
+    && (candidate.clientId === undefined || typeof candidate.clientId === "string");
 }
 
 function isPendingMailtoAck(value: unknown, id: string): value is PendingMailtoAck {
@@ -128,7 +129,7 @@ function getMailtoClientPriority(info: ProtocolClientInfo): number {
 function getDefaultProtocolClientInfo(): ProtocolClientInfo {
   const nav = navigator as Navigator & { standalone?: boolean };
   const standalone = window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
-  return { path: window.location.pathname, standalone };
+  return { path: window.location.pathname, standalone, clientId: BROWSER_CLIENT_ID };
 }
 
 async function requestMailtoViaServiceWorker(value: ParsedMailto, timeoutMs: number): Promise<boolean> {
@@ -288,14 +289,15 @@ export function listenForMailtoRequests(
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (isPendingMailtoRequest(event.data)) {
+        if (event.data.clientId !== undefined && event.data.clientId !== BROWSER_CLIENT_ID) return;
         if (typeof window !== "undefined") window.focus();
         onMailto(event.data.value);
       }
     };
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
-    notifyServiceWorker(MAILTO_CLIENT_READY, clientInfo);
+    notifyServiceWorker(MAILTO_CLIENT_READY, { ...clientInfo, clientId: BROWSER_CLIENT_ID });
     cleanup.push(() => {
-      notifyServiceWorker(MAILTO_CLIENT_GONE, clientInfo);
+      notifyServiceWorker(MAILTO_CLIENT_GONE, { ...clientInfo, clientId: BROWSER_CLIENT_ID });
       navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
     });
   }

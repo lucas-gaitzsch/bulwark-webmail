@@ -51,6 +51,7 @@ self.addEventListener("message", (event) => {
       MAILTO_CLIENTS.set(event.source.id, {
         path: typeof data.path === "string" ? data.path : "",
         standalone: data.standalone === true,
+        clientId: typeof data.clientId === "string" ? data.clientId : "",
       });
     }
     return;
@@ -59,7 +60,9 @@ self.addEventListener("message", (event) => {
   if (data.type === "mailto-client-gone") {
     if (event.source && event.source.id) {
       const current = MAILTO_CLIENTS.get(event.source.id);
-      if (!current || typeof data.path !== "string" || current.path === data.path) {
+      if (!current
+        || (typeof data.clientId === "string" && current.clientId === data.clientId)
+        || (typeof data.clientId !== "string" && typeof data.path === "string" && current.path === data.path)) {
         MAILTO_CLIENTS.delete(event.source.id);
       }
     }
@@ -161,6 +164,11 @@ async function handlePush(event) {
 async function handleNotificationClick(event) {
   const data = event.notification.data || {};
   const tag = event.notification.tag || "";
+
+  if (data.kind === "protocol-mailto-focus") {
+    return handleMailtoFocusNotificationClick();
+  }
+
   const targetUrl = buildClickUrl(data);
 
   const allClients = await self.clients.matchAll({
@@ -199,24 +207,43 @@ async function handleNotificationClick(event) {
 }
 
 async function focusExistingWindowClient(sourceClientId, requireMailtoReady) {
-  const client = await findReusableWindowClient(sourceClientId, requireMailtoReady);
+  const entry = await findReusableWindowClientEntry(sourceClientId, requireMailtoReady);
+  const client = entry && entry.client;
   if (client && "focus" in client) {
     return client.focus();
+  }
+}
+
+async function handleMailtoFocusNotificationClick() {
+  const entry = await findReusableWindowClientEntry(null, true);
+  const client = entry && entry.client;
+  if (client && "focus" in client) {
+    try {
+      return await client.focus();
+    } catch (_) {
+      // Fall through to opening a new app window if activation is still blocked.
+    }
+  }
+
+  if (self.clients.openWindow) {
+    return self.clients.openWindow(`${BASE_PATH}/`);
   }
 }
 
 async function handleOpenMailtoInClient(event) {
   const data = event.data || {};
   const responsePort = event.ports && event.ports[0];
-  const client = await findReusableWindowClient(event.source && event.source.id, true);
+  const entry = await findReusableWindowClientEntry(event.source && event.source.id, true);
+  const client = entry && entry.client;
+  const state = entry && entry.state;
 
-  if (!client) {
+  if (!client || !state || !state.clientId) {
     responsePort && responsePort.postMessage({ delivered: false });
     return;
   }
 
   try {
-    client.postMessage({ type: "mailto-request", id: data.id, value: data.value });
+    client.postMessage({ type: "mailto-request", id: data.id, clientId: state.clientId, value: data.value });
   } catch (_) {
     responsePort && responsePort.postMessage({ delivered: false });
     return;
@@ -227,13 +254,29 @@ async function handleOpenMailtoInClient(event) {
       await client.focus();
     } catch (_) {
       // Delivery succeeded; focusing can still be blocked by browser policy.
+      await showMailtoFocusNotification();
     }
   }
 
   responsePort && responsePort.postMessage({ delivered: true });
 }
 
-async function findReusableWindowClient(sourceClientId, requireMailtoReady) {
+async function showMailtoFocusNotification() {
+  try {
+    await self.registration.showNotification("Bulwark", {
+      body: "Composer opened in Bulwark. Click to bring it to the front.",
+      tag: "bulwark-mailto-focus",
+      icon: `${BASE_PATH}/icon-192x192.png`,
+      badge: `${BASE_PATH}/icon-192x192.png`,
+      data: { kind: "protocol-mailto-focus" },
+      renotify: true,
+    });
+  } catch (_) {
+    // Notification permission may be missing; the mailto request was still delivered.
+  }
+}
+
+async function findReusableWindowClientEntry(sourceClientId, requireMailtoReady) {
   const scopedPath = BASE_PATH ? `${BASE_PATH}/` : "/";
   const allClients = await self.clients.matchAll({
     type: "window",
@@ -252,14 +295,14 @@ async function findReusableWindowClient(sourceClientId, requireMailtoReady) {
       if (!url.pathname.startsWith(scopedPath)) continue;
       if (url.pathname.includes("/protocol/")) continue;
 
-      candidates.push({ client, score: getReusableClientScore(state) });
+      candidates.push({ client, state, score: getReusableClientScore(state) });
     } catch (_) {
       // Detached clients can disappear while iterating.
     }
   }
 
   candidates.sort((a, b) => a.score - b.score);
-  return candidates[0] && candidates[0].client;
+  return candidates[0];
 }
 
 function getReusableClientScore(state) {

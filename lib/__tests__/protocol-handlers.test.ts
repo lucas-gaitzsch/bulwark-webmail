@@ -1,6 +1,44 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseMailto } from "../protocol-handlers/mailto";
+import { listenForMailtoRequests } from "../protocol-handlers/session";
 import { parseWebcal } from "../protocol-handlers/webcal";
+
+const originalServiceWorkerDescriptor = Object.getOwnPropertyDescriptor(navigator, "serviceWorker");
+
+function installServiceWorkerMock() {
+  const listeners = new Set<(event: MessageEvent) => void>();
+  const worker = { postMessage: vi.fn() };
+  const serviceWorker = {
+    ready: Promise.resolve({ active: worker }),
+    controller: worker,
+    addEventListener: vi.fn((type: string, listener: EventListener) => {
+      if (type === "message") listeners.add(listener as (event: MessageEvent) => void);
+    }),
+    removeEventListener: vi.fn((type: string, listener: EventListener) => {
+      if (type === "message") listeners.delete(listener as (event: MessageEvent) => void);
+    }),
+  };
+
+  Object.defineProperty(navigator, "serviceWorker", {
+    configurable: true,
+    value: serviceWorker,
+  });
+
+  return {
+    dispatch(data: unknown) {
+      listeners.forEach((listener) => listener(new MessageEvent("message", { data })));
+    },
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  if (originalServiceWorkerDescriptor) {
+    Object.defineProperty(navigator, "serviceWorker", originalServiceWorkerDescriptor);
+    return;
+  }
+  Reflect.deleteProperty(navigator, "serviceWorker");
+});
 
 describe("protocol handlers", () => {
   describe("parseMailto", () => {
@@ -94,6 +132,39 @@ describe("protocol handlers", () => {
 
     it("prefers a name query parameter", () => {
       expect(parseWebcal("webcal://example.com/team.ics?name=Team%20Calendar")?.suggestedName).toBe("Team Calendar");
+    });
+  });
+
+  describe("listenForMailtoRequests", () => {
+    const mailtoValue = {
+      to: ["alice@example.com"],
+      cc: [],
+      bcc: [],
+      subject: "Hello",
+      body: "Hi",
+    };
+
+    it("accepts legacy service-worker mailto messages without a client id", () => {
+      const serviceWorker = installServiceWorkerMock();
+      const onMailto = vi.fn();
+      vi.spyOn(window, "focus").mockImplementation(() => undefined);
+
+      const cleanup = listenForMailtoRequests(onMailto, () => ({ path: "/", standalone: false }));
+      serviceWorker.dispatch({ type: "mailto-request", id: "legacy", value: mailtoValue });
+
+      expect(onMailto).toHaveBeenCalledWith(mailtoValue);
+      cleanup();
+    });
+
+    it("ignores service-worker mailto messages for another client", () => {
+      const serviceWorker = installServiceWorkerMock();
+      const onMailto = vi.fn();
+
+      const cleanup = listenForMailtoRequests(onMailto, () => ({ path: "/", standalone: false }));
+      serviceWorker.dispatch({ type: "mailto-request", id: "targeted", clientId: "other-client", value: mailtoValue });
+
+      expect(onMailto).not.toHaveBeenCalled();
+      cleanup();
     });
   });
 });
