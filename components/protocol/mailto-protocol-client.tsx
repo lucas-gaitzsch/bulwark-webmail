@@ -10,6 +10,14 @@ function getProtocolPathPrefix(): string {
   return index > 0 ? window.location.pathname.slice(0, index) : "";
 }
 
+function leaveProtocolRoute() {
+  window.close();
+
+  window.setTimeout(() => {
+    window.location.replace(`${getProtocolPathPrefix()}/`);
+  }, 150);
+}
+
 async function focusExistingClient() {
   if (!("serviceWorker" in navigator)) return;
 
@@ -41,7 +49,7 @@ export function MailtoProtocolClient({ openingText }: MailtoProtocolClientProps)
 
         if (delivered) {
           void focusExistingClient();
-          window.close();
+          leaveProtocolRoute();
           return;
         }
 

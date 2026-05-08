@@ -6,15 +6,25 @@ const WEBCAL_KEY = "bulwark:pending-webcal";
 const PROTOCOL_CHANNEL = "bulwark:protocol-handlers";
 const PENDING_TTL_MS = 5 * 60 * 1000;
 const MAILTO_REQUEST = "mailto-request";
+const MAILTO_CANDIDATE = "mailto-candidate";
 const MAILTO_ACK = "mailto-ack";
 const OPEN_MAILTO_IN_CLIENT = "open-mailto-in-client";
 const MAILTO_CLIENT_READY = "mailto-client-ready";
 const MAILTO_CLIENT_GONE = "mailto-client-gone";
+const PENDING_MAILTO_EVENT = "bulwark:pending-mailto";
+const PENDING_WEBCAL_EVENT = "bulwark:pending-webcal";
 
 type PendingValue<T> = T & { createdAt: number };
 type PendingMailtoRequest = { type: typeof MAILTO_REQUEST; id: string; value: ParsedMailto };
+type PendingMailtoCandidate = { type: typeof MAILTO_CANDIDATE; id: string; clientId: string; priority: number };
 type PendingMailtoAck = { type: typeof MAILTO_ACK; id: string };
-type OpenMailtoInClientRequest = { type: typeof OPEN_MAILTO_IN_CLIENT; id: string; value: ParsedMailto };
+type OpenMailtoInClientRequest = {
+  type: typeof OPEN_MAILTO_IN_CLIENT;
+  id: string;
+  value: ParsedMailto;
+  clientId?: string;
+};
+type ProtocolClientInfo = { path: string; standalone: boolean };
 
 function savePending<T>(key: string, value: T) {
   try {
@@ -80,11 +90,45 @@ function isPendingMailtoAck(value: unknown, id: string): value is PendingMailtoA
   return candidate.type === MAILTO_ACK && candidate.id === id;
 }
 
+function isPendingMailtoCandidate(value: unknown, id: string): value is PendingMailtoCandidate {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<PendingMailtoCandidate>;
+  return candidate.type === MAILTO_CANDIDATE
+    && candidate.id === id
+    && typeof candidate.clientId === "string"
+    && typeof candidate.priority === "number";
+}
+
+function isOpenMailtoInClientRequest(value: unknown): value is OpenMailtoInClientRequest {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<OpenMailtoInClientRequest>;
+  return candidate.type === OPEN_MAILTO_IN_CLIENT
+    && typeof candidate.id === "string"
+    && isParsedMailto(candidate.value)
+    && (candidate.clientId === undefined || typeof candidate.clientId === "string");
+}
+
 function createRequestId(): string {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+const BROWSER_CLIENT_ID = createRequestId();
+
+function getMailtoClientPriority(info: ProtocolClientInfo): number {
+  const isMailSection = info.path === "/" || info.path === "";
+  if (info.standalone && isMailSection) return 0;
+  if (isMailSection) return 1;
+  if (info.standalone) return 2;
+  return 3;
+}
+
+function getDefaultProtocolClientInfo(): ProtocolClientInfo {
+  const nav = navigator as Navigator & { standalone?: boolean };
+  const standalone = window.matchMedia?.("(display-mode: standalone)").matches || nav.standalone === true;
+  return { path: window.location.pathname, standalone };
 }
 
 async function requestMailtoViaServiceWorker(value: ParsedMailto, timeoutMs: number): Promise<boolean> {
@@ -128,13 +172,16 @@ async function requestMailtoViaServiceWorker(value: ParsedMailto, timeoutMs: num
   }
 }
 
-function notifyServiceWorker(type: typeof MAILTO_CLIENT_READY | typeof MAILTO_CLIENT_GONE) {
+function notifyServiceWorker(
+  type: typeof MAILTO_CLIENT_READY | typeof MAILTO_CLIENT_GONE,
+  info?: ProtocolClientInfo,
+) {
   if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
 
   navigator.serviceWorker.ready
     .then((registration) => {
       const worker = navigator.serviceWorker.controller ?? registration.active;
-      worker?.postMessage({ type });
+      worker?.postMessage({ type, ...info });
     })
     .catch(() => {
       // Service worker registration is optional for local/dev environments.
@@ -157,6 +204,18 @@ export function consumePendingMailto(): ParsedMailto | null {
   return consumePending(MAILTO_KEY, isParsedMailto);
 }
 
+export function notifyPendingMailto() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PENDING_MAILTO_EVENT));
+  }
+}
+
+export function subscribeToPendingMailto(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(PENDING_MAILTO_EVENT, callback);
+  return () => window.removeEventListener(PENDING_MAILTO_EVENT, callback);
+}
+
 async function requestMailtoViaBroadcastChannel(value: ParsedMailto, timeoutMs: number): Promise<boolean> {
   if (typeof BroadcastChannel === "undefined") {
     return false;
@@ -165,16 +224,49 @@ async function requestMailtoViaBroadcastChannel(value: ParsedMailto, timeoutMs: 
   return new Promise((resolve) => {
     const id = createRequestId();
     const channel = new BroadcastChannel(PROTOCOL_CHANNEL);
+    const candidates: PendingMailtoCandidate[] = [];
+    let selected = false;
+    let selectionTimer: ReturnType<typeof globalThis.setTimeout> | null = null;
+    const candidateWindowMs = Math.min(75, Math.max(25, Math.floor(timeoutMs / 3)));
     const timeout = globalThis.setTimeout(() => {
+      if (selectionTimer) globalThis.clearTimeout(selectionTimer);
       channel.close();
       resolve(false);
     }, timeoutMs);
 
+    const selectCandidate = () => {
+      if (selected) return;
+      selected = true;
+
+      const best = candidates.sort((a, b) => a.priority - b.priority)[0];
+      if (!best) {
+        globalThis.clearTimeout(timeout);
+        channel.close();
+        resolve(false);
+        return;
+      }
+
+      channel.postMessage({
+        type: OPEN_MAILTO_IN_CLIENT,
+        id,
+        clientId: best.clientId,
+        value,
+      } satisfies OpenMailtoInClientRequest);
+    };
+
     channel.onmessage = (event) => {
-      if (!isPendingMailtoAck(event.data, id)) return;
-      globalThis.clearTimeout(timeout);
-      channel.close();
-      resolve(true);
+      if (isPendingMailtoCandidate(event.data, id)) {
+        candidates.push(event.data);
+        selectionTimer ??= globalThis.setTimeout(selectCandidate, candidateWindowMs);
+        return;
+      }
+
+      if (isPendingMailtoAck(event.data, id)) {
+        if (selectionTimer) globalThis.clearTimeout(selectionTimer);
+        globalThis.clearTimeout(timeout);
+        channel.close();
+        resolve(true);
+      }
     };
 
     channel.postMessage({ type: MAILTO_REQUEST, id, value } satisfies PendingMailtoRequest);
@@ -186,19 +278,24 @@ export async function requestOpenMailtoInExistingClient(value: ParsedMailto, tim
   return requestMailtoViaBroadcastChannel(value, timeoutMs);
 }
 
-export function listenForMailtoRequests(onMailto: (value: ParsedMailto) => void): () => void {
+export function listenForMailtoRequests(
+  onMailto: (value: ParsedMailto) => void,
+  getClientInfo: () => ProtocolClientInfo = getDefaultProtocolClientInfo,
+): () => void {
   const cleanup: Array<() => void> = [];
+  const clientInfo = getClientInfo();
 
   if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
     const handleServiceWorkerMessage = (event: MessageEvent) => {
       if (isPendingMailtoRequest(event.data)) {
+        if (typeof window !== "undefined") window.focus();
         onMailto(event.data.value);
       }
     };
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
-    notifyServiceWorker(MAILTO_CLIENT_READY);
+    notifyServiceWorker(MAILTO_CLIENT_READY, clientInfo);
     cleanup.push(() => {
-      notifyServiceWorker(MAILTO_CLIENT_GONE);
+      notifyServiceWorker(MAILTO_CLIENT_GONE, clientInfo);
       navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
     });
   }
@@ -206,7 +303,18 @@ export function listenForMailtoRequests(onMailto: (value: ParsedMailto) => void)
   if (typeof BroadcastChannel !== "undefined") {
     const channel = new BroadcastChannel(PROTOCOL_CHANNEL);
     channel.onmessage = (event) => {
-      if (!isPendingMailtoRequest(event.data)) return;
+      if (isPendingMailtoRequest(event.data)) {
+        channel.postMessage({
+          type: MAILTO_CANDIDATE,
+          id: event.data.id,
+          clientId: BROWSER_CLIENT_ID,
+          priority: getMailtoClientPriority(getClientInfo()),
+        } satisfies PendingMailtoCandidate);
+        return;
+      }
+
+      if (!isOpenMailtoInClientRequest(event.data) || event.data.clientId !== BROWSER_CLIENT_ID) return;
+      if (typeof window !== "undefined") window.focus();
       onMailto(event.data.value);
       channel.postMessage({ type: MAILTO_ACK, id: event.data.id } satisfies PendingMailtoAck);
     };
@@ -222,6 +330,18 @@ export function savePendingWebcal(value: ParsedWebcal) {
 
 export function consumePendingWebcal(): ParsedWebcal | null {
   return consumePending(WEBCAL_KEY, isParsedWebcal);
+}
+
+export function notifyPendingWebcal() {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(PENDING_WEBCAL_EVENT));
+  }
+}
+
+export function subscribeToPendingWebcal(callback: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(PENDING_WEBCAL_EVENT, callback);
+  return () => window.removeEventListener(PENDING_WEBCAL_EVENT, callback);
 }
 
 export function hasPendingWebcal(): boolean {

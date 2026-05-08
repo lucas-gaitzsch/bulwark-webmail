@@ -5,6 +5,7 @@ import { CalendarAlertProvider } from "@/components/providers/calendar-alert-pro
 import { EmbeddedBridgeProvider } from "@/components/providers/embedded-bridge-provider";
 import { RateLimitToastProvider } from "@/components/providers/rate-limit-toast-provider";
 import { TourProvider } from "@/components/tour/tour-provider";
+import { ProtocolLaunchHandlerProvider } from "@/components/protocol/protocol-launch-handler-provider";
 import { locales } from "@/i18n/routing";
 
 export default async function LocaleLayout({
@@ -32,7 +33,9 @@ export default async function LocaleLayout({
           <RateLimitToastProvider>
             <EmbeddedBridgeProvider>
               <TourProvider>
-                {children}
+                <ProtocolLaunchHandlerProvider>
+                  {children}
+                </ProtocolLaunchHandlerProvider>
               </TourProvider>
             </EmbeddedBridgeProvider>
           </RateLimitToastProvider>

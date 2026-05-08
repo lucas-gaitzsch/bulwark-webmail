@@ -58,7 +58,7 @@ import { CreateCalendarModal } from "@/components/calendar/create-calendar-modal
 import { getUserParticipantId } from "@/lib/calendar-participants";
 import { generateBirthdayEvents, createBirthdayCalendar, BIRTHDAY_CALENDAR_ID } from "@/lib/birthday-calendar";
 import { debug } from "@/lib/debug";
-import { consumePendingWebcal, hasPendingWebcal } from "@/lib/protocol-handlers/session";
+import { consumePendingWebcal, hasPendingWebcal, subscribeToPendingWebcal } from "@/lib/protocol-handlers/session";
 import type { ParsedWebcal } from "@/lib/protocol-handlers/webcal";
 
 type PendingScopeAction =
@@ -226,10 +226,15 @@ export default function CalendarPage() {
   useEffect(() => {
     if (!isAuthenticated || !client) return;
 
-    const pending = consumePendingWebcal();
-    if (!pending) return;
+    const openPendingWebcal = () => {
+      const pending = consumePendingWebcal();
+      if (!pending) return;
 
-    handleWebcalProtocolRequest(pending);
+      handleWebcalProtocolRequest(pending);
+    };
+
+    openPendingWebcal();
+    return subscribeToPendingWebcal(openPendingWebcal);
   }, [isAuthenticated, client, handleWebcalProtocolRequest]);
 
   useEffect(() => {

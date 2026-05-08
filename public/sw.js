@@ -23,7 +23,7 @@ function getBasePath() {
 }
 
 const BASE_PATH = getBasePath();
-const MAILTO_CLIENT_IDS = new Set();
+const MAILTO_CLIENTS = new Map();
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -48,14 +48,20 @@ self.addEventListener("message", (event) => {
   const data = event.data || {};
   if (data.type === "mailto-client-ready") {
     if (event.source && event.source.id) {
-      MAILTO_CLIENT_IDS.add(event.source.id);
+      MAILTO_CLIENTS.set(event.source.id, {
+        path: typeof data.path === "string" ? data.path : "",
+        standalone: data.standalone === true,
+      });
     }
     return;
   }
 
   if (data.type === "mailto-client-gone") {
     if (event.source && event.source.id) {
-      MAILTO_CLIENT_IDS.delete(event.source.id);
+      const current = MAILTO_CLIENTS.get(event.source.id);
+      if (!current || typeof data.path !== "string" || current.path === data.path) {
+        MAILTO_CLIENTS.delete(event.source.id);
+      }
     }
     return;
   }
@@ -226,10 +232,12 @@ async function findReusableWindowClient(sourceClientId, requireMailtoReady) {
     type: "window",
     includeUncontrolled: true,
   });
+  const candidates = [];
 
   for (const client of allClients) {
     if (client.id === sourceClientId) continue;
-    if (requireMailtoReady && !MAILTO_CLIENT_IDS.has(client.id)) continue;
+    const state = MAILTO_CLIENTS.get(client.id);
+    if (requireMailtoReady && !state) continue;
 
     try {
       const url = new URL(client.url);
@@ -237,11 +245,24 @@ async function findReusableWindowClient(sourceClientId, requireMailtoReady) {
       if (!url.pathname.startsWith(scopedPath)) continue;
       if (url.pathname.includes("/protocol/")) continue;
 
-      return client;
+      candidates.push({ client, score: getReusableClientScore(state) });
     } catch (_) {
       // Detached clients can disappear while iterating.
     }
   }
+
+  candidates.sort((a, b) => a.score - b.score);
+  return candidates[0] && candidates[0].client;
+}
+
+function getReusableClientScore(state) {
+  if (!state) return 4;
+
+  const isMailSection = state.path === "/" || state.path === "";
+  if (state.standalone && isMailSection) return 0;
+  if (isMailSection) return 1;
+  if (state.standalone) return 2;
+  return 3;
 }
 
 function buildClickUrl(data) {

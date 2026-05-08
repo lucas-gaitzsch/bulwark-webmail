@@ -60,7 +60,7 @@ import { Button } from "@/components/ui/button";
 import { useConfig } from "@/hooks/use-config";
 import { usePluginStore } from "@/stores/plugin-store";
 import { useThemeStore } from "@/stores/theme-store";
-import { consumePendingMailto, listenForMailtoRequests } from "@/lib/protocol-handlers/session";
+import { consumePendingMailto, subscribeToPendingMailto } from "@/lib/protocol-handlers/session";
 import type { ParsedMailto } from "@/lib/protocol-handlers/mailto";
 import { plainTextToComposerBody } from "@/lib/email-composer-utils";
 import { appLifecycleHooks, uiHooks, routerHooks, toastHooks, emailHooks } from "@/lib/plugin-hooks";
@@ -722,14 +722,13 @@ export default function Home() {
   useEffect(() => {
     if (!isAuthenticated || !client) return;
 
-    const pending = consumePendingMailto();
-    if (pending) handleMailtoProtocolRequest(pending);
-  }, [isAuthenticated, client, handleMailtoProtocolRequest]);
+    const openPendingMailto = () => {
+      const pending = consumePendingMailto();
+      if (pending) handleMailtoProtocolRequest(pending);
+    };
 
-  useEffect(() => {
-    if (!isAuthenticated || !client) return;
-
-    return listenForMailtoRequests(handleMailtoProtocolRequest);
+    openPendingMailto();
+    return subscribeToPendingMailto(openPendingMailto);
   }, [isAuthenticated, client, handleMailtoProtocolRequest]);
 
   // Load mailboxes and emails when authenticated (only if not already loaded)

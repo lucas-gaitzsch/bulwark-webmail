@@ -10,7 +10,8 @@ type WebAppProtocolHandler = {
 type ExtendedManifest = MetadataRoute.Manifest & {
   protocol_handlers?: WebAppProtocolHandler[];
   launch_handler?: {
-    client_mode?: "navigate-existing" | "auto" | "focus-existing" | "navigate-new";
+    client_mode?: "navigate-existing" | "auto" | "focus-existing" | "navigate-new"
+      | Array<"navigate-existing" | "auto" | "focus-existing" | "navigate-new">;
   };
 };
 
@@ -74,7 +75,7 @@ export default function manifest(): ExtendedManifest {
       { protocol: "webcal", url: withBase("/protocol/webcal?url=%s") },
     ],
     launch_handler: {
-      client_mode: "navigate-existing",
+      client_mode: "navigate-new",
     },
   };
 }
