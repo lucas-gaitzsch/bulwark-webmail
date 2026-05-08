@@ -9,17 +9,7 @@ import type { ProtocolOpenMode } from "@/stores/settings-store";
 import { toast } from "@/stores/toast-store";
 import { SettingsSection, SettingItem, Select } from "./settings-section";
 
-const REGISTRATION_STORAGE_KEY = "bulwark:verified-protocol-handler-registrations";
 type Protocol = "mailto" | "webcal";
-type RegistrationState = Record<Protocol, boolean>;
-type ProtocolStatusNavigator = Navigator & {
-  isProtocolHandlerRegistered?: (protocol: string, url: string) => boolean | "registered" | "new" | "declined";
-};
-
-const EMPTY_REGISTRATION_STATE: RegistrationState = {
-  mailto: false,
-  webcal: false,
-};
 
 function canRegisterProtocolHandler(): boolean {
   return typeof navigator !== "undefined"
@@ -28,40 +18,8 @@ function canRegisterProtocolHandler(): boolean {
     && window.isSecureContext;
 }
 
-function loadRegistrationState(): RegistrationState {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(REGISTRATION_STORAGE_KEY) || "{}");
-    return {
-      mailto: parsed.mailto === true,
-      webcal: parsed.webcal === true,
-    };
-  } catch {
-    return EMPTY_REGISTRATION_STATE;
-  }
-}
-
-function saveRegistrationState(state: RegistrationState) {
-  try {
-    localStorage.setItem(REGISTRATION_STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // Browser registration still succeeded; only the local settings hint is unavailable.
-  }
-}
-
 function getProtocolHandlerUrl(protocol: Protocol) {
   return `${window.location.origin}${getPathPrefix()}/protocol/${protocol}?url=%s`;
-}
-
-function readBrowserRegistrationStatus(protocol: Protocol): boolean | null {
-  const statusReader = (navigator as ProtocolStatusNavigator).isProtocolHandlerRegistered;
-  if (typeof statusReader !== "function") return null;
-
-  try {
-    const status = statusReader.call(navigator, protocol, getProtocolHandlerUrl(protocol));
-    return status === true || status === "registered";
-  } catch {
-    return null;
-  }
 }
 
 function registerProtocolHandler(protocol: Protocol) {
@@ -80,17 +38,9 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
   const protocolOpenMode = useSettingsStore((state) => state.protocolOpenMode);
   const updateSetting = useSettingsStore((state) => state.updateSetting);
   const [supported, setSupported] = useState(false);
-  const [registrations, setRegistrations] = useState<RegistrationState>(EMPTY_REGISTRATION_STATE);
 
   useEffect(() => {
     setSupported(canRegisterProtocolHandler());
-    const stored = loadRegistrationState();
-    const mailtoStatus = readBrowserRegistrationStatus("mailto");
-    const webcalStatus = readBrowserRegistrationStatus("webcal");
-    setRegistrations({
-      mailto: mailtoStatus ?? stored.mailto,
-      webcal: webcalStatus ?? stored.webcal,
-    });
   }, []);
 
   const handleOpenModeChange = async (value: string) => {
@@ -109,15 +59,6 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
   const handleRegister = (protocol: Protocol) => {
     try {
       registerProtocolHandler(protocol);
-
-      if (readBrowserRegistrationStatus(protocol) === true) {
-        setRegistrations((current) => {
-          const next = { ...current, [protocol]: true };
-          saveRegistrationState(next);
-          return next;
-        });
-      }
-
       toast.success(protocol === "mailto" ? t("mailto_registered") : t("webcal_registered"));
     } catch {
       toast.error(t("registration_failed"));
@@ -125,14 +66,6 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
   };
 
   const renderRegistrationControl = (protocol: Protocol) => {
-    if (registrations[protocol]) {
-      return (
-        <span className="inline-flex rounded-md bg-muted px-3 py-1.5 text-sm text-muted-foreground" aria-live="polite">
-          {protocol === "mailto" ? t("mailto_registered") : t("webcal_registered")}
-        </span>
-      );
-    }
-
     return (
       <Button size="sm" onClick={() => handleRegister(protocol)} disabled={!supported}>
         {protocol === "mailto" ? t("register_mailto") : t("register_webcal")}
@@ -152,6 +85,12 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
         {renderRegistrationControl("mailto")}
       </SettingItem>
 
+      {supportsCalendar && (
+        <SettingItem label={t("webcal_label")} description={t("webcal_description")}>
+          {renderRegistrationControl("webcal")}
+        </SettingItem>
+      )}
+
       <SettingItem label={t("protocol_open_mode_label")} description={t("protocol_open_mode_description")}>
         <Select
           value={protocolOpenMode}
@@ -162,12 +101,6 @@ export function ProtocolHandlerSettings({ supportsCalendar }: ProtocolHandlerSet
           ]}
         />
       </SettingItem>
-
-      {supportsCalendar && (
-        <SettingItem label={t("webcal_label")} description={t("webcal_description")}>
-          {renderRegistrationControl("webcal")}
-        </SettingItem>
-      )}
 
       <p className="text-xs text-muted-foreground">{t("browser_note")}</p>
     </SettingsSection>
