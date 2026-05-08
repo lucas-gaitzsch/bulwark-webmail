@@ -217,13 +217,20 @@ async function handleOpenMailtoInClient(event) {
 
   try {
     client.postMessage({ type: "mailto-request", id: data.id, value: data.value });
-    if ("focus" in client) {
-      await client.focus();
-    }
-    responsePort && responsePort.postMessage({ delivered: true });
   } catch (_) {
     responsePort && responsePort.postMessage({ delivered: false });
+    return;
   }
+
+  if ("focus" in client) {
+    try {
+      await client.focus();
+    } catch (_) {
+      // Delivery succeeded; focusing can still be blocked by browser policy.
+    }
+  }
+
+  responsePort && responsePort.postMessage({ delivered: true });
 }
 
 async function findReusableWindowClient(sourceClientId, requireMailtoReady) {

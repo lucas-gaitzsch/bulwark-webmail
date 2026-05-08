@@ -75,7 +75,7 @@ export default function manifest(): ExtendedManifest {
       { protocol: "webcal", url: withBase("/protocol/webcal?url=%s") },
     ],
     launch_handler: {
-      client_mode: "navigate-new",
+      client_mode: ["focus-existing", "navigate-new"],
     },
   };
 }

@@ -9,6 +9,7 @@ import {
   listenForMailtoRequests,
   notifyPendingMailto,
   notifyPendingWebcal,
+  requestOpenMailtoInExistingClient,
   savePendingMailto,
   savePendingWebcal,
 } from "@/lib/protocol-handlers/session";
@@ -80,9 +81,13 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
       if (launch.kind === "mailto") {
         const parsed = parseMailto(launch.raw);
         if (!parsed) return;
-        savePendingMailto(parsed);
-        notifyPendingMailto();
-        if (pathname !== "/") router.push("/");
+
+        void requestOpenMailtoInExistingClient(parsed).then((delivered) => {
+          if (delivered) return;
+          savePendingMailto(parsed);
+          notifyPendingMailto();
+          if (pathname !== "/") router.push("/");
+        });
         return;
       }
 
