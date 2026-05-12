@@ -565,6 +565,15 @@
       "to": "To: {recipients}"
     },
     "remove_sub_address": "Remove sub-address",
+    "from_override": {
+      "toggle_off": "Override",
+      "toggle_on": "Cancel override",
+      "toggle_tooltip": "Edit the From name and address freely. Mail is still sent through your identity — only the visible From header changes.",
+      "name_label": "From name",
+      "name_placeholder": "Name",
+      "email_label": "From email address",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Template",
     "save_as_template": "Save as Template",
     "validation": {
@@ -975,11 +984,13 @@
       },
       "mail_layout": {
         "label": "Mail Layout",
-        "description": "Choose between the classic split reading pane and a Gmail-style focused reading flow.",
+        "description": "Choose between the classic split reading pane, a Gmail-style focused reading flow, or a Zimbra-style bottom reading pane.",
         "split": "Split pane",
         "split_description": "Keep the message list and reading pane visible side by side.",
         "focus": "Focused list",
-        "focus_description": "Show one line per message and open mail full-width while keeping the folder sidebar visible."
+        "focus_description": "Show one line per message and open mail full-width while keeping the folder sidebar visible.",
+        "horizontal": "Reading pane at bottom",
+        "horizontal_description": "Show the message list on top and open the selected message in a reading pane below it."
       },
       "show_preview": {
         "label": "Show Preview Text",
@@ -995,8 +1006,18 @@
         "description": "Disable the rich text editor and send all emails as plain text only, including replies and forwards"
       },
       "auto_select_reply_identity": {
-        "label": "Auto-select Reply Address",
-        "description": "When replying, automatically switch the From address to the identity that originally received the message"
+        "label": "Reply From Received Address",
+        "description": "When replying, send from the address the message was originally sent to. Matches identities first; for domain catch-all deliveries, rewrites the From header to the alias while sending through your primary identity."
+      },
+      "signature_position": {
+        "label": "Signature Position",
+        "description": "Where to insert your signature in replies and forwards. Above the quoted text reads naturally as a closing for the reply; below keeps the original message contiguous.",
+        "above_quote": "Before quoted text",
+        "below_quote": "After quoted text"
+      },
+      "signature_separator": {
+        "label": "Signature Delimiter",
+        "description": "Prefix the signature with the standard \"-- \" delimiter line (RFC 3676). Turn off if you'd rather flow straight from your message into the signature."
       },
       "sub_address_delimiter": {
         "label": "Sub-Address Delimiter",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "New subfolder...",
     "new_folder": "New folder...",
     "rename": "Rename...",
+    "import_email": "Import .eml...",
     "empty_folder": "Empty folder",
     "empty_folder_generic": "Empty folder",
     "delete_folder": "Delete folder",

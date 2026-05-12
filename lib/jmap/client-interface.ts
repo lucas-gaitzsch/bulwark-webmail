@@ -146,6 +146,7 @@ export interface IJMAPClient {
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>,
     inReplyTo?: string[],
     references?: string[],
+    envelopeMailFrom?: string,
   ): Promise<void>;
 
   sendImipReply(opts: {

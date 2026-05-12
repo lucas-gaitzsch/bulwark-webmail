@@ -31,7 +31,7 @@ import { useThemeStore } from '@/stores/theme-store';
 import { getActiveAccountSlotHeaders } from '@/lib/auth/active-account-slot';
 
 import { useUpdateStore, selectHasUpdate } from '@/stores/update-store';
-import { apiFetch } from '@/lib/browser-navigation';
+import { apiFetch, getPathPrefix } from '@/lib/browser-navigation';
 
 // Single-page tab navigation: clicks update a Zustand store. The URL stays
 // at /admin so React doesn't fire a route transition on every tab switch -
@@ -177,6 +177,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return <>{children}</>;
   }
 
+  // /admin lives outside the [locale] tree, so links back to the webmail
+  // apps are bare <a> tags (hard navigation). Next.js only auto-applies
+  // basePath to <Link>/router APIs — for these we prepend it manually so
+  // NEXT_PUBLIC_BASE_PATH=/webmail deployments don't redirect to "/".
+  const prefix = getPathPrefix();
+
   const navContent = (
     <>
       <div className="flex-1 overflow-y-auto py-2">
@@ -274,28 +280,28 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="w-7 h-7 mb-2" />
         )}
         <a
-          href="/"
+          href={`${prefix}/`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Mail"
         >
           <Mail className="w-[18px] h-[18px]" />
         </a>
         <a
-          href="/calendar"
+          href={`${prefix}/calendar`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Calendar"
         >
           <Calendar className="w-[18px] h-[18px]" />
         </a>
         <a
-          href="/contacts"
+          href={`${prefix}/contacts`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Contacts"
         >
           <BookUser className="w-[18px] h-[18px]" />
         </a>
         <a
-          href="/files"
+          href={`${prefix}/files`}
           className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
           title="Files"
         >
@@ -306,7 +312,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Shield className="w-[18px] h-[18px]" />
           </div>
           <a
-            href="/settings"
+            href={`${prefix}/settings`}
             className="flex items-center justify-center w-10 h-10 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted"
             title="Settings"
           >
@@ -411,7 +417,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         aria-label="Main navigation"
       >
         <a
-          href="/"
+          href={`${prefix}/`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Mail"
         >
@@ -419,7 +425,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Mail</span>
         </a>
         <a
-          href="/calendar"
+          href={`${prefix}/calendar`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Calendar"
         >
@@ -427,7 +433,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Calendar</span>
         </a>
         <a
-          href="/contacts"
+          href={`${prefix}/contacts`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Contacts"
         >
@@ -435,7 +441,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Contacts</span>
         </a>
         <a
-          href="/files"
+          href={`${prefix}/files`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Files"
         >
@@ -454,7 +460,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <span className="text-[10px] font-medium leading-tight truncate max-w-full">Admin</span>
         </div>
         <a
-          href="/settings"
+          href={`${prefix}/settings`}
           className="flex flex-col items-center justify-center gap-1 py-2 px-1 min-h-[44px] grow shrink-0 basis-[64px] transition-colors duration-150 text-muted-foreground hover:text-foreground"
           title="Settings"
         >

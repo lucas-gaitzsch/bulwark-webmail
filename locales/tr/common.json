@@ -565,6 +565,15 @@
       "to": "Kime: {recipients}"
     },
     "remove_sub_address": "Alt adresi kaldır",
+    "from_override": {
+      "toggle_off": "Geçersiz kıl",
+      "toggle_on": "Geçersiz kılmayı iptal et",
+      "toggle_tooltip": "Gönderen adını ve adresini serbestçe düzenleyin. Posta hâlâ kimliğiniz üzerinden gönderilir — yalnızca görünür Kimden başlığı değişir.",
+      "name_label": "Gönderen adı",
+      "name_placeholder": "Ad",
+      "email_label": "Gönderen e-posta adresi",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Şablon",
     "save_as_template": "Şablon Olarak Kaydet",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "Bölünmüş bölme",
         "split_description": "İleti listesi ve okuma bölmesini yan yana görünür tutun.",
         "focus": "Odaklı liste",
-        "focus_description": "İleti başına bir satır gösterin ve klasör kenar çubuğu görünürken postayı tam genişlikte açın."
+        "focus_description": "İleti başına bir satır gösterin ve klasör kenar çubuğu görünürken postayı tam genişlikte açın.",
+        "horizontal": "Okuma bölmesi altta",
+        "horizontal_description": "Mesaj listesini üstte gösterin ve seçilen mesajı altındaki okuma bölmesinde açın."
       },
       "show_preview": {
         "label": "Önizleme Metnini Göster",
@@ -994,6 +1005,16 @@
       "auto_select_reply_identity": {
         "label": "Yanıt Adresini Otomatik Seç",
         "description": "Yanıtlarken, Kimden adresini iletiyi başlangıçta alan kimliğe otomatik olarak değiştir"
+      },
+      "signature_position": {
+        "label": "İmza konumu",
+        "description": "Yanıtlarda ve iletmelerde imzanızın nereye ekleneceği. Alıntılanan metnin üzerinde, yanıt için doğal bir kapanış olarak okunur; altında ise orijinal mesajı bir bütün hâlinde tutar.",
+        "above_quote": "Alıntılanan metinden önce",
+        "below_quote": "Alıntılanan metinden sonra"
+      },
+      "signature_separator": {
+        "label": "İmza ayırıcı",
+        "description": "İmzayı standart \"-- \" ayırıcı satırıyla başlat (RFC 3676). Mesajdan doğrudan imzaya geçmek istiyorsanız kapatın."
       },
       "sub_address_delimiter": {
         "label": "Alt Adres Ayırıcı",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "Yeni alt klasör...",
     "new_folder": "Yeni klasör...",
     "rename": "Yeniden adlandır...",
+    "import_email": ".eml içe aktar...",
     "empty_folder": "Klasörü boşalt",
     "empty_folder_generic": "Klasörü boşalt",
     "delete_folder": "Klasörü sil",

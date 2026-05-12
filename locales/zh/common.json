@@ -562,6 +562,15 @@
       "to": "至：{recipients}"
     },
     "remove_sub_address": "删除子地址",
+    "from_override": {
+      "toggle_off": "覆盖",
+      "toggle_on": "取消覆盖",
+      "toggle_tooltip": "自由编辑发件人姓名和地址。邮件仍通过您的身份发送 — 仅可见的发件人标题发生变化。",
+      "name_label": "发件人姓名",
+      "name_placeholder": "姓名",
+      "email_label": "发件人电子邮件地址",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "模板",
     "save_as_template": "保存为模板",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "分栏视图",
         "split_description": "左侧显示邮件列表，右侧显示阅读窗格。",
         "focus": "沉浸模式",
-        "focus_description": "每封邮件显示一行，打开邮件时使用全宽阅读视图，同时保留文件夹侧边栏。"
+        "focus_description": "每封邮件显示一行，打开邮件时使用全宽阅读视图，同时保留文件夹侧边栏。",
+        "horizontal": "底部阅读窗格",
+        "horizontal_description": "在顶部显示邮件列表，并在下方的阅读窗格中打开所选邮件。"
       },
       "show_preview": {
         "label": "显示预览文本",
@@ -994,6 +1005,16 @@
       "auto_select_reply_identity": {
         "label": "自动选择回复地址",
         "description": "回复时自动将发件人地址切换为最初收到该邮件的身份"
+      },
+      "signature_position": {
+        "label": "签名位置",
+        "description": "在回复和转发中插入签名的位置。位于引用文本上方时，可作为回复的自然结尾；位于下方时，保持原始邮件连贯。",
+        "above_quote": "引用文本之前",
+        "below_quote": "引用文本之后"
+      },
+      "signature_separator": {
+        "label": "签名分隔符",
+        "description": "在签名前加入标准的 “-- ” 分隔行（RFC 3676）。如果希望正文直接连到签名，请关闭。"
       },
       "sub_address_delimiter": {
         "label": "子地址分隔符",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "新建子文件夹...",
     "new_folder": "新建文件夹...",
     "rename": "重命名...",
+    "import_email": "导入 .eml...",
     "empty_folder": "清空文件夹",
     "empty_folder_generic": "清空文件夹",
     "delete_folder": "删除文件夹",

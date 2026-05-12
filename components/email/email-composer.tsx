@@ -32,9 +32,10 @@ import { TemplatePicker } from "@/components/templates/template-picker";
 import { TemplateForm } from "@/components/templates/template-form";
 import type { EmailTemplate } from "@/lib/template-types";
 import { appendPlainTextSignature, getPlainTextSignature } from "@/lib/signature-utils";
-import { findReplyIdentityId } from "@/lib/reply-identity";
+import { resolveReplyFrom } from "@/lib/reply-identity";
 import { computeReplyThreadingHeaders } from "@/lib/email-threading";
 import { RichTextEditor } from "@/components/email/rich-text-editor";
+import type { Editor } from "@tiptap/react";
 
 /** Strip HTML tags and decode entities to get a plain-text version */
 function htmlToPlainText(html: string): string {
@@ -55,6 +56,10 @@ export interface ComposerDraftData {
   mode: 'compose' | 'reply' | 'replyAll' | 'forward';
   replyTo?: EmailComposerProps['replyTo'];
   draftId: string | null;
+  /** When set, overrides the header From: — sent through the selected identity's envelope. */
+  fromOverrideEmail?: string;
+  fromOverrideName?: string;
+  fromOverrideEnabled?: boolean;
 }
 
 interface EmailComposerProps {
@@ -69,6 +74,7 @@ interface EmailComposerProps {
     fromEmail?: string;
     fromName?: string;
     identityId?: string;
+    envelopeMailFrom?: string;
     attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>;
     inReplyTo?: string[];
     references?: string[];
@@ -111,6 +117,39 @@ type ComposerAttachment = {
   abortController?: AbortController;
 };
 
+type SignatureIdentityLike = {
+  htmlSignature?: string;
+  textSignature?: string;
+} | null | undefined;
+
+// Render the embedded signature for "above quote" mode. Bracketed with
+// `data-signature-block` marker paragraphs so we can swap the inner content
+// when the user switches identity without losing the surrounding draft or
+// quoted message. The markers are preserved through TipTap by the
+// StyledParagraph extension.
+function buildEmbeddedSignatureHtml(
+  identity: SignatureIdentityLike,
+  options: { embed: boolean; separator: boolean }
+): string {
+  if (!options.embed) return '';
+  const startMarker = options.separator
+    ? `<p data-signature-block="separator">-- </p>`
+    : `<p data-signature-block="start"></p>`;
+  const endMarker = `<p data-signature-block="end"></p>`;
+  if (identity?.htmlSignature) {
+    return `${startMarker}${sanitizeEmailHtml(identity.htmlSignature)}${endMarker}`;
+  }
+  if (identity?.textSignature) {
+    const escaped = identity.textSignature
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\n/g, '<br>');
+    return `${startMarker}<p>${escaped}</p>${endMarker}`;
+  }
+  return '';
+}
+
 export function EmailComposer({
   onSend,
   onClose,
@@ -130,6 +169,25 @@ export function EmailComposer({
   const autoSelectReplyIdentity = useSettingsStore((state) => state.autoSelectReplyIdentity);
   const attachmentReminderEnabled = useSettingsStore((state) => state.attachmentReminderEnabled);
   const attachmentReminderKeywords = useSettingsStore((state) => state.attachmentReminderKeywords);
+  const signaturePosition = useSettingsStore((state) => state.signaturePosition);
+  const signatureSeparatorEnabled = useSettingsStore((state) => state.signatureSeparatorEnabled);
+  const identities = useIdentityStore((s) => s.identities);
+  const primaryIdentity = identities[0] ?? null;
+
+  // The signature identity used when embedding the signature into the initial
+  // body for "above quote" mode. Mirrors the signatureIdentity derivation
+  // below, but uses initialData (or primary) since selectedIdentityId state
+  // does not exist yet at this point.
+  const initialCurrentIdentityForSig = initialData?.selectedIdentityId
+    ? identities.find((i) => i.id === initialData.selectedIdentityId) || primaryIdentity
+    : primaryIdentity;
+  const initialSignatureIdentity = (initialCurrentIdentityForSig?.htmlSignature || initialCurrentIdentityForSig?.textSignature)
+    ? initialCurrentIdentityForSig
+    : primaryIdentity;
+  const shouldEmbedSignatureAboveQuote =
+    (mode === 'reply' || mode === 'replyAll' || mode === 'forward') &&
+    signaturePosition === 'above_quote' &&
+    !!(initialSignatureIdentity?.htmlSignature || initialSignatureIdentity?.textSignature);
 
   // Initialize with reply/forward data if provided
   const getInitialTo = () => {
@@ -179,10 +237,19 @@ export function EmailComposer({
       const originalText = replyTo.body || (replyTo.htmlBody ? htmlToPlainText(replyTo.htmlBody) : '');
       const quotedText = originalText.split('\n').map(line => `> ${line}`).join('\n');
 
+      // When "above quote" is configured, splice signature between the user's
+      // drafting area and the quoted content so it reads naturally as a
+      // closing for the reply body. Send-time append is skipped — see
+      // shouldEmbedSignatureAboveQuote.
+      const plainSep = signatureSeparatorEnabled ? '\n\n-- \n' : '\n\n';
+      const signatureBlock = shouldEmbedSignatureAboveQuote
+        ? `${plainSep}${getPlainTextSignature(initialSignatureIdentity)}`
+        : '';
+
       if (mode === 'forward') {
-        return `${prefix}\n\n---------- Forwarded message ----------\nFrom: ${fromStr}\nDate: ${date}\nSubject: ${replyTo.subject || ''}\n\n${originalText}`;
+        return `${prefix}${signatureBlock}\n\n---------- Forwarded message ----------\nFrom: ${fromStr}\nDate: ${date}\nSubject: ${replyTo.subject || ''}\n\n${originalText}`;
       } else if (mode === 'reply' || mode === 'replyAll') {
-        return `${prefix}\n\nOn ${date}, ${fromStr} wrote:\n${quotedText}`;
+        return `${prefix}${signatureBlock}\n\nOn ${date}, ${fromStr} wrote:\n${quotedText}`;
       }
       return prefix;
     }
@@ -194,20 +261,25 @@ export function EmailComposer({
     const from = replyTo.from?.[0];
     const fromStr = from ? `${from.name || from.email}` : tCommon('unknown');
 
+    const signatureBlock = buildEmbeddedSignatureHtml(initialSignatureIdentity, {
+      embed: shouldEmbedSignatureAboveQuote,
+      separator: signatureSeparatorEnabled,
+    });
+
     // Build quoted content as HTML
     if (replyTo.htmlBody && (mode === 'reply' || mode === 'replyAll' || mode === 'forward')) {
       const quoteHeader = mode === 'forward'
         ? `---------- Forwarded message ----------<br>From: ${fromStr}<br>Date: ${date}<br>Subject: ${replyTo.subject || ''}<br><br>`
         : `On ${date}, ${fromStr} wrote:<br>`;
-      return `${prefix}<br><div>${quoteHeader}</div><blockquote style="margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex">${replyTo.htmlBody}</blockquote>`;
+      return `${prefix}${signatureBlock}<br><div>${quoteHeader}</div><blockquote style="margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex">${replyTo.htmlBody}</blockquote>`;
     }
 
     if (replyTo.body) {
       const escapedOriginal = replyTo.body.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
       if (mode === 'forward') {
-        return `${prefix}<br><br>---------- Forwarded message ----------<br>From: ${fromStr}<br>Date: ${date}<br>Subject: ${replyTo.subject || ''}<br><br>${escapedOriginal}`;
+        return `${prefix}${signatureBlock}<br><br>---------- Forwarded message ----------<br>From: ${fromStr}<br>Date: ${date}<br>Subject: ${replyTo.subject || ''}<br><br>${escapedOriginal}`;
       } else if (mode === 'reply' || mode === 'replyAll') {
-        return `${prefix}<br><br>On ${date}, ${fromStr} wrote:<br><blockquote style="margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex">${escapedOriginal}</blockquote>`;
+        return `${prefix}${signatureBlock}<br><br>On ${date}, ${fromStr} wrote:<br><blockquote style="margin:0 0 0 0.8ex;border-left:2px solid #ccc;padding-left:1ex">${escapedOriginal}</blockquote>`;
       }
     }
     return prefix;
@@ -245,6 +317,9 @@ export function EmailComposer({
   const [shakeField, setShakeField] = useState<string | null>(null);
   const [selectedIdentityId, setSelectedIdentityId] = useState<string | null>(initialData?.selectedIdentityId ?? null);
   const [subAddressTag, setSubAddressTag] = useState<string>(initialData?.subAddressTag ?? '');
+  const [fromOverrideEnabled, setFromOverrideEnabled] = useState<boolean>(initialData?.fromOverrideEnabled ?? false);
+  const [fromOverrideEmail, setFromOverrideEmail] = useState<string>(initialData?.fromOverrideEmail ?? '');
+  const [fromOverrideName, setFromOverrideName] = useState<string>(initialData?.fromOverrideName ?? '');
   const [showTemplatePicker, setShowTemplatePicker] = useState(false);
   const [showSaveAsTemplate, setShowSaveAsTemplate] = useState(false);
   const [showCloseDialog, setShowCloseDialog] = useState(false);
@@ -276,24 +351,96 @@ export function EmailComposer({
   });
 
   const { client } = useAuthStore();
-  const identities = useIdentityStore((s) => s.identities);
-  const primaryIdentity = identities[0] ?? null;
   const currentIdentity = selectedIdentityId
     ? identities.find((identity) => identity.id === selectedIdentityId) || primaryIdentity
     : primaryIdentity;
+  // Alias identities often lack a configured signature - fall back to the primary
+  // identity's signature so replies (which auto-select a matching alias) still
+  // populate the user's signature.
+  const signatureIdentity = (currentIdentity?.htmlSignature || currentIdentity?.textSignature)
+    ? currentIdentity
+    : primaryIdentity;
+
+  // Hold the TipTap editor instance so we can swap the embedded signature
+  // when the user switches identity in "above quote" mode without rebuilding
+  // the whole body (which would lose user edits to the surrounding draft).
+  const editorRef = useRef<Editor | null>(null);
+  const prevSignatureIdentityIdRef = useRef<string | null | undefined>(signatureIdentity?.id);
+  const prevSignatureSeparatorRef = useRef<boolean>(signatureSeparatorEnabled);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const identityChanged = prevSignatureIdentityIdRef.current !== signatureIdentity?.id;
+    const separatorChanged = prevSignatureSeparatorRef.current !== signatureSeparatorEnabled;
+    prevSignatureIdentityIdRef.current = signatureIdentity?.id;
+    prevSignatureSeparatorRef.current = signatureSeparatorEnabled;
+    if (!editor) return;
+    if (!identityChanged && !separatorChanged) return;
+    if (plainTextMode) return;
+    if (mode !== 'reply' && mode !== 'replyAll' && mode !== 'forward') return;
+    if (signaturePosition !== 'above_quote') return;
+
+    const currentHtml = editor.getHTML();
+    const doc = new DOMParser().parseFromString(currentHtml, 'text/html');
+    const startEl = doc.querySelector('[data-signature-block="separator"], [data-signature-block="start"]');
+    if (!startEl) return;
+    const endEl = doc.querySelector('[data-signature-block="end"]');
+
+    const newSignature = buildEmbeddedSignatureHtml(signatureIdentity, {
+      embed: true,
+      separator: signatureSeparatorEnabled,
+    });
+    if (!newSignature) return;
+
+    // Build a temporary container holding the replacement nodes so we can
+    // splice them in without re-serializing/parsing twice.
+    const replacementHost = doc.createElement('div');
+    replacementHost.innerHTML = newSignature;
+    const replacementNodes = Array.from(replacementHost.childNodes);
+
+    const parent = startEl.parentNode;
+    if (!parent) return;
+
+    // Remove the existing signature range [startEl … endEl] inclusive, or
+    // from startEl to the next blockquote if no end marker is present.
+    const removeUntil = endEl && endEl.parentNode === parent ? endEl : null;
+    const toRemove: Node[] = [];
+    let cursor: Node | null = startEl;
+    while (cursor) {
+      toRemove.push(cursor);
+      if (cursor === removeUntil) break;
+      const next: Node | null = cursor.nextSibling;
+      if (!removeUntil && next && (next as Element).tagName === 'BLOCKQUOTE') break;
+      cursor = next;
+    }
+    const insertBefore = toRemove[toRemove.length - 1]?.nextSibling ?? null;
+    toRemove.forEach((node) => parent.removeChild(node));
+    replacementNodes.forEach((node) => parent.insertBefore(node, insertBefore));
+
+    const nextHtml = doc.body.innerHTML;
+    if (nextHtml !== currentHtml) {
+      editor.commands.setContent(nextHtml, { emitUpdate: true });
+    }
+  }, [signatureIdentity?.id, signatureIdentity?.htmlSignature, signatureIdentity?.textSignature, signatureSeparatorEnabled, signaturePosition, mode, plainTextMode]);
+
   useEffect(() => {
     if (!autoSelectReplyIdentity) return;
     if (selectedIdentityId || initialData?.selectedIdentityId) return;
     if (mode !== 'reply' && mode !== 'replyAll') return;
 
-    const matchedIdentityId = findReplyIdentityId(identities, {
+    const resolved = resolveReplyFrom(identities, {
       to: replyTo?.to,
       cc: replyTo?.cc,
       bcc: replyTo?.bcc,
     });
 
-    if (matchedIdentityId) {
-      setSelectedIdentityId(matchedIdentityId);
+    if (resolved) {
+      setSelectedIdentityId(resolved.identityId);
+      if (resolved.overrideEmail && !fromOverrideEnabled) {
+        setFromOverrideEnabled(true);
+        setFromOverrideEmail(resolved.overrideEmail);
+        if (resolved.overrideName) setFromOverrideName(resolved.overrideName);
+      }
       return;
     }
 
@@ -312,6 +459,7 @@ export function EmailComposer({
     }
   }, [
     autoSelectReplyIdentity,
+    fromOverrideEnabled,
     identities,
     initialData?.selectedIdentityId,
     mode,
@@ -322,10 +470,10 @@ export function EmailComposer({
     selectedIdentityId,
   ]);
 
-  const composerSignatureHtml = currentIdentity?.htmlSignature
-    ? `<div>${sanitizeEmailHtml(currentIdentity.htmlSignature)}</div>`
-    : currentIdentity?.textSignature
-      ? `<div>${getPlainTextSignature(currentIdentity).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>`
+  const composerSignatureHtml = signatureIdentity?.htmlSignature
+    ? `<div>${sanitizeEmailHtml(signatureIdentity.htmlSignature)}</div>`
+    : signatureIdentity?.textSignature
+      ? `<div>${getPlainTextSignature(signatureIdentity).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}</div>`
       : '';
   const getAutocomplete = useContactStore((s) => s.getAutocomplete);
   const addToTrustedSendersBook = useContactStore((s) => s.addToTrustedSendersBook);
@@ -361,8 +509,8 @@ export function EmailComposer({
   }, [currentSmimeIdentityId]);
 
   // Keep a ref to current state for the unmount save
-  const stateRef = useRef({ to, cc, bcc, subject, body, showCc, showBcc, selectedIdentityId, subAddressTag, draftId });
-  stateRef.current = { to, cc, bcc, subject, body, showCc, showBcc, selectedIdentityId, subAddressTag, draftId };
+  const stateRef = useRef({ to, cc, bcc, subject, body, showCc, showBcc, selectedIdentityId, subAddressTag, draftId, fromOverrideEnabled, fromOverrideEmail, fromOverrideName });
+  stateRef.current = { to, cc, bcc, subject, body, showCc, showBcc, selectedIdentityId, subAddressTag, draftId, fromOverrideEnabled, fromOverrideEmail, fromOverrideName };
 
   // Track initial values for dirty detection (captured once on first render)
   const initialValuesRef = useRef({ to, cc, bcc, subject, body, attachmentCount: attachments.length });
@@ -755,11 +903,17 @@ export function EmailComposer({
 
     // Get the selected identity or primary identity
     // Generate sub-addressed email if tag is set
-    const fromEmail = currentIdentity?.email
+    const identityFromEmail = currentIdentity?.email
       ? subAddressTag
         ? generateSubAddress(currentIdentity.email, subAddressTag, subAddressDelimiter)
         : currentIdentity.email
       : undefined;
+    const fromEmail = (fromOverrideEnabled && fromOverrideEmail.trim())
+      ? fromOverrideEmail.trim()
+      : identityFromEmail;
+    const fromName = (fromOverrideEnabled && fromOverrideEmail.trim())
+      ? (fromOverrideName.trim() || undefined)
+      : (currentIdentity?.name || undefined);
 
     try {
       const savedDraftId = await client.createDraft(
@@ -772,7 +926,7 @@ export function EmailComposer({
         fromEmail,
         draftId || undefined,
         uploadedAttachments,
-        currentIdentity?.name || undefined,
+        fromName,
         plainTextMode ? undefined : body
       );
 
@@ -945,20 +1099,39 @@ export function EmailComposer({
       }
     }
 
-    const fromEmail = currentIdentity?.email
+    const identityFromEmail = currentIdentity?.email
       ? subAddressTag
         ? generateSubAddress(currentIdentity.email, subAddressTag, subAddressDelimiter)
         : currentIdentity.email
       : undefined;
+    // When the user has typed a From override, that becomes the header From
+    // (and MIME-builder From in the S/MIME path). The identity still drives
+    // the SMTP envelope MAIL FROM — set explicitly so it doesn't mistakenly
+    // default to the override address.
+    const overrideActive = fromOverrideEnabled && fromOverrideEmail.trim().length > 0;
+    const fromEmail = overrideActive ? fromOverrideEmail.trim() : identityFromEmail;
+    const fromName = overrideActive
+      ? (fromOverrideName.trim() || undefined)
+      : (currentIdentity?.name || undefined);
+    const envelopeMailFrom = overrideActive ? identityFromEmail : undefined;
 
     // Body is already HTML from the rich text editor (or plain text in plain text mode).
+    // When "above quote" mode is configured for replies/forwards, the signature
+    // was embedded into the body during init (see getInitialBody) so the
+    // trailing append must be skipped to avoid duplicating it.
+    const signatureAlreadyInBody =
+      (mode === 'reply' || mode === 'replyAll' || mode === 'forward') &&
+      signaturePosition === 'above_quote';
+
     // Build HTML signature block (used only in rich text mode)
     const buildSignatureHtml = (): string => {
-      if (currentIdentity?.htmlSignature) {
-        return `<br><br>-- <br>${sanitizeEmailHtml(currentIdentity.htmlSignature)}`;
+      if (signatureAlreadyInBody) return '';
+      const sep = signatureSeparatorEnabled ? `<br><br>-- <br>` : `<br><br>`;
+      if (signatureIdentity?.htmlSignature) {
+        return `${sep}${sanitizeEmailHtml(signatureIdentity.htmlSignature)}`;
       }
-      if (currentIdentity?.textSignature) {
-        return `<br><br>-- <br>${currentIdentity.textSignature.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}`;
+      if (signatureIdentity?.textSignature) {
+        return `${sep}${signatureIdentity.textSignature.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>')}`;
       }
       return '';
     };
@@ -969,9 +1142,10 @@ export function EmailComposer({
       : null;
 
     // In plain text mode, send text/plain only (no HTML body)
+    const signatureOpts = { separator: signatureSeparatorEnabled };
     const finalBody = plainTextMode
-      ? appendPlainTextSignature(body, currentIdentity)
-      : appendPlainTextSignature(htmlToPlainText(body), currentIdentity);
+      ? (signatureAlreadyInBody ? body : appendPlainTextSignature(body, signatureIdentity, signatureOpts))
+      : (signatureAlreadyInBody ? htmlToPlainText(body) : appendPlainTextSignature(htmlToPlainText(body), signatureIdentity, signatureOpts));
 
     const rewritten = plainTextMode ? null : rewriteInlineImages(body);
     const finalHtmlBody = plainTextMode
@@ -1005,6 +1179,12 @@ export function EmailComposer({
         // 1. Resolve S/MIME key
         if (smimeSign_ && !smimeKeyRecord) {
           throw new Error('No S/MIME key bound to this identity');
+        }
+        // S/MIME binds to the identity's key; sending from an override address
+        // would produce a signature whose Subject differs from the visible
+        // From, which most clients reject or flag. Refuse up front.
+        if (overrideActive) {
+          throw new Error('Cannot use From override with S/MIME — disable one to send.');
         }
 
         // 2. Ensure key is unlocked for signing
@@ -1150,8 +1330,9 @@ export function EmailComposer({
           htmlBody: outgoing.htmlBody || undefined,
           draftId: finalDraftId || undefined,
           fromEmail,
-          fromName: currentIdentity?.name || undefined,
+          fromName,
           identityId: outgoing.identityId || currentIdentity?.id,
+          envelopeMailFrom,
           attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
           inReplyTo: threadingHeaders?.inReplyTo,
           references: threadingHeaders?.references,
@@ -1179,7 +1360,7 @@ export function EmailComposer({
       setSubAddressTag("");
       setValidationErrors({});
       // Clear ref so unmount effect doesn't re-save
-      stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null };
+      stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null, fromOverrideEnabled: false, fromOverrideEmail: '', fromOverrideName: '' };
     } catch (err) {
       debug.error('Failed to send email:', err);
       toast.error(t('send_failed'));
@@ -1190,7 +1371,7 @@ export function EmailComposer({
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null };
+    stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null, fromOverrideEnabled: false, fromOverrideEmail: '', fromOverrideName: '' };
     onClose?.();
   };
 
@@ -1200,7 +1381,7 @@ export function EmailComposer({
       clearTimeout(saveTimeoutRef.current);
     }
     await saveDraft();
-    stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null };
+    stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null, fromOverrideEnabled: false, fromOverrideEmail: '', fromOverrideName: '' };
     onClose?.();
   };
 
@@ -1212,7 +1393,7 @@ export function EmailComposer({
     if (draftId && onDiscardDraft) {
       onDiscardDraft(draftId);
     }
-    stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null };
+    stateRef.current = { to: '', cc: '', bcc: '', subject: '', body: '', showCc: false, showBcc: false, selectedIdentityId: null, subAddressTag: '', draftId: null, fromOverrideEnabled: false, fromOverrideEmail: '', fromOverrideName: '' };
     onClose?.();
   };
 
@@ -1296,7 +1477,25 @@ export function EmailComposer({
           <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
             <span className="text-sm text-muted-foreground w-12 md:w-16 shrink-0">{t('from')}:</span>
             <div className="flex-1 flex items-center gap-1 min-w-0">
-              {identities.length > 1 ? (
+              {fromOverrideEnabled ? (
+                <div className="flex-1 flex items-center gap-1 min-w-0">
+                  <Input
+                    value={fromOverrideName}
+                    onChange={(e) => setFromOverrideName(e.target.value)}
+                    placeholder={t('from_override.name_placeholder')}
+                    className="h-7 text-sm w-32 md:w-40 shrink-0"
+                    aria-label={t('from_override.name_label')}
+                  />
+                  <Input
+                    value={fromOverrideEmail}
+                    onChange={(e) => setFromOverrideEmail(e.target.value)}
+                    placeholder={t('from_override.email_placeholder')}
+                    type="email"
+                    className="h-7 text-sm flex-1 min-w-0 font-mono"
+                    aria-label={t('from_override.email_label')}
+                  />
+                </div>
+              ) : identities.length > 1 ? (
                 <select
                   value={selectedIdentityId || primaryIdentity?.id || ''}
                   onChange={(e) => setSelectedIdentityId(e.target.value)}
@@ -1328,16 +1527,18 @@ export function EmailComposer({
                   )}
                 </span>
               )}
-              <SubAddressHelper
-                baseEmail={
-                  (selectedIdentityId
-                    ? identities.find(id => id.id === selectedIdentityId)?.email
-                    : primaryIdentity?.email) || ''
-                }
-                recipientEmails={to.split(',').map(e => e.trim()).filter(Boolean)}
-                onSelectTag={setSubAddressTag}
-              />
-              {subAddressTag && (
+              {!fromOverrideEnabled && (
+                <SubAddressHelper
+                  baseEmail={
+                    (selectedIdentityId
+                      ? identities.find(id => id.id === selectedIdentityId)?.email
+                      : primaryIdentity?.email) || ''
+                  }
+                  recipientEmails={to.split(',').map(e => e.trim()).filter(Boolean)}
+                  onSelectTag={setSubAddressTag}
+                />
+              )}
+              {!fromOverrideEnabled && subAddressTag && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -1349,6 +1550,28 @@ export function EmailComposer({
                   <X className="w-3 h-3" />
                 </Button>
               )}
+              <Button
+                type="button"
+                variant={fromOverrideEnabled ? 'outline' : 'ghost'}
+                size="sm"
+                onClick={() => {
+                  if (fromOverrideEnabled) {
+                    setFromOverrideEnabled(false);
+                  } else {
+                    setFromOverrideEnabled(true);
+                    if (!fromOverrideEmail && currentIdentity?.email) {
+                      setFromOverrideEmail(currentIdentity.email);
+                    }
+                    if (!fromOverrideName && currentIdentity?.name) {
+                      setFromOverrideName(currentIdentity.name);
+                    }
+                  }
+                }}
+                className="h-6 px-2 text-xs shrink-0"
+                title={t('from_override.toggle_tooltip')}
+              >
+                {fromOverrideEnabled ? t('from_override.toggle_on') : t('from_override.toggle_off')}
+              </Button>
             </div>
           </div>
 
@@ -1495,20 +1718,24 @@ export function EmailComposer({
               onImageUpload={handleImageUpload}
               placeholder={t('body_placeholder')}
               hasError={validationErrors.body}
+              onEditorReady={(ed) => { editorRef.current = ed; }}
             />
           </div>
         )}
 
-        {plainTextMode ? (
-          getPlainTextSignature(currentIdentity) ? (
+        {/* Hide the visual signature preview when the signature has already been
+            embedded into the body above the quote (otherwise it would appear twice). */}
+        {((mode === 'reply' || mode === 'replyAll' || mode === 'forward') && signaturePosition === 'above_quote') ? null
+          : plainTextMode ? (
+          getPlainTextSignature(signatureIdentity) ? (
             <div className="px-4 pb-3 text-sm leading-6 text-muted-foreground break-words whitespace-pre-wrap font-mono">
-              {'-- \n'}{getPlainTextSignature(currentIdentity)}
+              {signatureSeparatorEnabled ? '-- \n' : ''}{getPlainTextSignature(signatureIdentity)}
             </div>
           ) : null
         ) : composerSignatureHtml ? (
           <div
             className="px-4 pb-3 text-sm leading-6 text-foreground break-words [&_a]:text-primary [&_a]:underline-offset-2 [&_a:hover]:underline"
-            dangerouslySetInnerHTML={{ __html: `<div>-- </div>${composerSignatureHtml}` }}
+            dangerouslySetInnerHTML={{ __html: `${signatureSeparatorEnabled ? '<div>-- </div>' : ''}${composerSignatureHtml}` }}
           />
         ) : null}
       </div>

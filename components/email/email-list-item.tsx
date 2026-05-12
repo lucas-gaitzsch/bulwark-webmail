@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useCallback } from "react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, stripInvisibleLeading } from "@/lib/utils";
 import { Email } from "@/lib/jmap/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -51,7 +51,8 @@ export function EmailListItem({ email, selected, onClick, onContextMenu, onToggl
   const sender = showRecipient ? (email.to?.[0] ?? email.from?.[0]) : email.from?.[0];
   const isFocusedMailLayout = mailLayout === 'focus';
   const hideJunkAvatarImages = currentMailboxRole === 'junk' && !showAvatarsInJunk;
-  const inlinePreview = showPreview && email.preview ? ` ${email.preview}` : '';
+  const trimmedPreview = stripInvisibleLeading(email.preview ?? '');
+  const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
 
   // Resolve color tags using keyword definitions from settings; unknown tags fall back to gray
   const colorTagIds = getEmailColorTags(email.keywords);
@@ -128,8 +129,8 @@ export function EmailListItem({ email, selected, onClick, onContextMenu, onToggl
       style={{ minHeight: isFocusedMailLayout ? undefined : 'var(--list-item-height)' }}
     >
       <div
-        className={cn('px-4', isFocusedMailLayout ? 'flex items-center py-2.5' : 'flex items-start')}
-        style={isFocusedMailLayout ? { gap: '12px' } : { gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
+        className={cn('px-4', isFocusedMailLayout ? 'flex items-center' : 'flex items-start')}
+        style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
       >
         {/* Checkbox - only visible when in selection mode */}
         {selectedEmailIds.size > 0 && (
@@ -160,11 +161,11 @@ export function EmailListItem({ email, selected, onClick, onContextMenu, onToggl
         )}
 
         {/* Avatar */}
-        {!isFocusedMailLayout && density !== 'extra-compact' && (
+        {density !== 'extra-compact' && (
           <Avatar
             name={sender?.name}
             email={sender?.email}
-            size="md"
+            size={isFocusedMailLayout ? "sm" : "md"}
             className="flex-shrink-0 shadow-sm"
             disableImages={hideJunkAvatarImages}
           />
@@ -295,7 +296,7 @@ export function EmailListItem({ email, selected, onClick, onContextMenu, onToggl
                     ? "text-muted-foreground"
                     : "text-muted-foreground/80"
                 )}>
-                  {email.preview || "No preview available"}
+                  {trimmedPreview || "No preview available"}
                 </p>
               )}
             </>

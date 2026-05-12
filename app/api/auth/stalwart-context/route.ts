@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { JmapAuthVerificationError, verifyJmapAuth } from '@/lib/auth/verify-jmap-auth';
+import { JmapAuthVerificationError, normalizeJmapServerUrl, validateProxyAuthHeader, verifyJmapAuth } from '@/lib/auth/verify-jmap-auth';
 import { setStalwartAuthContext } from '@/lib/stalwart/auth-context';
 import { configManager } from '@/lib/admin/config-manager';
 import { isPublicHttpUrl } from '@/lib/security/url-guard';
@@ -57,7 +57,15 @@ export async function POST(request: NextRequest) {
     }
 
     const slot = getSlot(request, bodySlot);
-    const normalizedServerUrl = await verifyJmapAuth(upstreamUrl, authHeader, { trusted: upstreamTrusted });
+    // Trusted (admin-configured) URLs skip the upstream re-fetch: the caller
+    // just authenticated to JMAP with these credentials, and the cookie we
+    // write here is only ever consumed for requests on behalf of this same
+    // user — a bogus auth header would just yield 401s downstream, not
+    // privilege escalation. For untrusted custom endpoints we still verify
+    // upstream as before.
+    const normalizedServerUrl = upstreamTrusted
+      ? (validateProxyAuthHeader(authHeader), normalizeJmapServerUrl(upstreamUrl))
+      : await verifyJmapAuth(upstreamUrl, authHeader, { trusted: false });
 
     await setStalwartAuthContext(slot, {
       serverUrl: normalizedServerUrl,

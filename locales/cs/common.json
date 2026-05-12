@@ -562,6 +562,15 @@
       "to": "Komu: {recipients}"
     },
     "remove_sub_address": "Odebrat subadresu",
+    "from_override": {
+      "toggle_off": "Přepsat",
+      "toggle_on": "Zrušit přepsání",
+      "toggle_tooltip": "Volně upravujte jméno a adresu odesílatele. Pošta se stále odesílá přes vaši identitu — mění se pouze viditelné záhlaví Od.",
+      "name_label": "Jméno odesílatele",
+      "name_placeholder": "Jméno",
+      "email_label": "E-mailová adresa odesílatele",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Šablona",
     "save_as_template": "Uložit jako šablonu",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "Rozdělené zobrazení",
         "split_description": "Seznam zpráv a panel pro čtení zůstávají viditelné vedle sebe.",
         "focus": "Soustředěný seznam",
-        "focus_description": "Zobrazit jeden řádek na zprávu a otevřít poštu na plnou šířku s viditelným panelem složek."
+        "focus_description": "Zobrazit jeden řádek na zprávu a otevřít poštu na plnou šířku s viditelným panelem složek.",
+        "horizontal": "Čtecí panel dole",
+        "horizontal_description": "Zobrazit seznam zpráv nahoře a otevřít vybranou zprávu ve čtecím panelu pod ním."
       },
       "show_preview": {
         "label": "Zobrazit náhledový text",
@@ -994,6 +1005,16 @@
       "auto_select_reply_identity": {
         "label": "Automaticky vybírat adresu pro odpověď",
         "description": "Při odpovídání automaticky přepnout adresu odesílatele na identitu, která původně obdržela zprávu"
+      },
+      "signature_position": {
+        "label": "Pozice podpisu",
+        "description": "Kam vložit podpis v odpovědích a přeposláních. Nad citovaným textem působí přirozeně jako zakončení odpovědi; pod ním zachovává původní zprávu vcelku.",
+        "above_quote": "Před citovaným textem",
+        "below_quote": "Za citovaným textem"
+      },
+      "signature_separator": {
+        "label": "Oddělovač podpisu",
+        "description": "Před podpis přidat standardní oddělovací řádek \"-- \" (RFC 3676). Vypněte, pokud chcete plynule přejít z textu zprávy do podpisu."
       },
       "sub_address_delimiter": {
         "label": "Oddělovač sub-adresy",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "Nová podsložka...",
     "new_folder": "Nová složka...",
     "rename": "Přejmenovat...",
+    "import_email": "Importovat .eml...",
     "empty_folder": "Vyprázdnit složku",
     "empty_folder_generic": "Vyprázdnit složku",
     "delete_folder": "Smazat složku",

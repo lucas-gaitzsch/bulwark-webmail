@@ -96,6 +96,8 @@ import { usePluginStore } from "@/stores/plugin-store";
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { emailHooks, uiHooks } from "@/lib/plugin-hooks";
 import type { AttachmentInfo, AttachmentPreview } from "@/lib/plugin-types";
+import { useAttachmentDrag, isDragOutSupported, type AttachmentDragSource } from "@/hooks/use-attachment-drag";
+import type { IJMAPClient } from "@/lib/jmap/client-interface";
 
 interface EmailViewerProps {
   email: Email | null;
@@ -791,6 +793,48 @@ function ContactSidebarPanel({
   );
 }
 
+interface DraggableAttachmentChipProps {
+  attachment: EffectiveAttachment;
+  client: IJMAPClient | null;
+  enabled: boolean;
+  children: (dragProps: {
+    draggable: boolean;
+    onPointerEnter: () => void;
+    onDragStart: (e: React.DragEvent<HTMLDivElement>) => void;
+    onDragEnd: (e: React.DragEvent<HTMLDivElement>) => void;
+  }) => React.ReactNode;
+}
+
+function DraggableAttachmentChip({ attachment, client, enabled, children }: DraggableAttachmentChipProps) {
+  const source = useMemo<AttachmentDragSource>(() => ({
+    name: attachment.name || 'download',
+    type: attachment.type || 'application/octet-stream',
+    getBlobUrl: async () => {
+      if (attachment.blobId && client) {
+        try {
+          return await client.fetchBlobAsObjectUrl(attachment.blobId, attachment.name || undefined, attachment.type);
+        } catch {
+          return null;
+        }
+      }
+      if (attachment.tnefData) {
+        const bytes = attachment.tnefData;
+        const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+        return URL.createObjectURL(new Blob([buffer], { type: attachment.type || 'application/octet-stream' }));
+      }
+      if (attachment.decryptedAttachment) {
+        const bytes = getAttachmentContentBytes(attachment.decryptedAttachment);
+        if (!bytes || bytes.byteLength === 0) return null;
+        const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+        return URL.createObjectURL(new Blob([buffer], { type: attachment.type || 'application/octet-stream' }));
+      }
+      return null;
+    },
+  }), [attachment, client]);
+  const drag = useAttachmentDrag(source, enabled);
+  return <>{children(drag)}</>;
+}
+
 function SidebarSection({ icon: Icon, title, children }: { icon: React.ComponentType<{ className?: string }>; title: string; children: React.ReactNode }) {
   return (
     <div>
@@ -854,6 +898,7 @@ export function EmailViewer({
   const calendarInvitationParsingEnabled = useSettingsStore((state) => state.calendarInvitationParsingEnabled);
   const hideInlineImageAttachments = useSettingsStore((state) => state.hideInlineImageAttachments);
   const attachmentImagePreviewsEnabled = useSettingsStore((state) => state.attachmentImagePreviewsEnabled);
+  const dragOutActive = useMemo(() => isDragOutSupported(), []);
   const timeFormat = useSettingsStore((state) => state.timeFormat);
   const isFocusedMailLayout = mailLayout === 'focus';
 
@@ -2296,7 +2341,7 @@ export function EmailViewer({
         htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
         // Per RFC 8621 § 4.1.4, when a message has only one alternative the server
         // exposes the same part in both htmlBody and textBody. The shared part may
-        // actually be text/plain (plain-text-only mail) — rendering that as HTML
+        // actually be text/plain (plain-text-only mail) - rendering that as HTML
         // collapses newlines and skips linkification, so route by the part's type.
         const htmlPart = email.htmlBody[0];
         if (htmlPart.type && htmlPart.type.toLowerCase() !== 'text/html') {
@@ -2691,7 +2736,7 @@ export function EmailViewer({
     // double re-inverting images nested inside those containers.
     // Nested bgcolor containers must NOT add another invert layer: each filter
     // toggles the inversion, so an odd number of stacked filters (e.g. body +
-    // outer bgcolor table + inner bgcolor table) produces an inverted result —
+    // outer bgcolor table + inner bgcolor table) produces an inverted result -
     // i.e. light-on-light. The second rule disables filter on bgcolor-like
     // elements that are descendants of another bgcolor-like element.
     const darkModeCSS = isDark && !emailHasNativeDarkMode ? `
@@ -2883,6 +2928,75 @@ export function EmailViewer({
                   htmlEl.style.filter = 'invert(1) hue-rotate(180deg)';
                 }
               }
+            });
+
+            // Re-invert emoji glyphs so they keep their original colors. The
+            // body's invert filter flips colored emoji (yellow smiley → blue,
+            // red heart → cyan, etc.). Wrap each emoji run in a span that
+            // re-inverts. Only act when the ancestor invert depth is odd -
+            // emojis inside a double-inverted bgcolor container already render
+            // at their original colors.
+            let emojiRe: RegExp;
+            try {
+              emojiRe = new RegExp('\\p{RGI_Emoji}', 'gv');
+            } catch {
+              emojiRe = /\p{Extended_Pictographic}(?:\uFE0F)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F)?)*/gu;
+            }
+            const emojiTestRe = /\p{Extended_Pictographic}/u;
+            const SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'IFRAME']);
+
+            const isOddInvertDepth = (start: Element | null) => {
+              let count = 0;
+              let n: Element | null = start;
+              while (n) {
+                if (n === doc.body) { count++; break; }
+                const cs = win.getComputedStyle(n);
+                if (cs.filter && cs.filter.includes('invert')) count++;
+                n = n.parentElement;
+              }
+              return count % 2 === 1;
+            };
+
+            const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT, {
+              acceptNode(node) {
+                let p = node.parentElement;
+                while (p) {
+                  if (SKIP_TAGS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
+                  p = p.parentElement;
+                }
+                return emojiTestRe.test(node.nodeValue || '')
+                  ? NodeFilter.FILTER_ACCEPT
+                  : NodeFilter.FILTER_REJECT;
+              },
+            });
+
+            const emojiTextNodes: Text[] = [];
+            let cur: Node | null;
+            while ((cur = walker.nextNode())) emojiTextNodes.push(cur as Text);
+
+            emojiTextNodes.forEach((textNode) => {
+              const parent = textNode.parentElement;
+              if (!parent || !isOddInvertDepth(parent)) return;
+              const text = textNode.nodeValue || '';
+              emojiRe.lastIndex = 0;
+              const frag = doc.createDocumentFragment();
+              let lastIndex = 0;
+              let m: RegExpExecArray | null;
+              while ((m = emojiRe.exec(text)) !== null) {
+                if (m.index > lastIndex) {
+                  frag.appendChild(doc.createTextNode(text.slice(lastIndex, m.index)));
+                }
+                const span = doc.createElement('span');
+                span.style.cssText = 'filter:invert(1) hue-rotate(180deg)';
+                span.textContent = m[0];
+                frag.appendChild(span);
+                lastIndex = m.index + m[0].length;
+              }
+              if (lastIndex === 0) return;
+              if (lastIndex < text.length) {
+                frag.appendChild(doc.createTextNode(text.slice(lastIndex)));
+              }
+              parent.replaceChild(frag, textNode);
             });
           }
         }
@@ -4335,8 +4449,9 @@ export function EmailViewer({
                     const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                     const thumbUrl = imageThumbUrls[attachment.id];
                     return (
+                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                        {(dragProps) => (
                       <div
-                        key={attachment.id}
                         className={cn(
                           "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer overflow-hidden",
                           thumbUrl
@@ -4345,6 +4460,10 @@ export function EmailViewer({
                         )}
                         title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                         onClick={() => handleEffectiveAttachmentOpen(attachment)}
+                        draggable={dragProps.draggable}
+                        onPointerEnter={dragProps.onPointerEnter}
+                        onDragStart={dragProps.onDragStart}
+                        onDragEnd={dragProps.onDragEnd}
                       >
                         {thumbUrl && (
                           <div className="w-full h-16 bg-background/40 flex items-center justify-center overflow-hidden">
@@ -4388,6 +4507,8 @@ export function EmailViewer({
                           )}
                         </div>
                       </div>
+                        )}
+                      </DraggableAttachmentChip>
                     );
                   })}
                   {effectiveAttachments.length > 2 && (
@@ -4408,11 +4529,16 @@ export function EmailViewer({
                           const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                           const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                           return (
+                            <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                              {(dragProps) => (
                             <div
-                              key={attachment.id}
                               className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
                               title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                               onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllBesideAttachments(false); }}
+                              draggable={dragProps.draggable}
+                              onPointerEnter={dragProps.onPointerEnter}
+                              onDragStart={dragProps.onDragStart}
+                              onDragEnd={dragProps.onDragEnd}
                             >
                               <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                               <span className="text-xs text-foreground truncate max-w-[180px]">
@@ -4440,6 +4566,8 @@ export function EmailViewer({
                                 )}
                               </div>
                             </div>
+                              )}
+                            </DraggableAttachmentChip>
                           );
                         })}
                       </div>
@@ -4693,8 +4821,9 @@ export function EmailViewer({
               const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
               const thumbUrl = imageThumbUrls[attachment.id];
               return (
+                <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                  {(dragProps) => (
                 <div
-                  key={attachment.id}
                   className={cn(
                     "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer flex-shrink-0 overflow-hidden",
                     thumbUrl
@@ -4703,6 +4832,10 @@ export function EmailViewer({
                   )}
                   title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                   onClick={() => handleEffectiveAttachmentOpen(attachment)}
+                  draggable={dragProps.draggable}
+                  onPointerEnter={dragProps.onPointerEnter}
+                  onDragStart={dragProps.onDragStart}
+                  onDragEnd={dragProps.onDragEnd}
                 >
                   {thumbUrl && (
                     <div className="w-full h-20 bg-background/40 flex items-center justify-center overflow-hidden">
@@ -4751,6 +4884,8 @@ export function EmailViewer({
                     )}
                   </div>
                 </div>
+                  )}
+                </DraggableAttachmentChip>
               );
             })}
             {visibleBelowHeaderCount !== null && effectiveAttachments.length > visibleBelowHeaderCount && (
@@ -4771,11 +4906,16 @@ export function EmailViewer({
                     const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                     const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                     return (
+                      <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                        {(dragProps) => (
                       <div
-                        key={attachment.id}
                         className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
                         title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                         onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllBelowHeaderAttachments(false); }}
+                        draggable={dragProps.draggable}
+                        onPointerEnter={dragProps.onPointerEnter}
+                        onDragStart={dragProps.onDragStart}
+                        onDragEnd={dragProps.onDragEnd}
                       >
                         <FileIcon className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                         <span className="text-sm text-foreground truncate max-w-[220px]">
@@ -4803,6 +4943,8 @@ export function EmailViewer({
                           )}
                         </div>
                       </div>
+                        )}
+                      </DraggableAttachmentChip>
                     );
                   })}
                 </div>
@@ -4822,8 +4964,9 @@ export function EmailViewer({
                 const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                 const thumbUrl = imageThumbUrls[attachment.id];
                 return (
+                  <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                    {(dragProps) => (
                   <div
-                    key={attachment.id}
                     className={cn(
                       "bg-muted/60 hover:bg-muted rounded-md border border-border/50 group relative cursor-pointer overflow-hidden",
                       thumbUrl
@@ -4832,6 +4975,10 @@ export function EmailViewer({
                     )}
                     title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                     onClick={() => handleEffectiveAttachmentOpen(attachment)}
+                    draggable={dragProps.draggable}
+                    onPointerEnter={dragProps.onPointerEnter}
+                    onDragStart={dragProps.onDragStart}
+                    onDragEnd={dragProps.onDragEnd}
                   >
                     {thumbUrl && (
                       <div className="w-full h-20 bg-background/40 flex items-center justify-center overflow-hidden">
@@ -4875,6 +5022,8 @@ export function EmailViewer({
                       )}
                     </div>
                   </div>
+                    )}
+                  </DraggableAttachmentChip>
                 );
               })}
               {effectiveAttachments.length > 2 && (
@@ -4894,11 +5043,16 @@ export function EmailViewer({
                       const isPreviewable = isFilePreviewable(attachment.name || undefined, attachment.type);
                       const opensPreview = isPreviewable && mailAttachmentAction === 'preview';
                       return (
+                        <DraggableAttachmentChip key={attachment.id} attachment={attachment} client={client} enabled={dragOutActive}>
+                          {(dragProps) => (
                         <div
-                          key={attachment.id}
                           className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-muted/60 group relative cursor-pointer w-full"
                           title={`${opensPreview ? tFiles('preview') : t('download')} ${getAttachmentDisplayName(attachment.name, attachment.type)}`}
                           onClick={() => { handleEffectiveAttachmentOpen(attachment); setShowAllMobileAttachments(false); }}
+                          draggable={dragProps.draggable}
+                          onPointerEnter={dragProps.onPointerEnter}
+                          onDragStart={dragProps.onDragStart}
+                          onDragEnd={dragProps.onDragEnd}
                         >
                           <FileIcon className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                           <span className="text-xs text-foreground truncate max-w-[180px]">
@@ -4926,6 +5080,8 @@ export function EmailViewer({
                             )}
                           </div>
                         </div>
+                          )}
+                        </DraggableAttachmentChip>
                       );
                     })}
                   </div>

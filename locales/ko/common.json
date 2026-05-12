@@ -562,6 +562,15 @@
       "to": "받는 사람: {recipients}"
     },
     "remove_sub_address": "서브 어드레스 삭제",
+    "from_override": {
+      "toggle_off": "재정의",
+      "toggle_on": "재정의 취소",
+      "toggle_tooltip": "보낸 사람 이름과 주소를 자유롭게 편집하세요. 메일은 여전히 사용자의 ID를 통해 전송되며 — 표시되는 보낸 사람 헤더만 변경됩니다.",
+      "name_label": "보낸 사람 이름",
+      "name_placeholder": "이름",
+      "email_label": "보낸 사람 이메일 주소",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "템플릿",
     "save_as_template": "템플릿으로 저장",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "화면 분할",
         "split_description": "메일 목록과 읽기 창을 나란히 보여줘요.",
         "focus": "집중형 목록",
-        "focus_description": "메일을 한 줄로 보여주고, 클릭하면 폴더 사이드바는 남겨둔 채 메일 내용을 넓게 보여줘요."
+        "focus_description": "메일을 한 줄로 보여주고, 클릭하면 폴더 사이드바는 남겨둔 채 메일 내용을 넓게 보여줘요.",
+        "horizontal": "읽기 창 하단 표시",
+        "horizontal_description": "메시지 목록을 상단에 표시하고 선택한 메시지를 하단 읽기 창에서 엽니다."
       },
       "show_preview": {
         "label": "미리보기 텍스트 표시",
@@ -994,6 +1005,16 @@
       "auto_select_reply_identity": {
         "label": "답장 시 보내는 사람 자동 선택",
         "description": "답장할 때 메일을 받았던 주소로 보내는 사람을 자동으로 변경해요"
+      },
+      "signature_position": {
+        "label": "서명 위치",
+        "description": "답장과 전달에서 서명을 삽입할 위치. 인용된 텍스트 위에 두면 답장의 마무리처럼 자연스럽게 읽히고, 아래에 두면 원본 메시지가 이어져 보입니다.",
+        "above_quote": "인용 텍스트 앞",
+        "below_quote": "인용 텍스트 뒤"
+      },
+      "signature_separator": {
+        "label": "서명 구분선",
+        "description": "서명 앞에 표준 구분선 \"-- \" (RFC 3676)을 추가합니다. 본문에서 바로 서명으로 이어지길 원하면 해제하세요."
       },
       "sub_address_delimiter": {
         "label": "서브 주소 구분자",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "새 하위 폴더...",
     "new_folder": "새 폴더...",
     "rename": "이름 바꾸기...",
+    "import_email": ".eml 가져오기...",
     "empty_folder": "폴더 비우기",
     "empty_folder_generic": "폴더 비우기",
     "delete_folder": "폴더 삭제",

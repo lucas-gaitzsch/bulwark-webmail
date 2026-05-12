@@ -562,6 +562,15 @@
       "to": "Aan: {recipients}"
     },
     "remove_sub_address": "Sub-adres verwijderen",
+    "from_override": {
+      "toggle_off": "Overschrijven",
+      "toggle_on": "Overschrijven annuleren",
+      "toggle_tooltip": "Bewerk de naam en het adres van de afzender vrij. E-mail wordt nog steeds via je identiteit verzonden — alleen de zichtbare Van-koptekst verandert.",
+      "name_label": "Afzendernaam",
+      "name_placeholder": "Naam",
+      "email_label": "E-mailadres afzender",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Sjabloon",
     "save_as_template": "Opslaan als sjabloon",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "Gesplitst venster",
         "split_description": "Houd de berichtenlijst en het leesvenster naast elkaar zichtbaar.",
         "focus": "Gefocuste lijst",
-        "focus_description": "Toon één regel per bericht en open e-mail op volledige breedte terwijl de mappenzijbalk zichtbaar blijft."
+        "focus_description": "Toon één regel per bericht en open e-mail op volledige breedte terwijl de mappenzijbalk zichtbaar blijft.",
+        "horizontal": "Leesvenster onderaan",
+        "horizontal_description": "Toon de berichtenlijst bovenaan en open het geselecteerde bericht in een leesvenster eronder."
       },
       "disable_threading": {
         "label": "Conversatiegroepering uitschakelen",
@@ -989,6 +1000,16 @@
       "auto_select_reply_identity": {
         "label": "Antwoordadres automatisch selecteren",
         "description": "Schakel bij het beantwoorden automatisch het Van-adres om naar de identiteit die het oorspronkelijke bericht ontving"
+      },
+      "signature_position": {
+        "label": "Positie van handtekening",
+        "description": "Waar je handtekening in antwoorden en doorgestuurde berichten moet worden ingevoegd. Boven de geciteerde tekst leest natuurlijk als afsluiting van het antwoord; eronder houdt het originele bericht aaneengesloten.",
+        "above_quote": "Voor geciteerde tekst",
+        "below_quote": "Na geciteerde tekst"
+      },
+      "signature_separator": {
+        "label": "Handtekening-scheider",
+        "description": "De handtekening voorafgaan met de standaard scheidingsregel \"-- \" (RFC 3676). Zet uit als je liever direct van het bericht in de handtekening overgaat."
       },
       "sub_address_delimiter": {
         "label": "Sub-adres scheidingsteken",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "Nieuwe submap...",
     "new_folder": "Nieuwe map...",
     "rename": "Hernoemen...",
+    "import_email": ".eml importeren...",
     "empty_folder": "Map leegmaken",
     "empty_folder_generic": "Map leegmaken",
     "delete_folder": "Map verwijderen",

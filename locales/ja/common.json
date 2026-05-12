@@ -562,6 +562,15 @@
       "to": "宛先: {recipients}"
     },
     "remove_sub_address": "サブアドレスを削除",
+    "from_override": {
+      "toggle_off": "上書き",
+      "toggle_on": "上書きを取り消す",
+      "toggle_tooltip": "差出人名とアドレスを自由に編集できます。メールは引き続きあなたのアイデンティティ経由で送信されます — 表示される差出人ヘッダーのみが変更されます。",
+      "name_label": "差出人名",
+      "name_placeholder": "名前",
+      "email_label": "差出人メールアドレス",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "テンプレート",
     "save_as_template": "テンプレートとして保存",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "分割ペイン",
         "split_description": "メッセージリストと読み取りペインを並べて表示します。",
         "focus": "集中リスト",
-        "focus_description": "メッセージごとに1行表示し、フォルダサイドバーを表示したままメールを全幅で開きます。"
+        "focus_description": "メッセージごとに1行表示し、フォルダサイドバーを表示したままメールを全幅で開きます。",
+        "horizontal": "閲覧ペインを下に表示",
+        "horizontal_description": "メッセージ一覧を上に表示し、選択したメッセージを下の閲覧ペインで開きます。"
       },
       "disable_threading": {
         "label": "会話グループ化を無効にする",
@@ -989,6 +1000,16 @@
       "auto_select_reply_identity": {
         "label": "返信元アドレスを自動選択",
         "description": "返信時に、元のメッセージを受信したIDへ差出人アドレスを自動的に切り替えます"
+      },
+      "signature_position": {
+        "label": "署名の位置",
+        "description": "返信や転送で署名を挿入する位置。引用テキストの上は返信の締めとして自然に読めます。下は元のメッセージを続けて表示します。",
+        "above_quote": "引用テキストの前",
+        "below_quote": "引用テキストの後"
+      },
+      "signature_separator": {
+        "label": "署名区切り",
+        "description": "署名の前に標準の区切り行「-- 」（RFC 3676）を付けます。本文から署名へ直接続けたい場合はオフにしてください。"
       },
       "sub_address_delimiter": {
         "label": "サブアドレス区切り文字",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "新しいサブフォルダー...",
     "new_folder": "新しいフォルダー...",
     "rename": "名前を変更...",
+    "import_email": ".eml をインポート...",
     "empty_folder": "フォルダーを空にする",
     "empty_folder_generic": "フォルダーを空にする",
     "delete_folder": "フォルダーを削除",

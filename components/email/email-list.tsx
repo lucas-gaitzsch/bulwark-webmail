@@ -109,7 +109,7 @@ export function EmailList({
 
   const estimateSize = useCallback(() => {
     if (isFocusedMailLayout) {
-      return { 'extra-compact': 32, compact: 40, regular: 46, comfortable: 54 }[density];
+      return { 'extra-compact': 28, compact: 40, regular: 56, comfortable: 64 }[density];
     }
     const base = { 'extra-compact': 32, compact: 60, regular: 84, comfortable: 104 }[density];
     return (showPreview && density !== 'extra-compact') ? base + 36 : base;

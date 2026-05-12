@@ -119,18 +119,6 @@ export function DashboardTab() {
         </div>
       ))}
 
-      {status && !status.lastLogin && (
-        <div className="flex items-start gap-3 rounded-lg border border-warning/20 bg-warning/10 p-4">
-          <AlertTriangle className="w-5 h-5 text-warning mt-0.5 shrink-0" />
-          <div>
-            <p className="text-sm font-medium text-warning">First login detected</p>
-            <p className="text-sm text-warning/80 mt-0.5">
-              Remember to remove ADMIN_PASSWORD from your .env file now that the hash is stored securely.
-            </p>
-          </div>
-        </div>
-      )}
-
       <SettingsSection title="Server" description="Application and connection details">
         <SettingItem label="Application">
           <span className="text-sm text-foreground">{config?.appName || '-'}</span>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback } from "react";
-import { formatDate } from "@/lib/utils";
+import { formatDate, stripInvisibleLeading } from "@/lib/utils";
 import { Email, ThreadGroup } from "@/lib/jmap/types";
 import { cn } from "@/lib/utils";
 import { Avatar } from "@/components/ui/avatar";
@@ -71,7 +71,8 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
     const accountColor = email.accountId ? getAccountById(email.accountId)?.avatarColor : undefined;
     const isChecked = selectedEmailIds.has(email.id);
     const isFocusedMailLayout = mailLayout === 'focus';
-    const inlinePreview = showPreview && email.preview ? ` ${email.preview}` : '';
+    const trimmedPreview = stripInvisibleLeading(email.preview ?? '');
+    const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
 
     // Resolve color tags using keyword definitions; unknown tags fall back to gray
     const tagIds = getEmailColorTags(email.keywords);
@@ -148,8 +149,8 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
         style={{ minHeight: isFocusedMailLayout ? undefined : 'var(--list-item-height)' }}
       >
         <div
-          className={cn('px-3', isFocusedMailLayout ? 'flex items-center py-2.5' : 'flex items-start')}
-          style={isFocusedMailLayout ? { gap: '12px' } : { gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
+          className={cn('px-3', isFocusedMailLayout ? 'flex items-center' : 'flex items-start')}
+          style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
         >
           {/* Checkbox - only visible when in selection mode */}
           {selectedEmailIds.size > 0 && (
@@ -178,11 +179,11 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
             </div>
           )}
 
-          {!isFocusedMailLayout && density !== 'extra-compact' && (
+          {density !== 'extra-compact' && (
             <Avatar
               name={sender?.name}
               email={sender?.email}
-              size="md"
+              size={isFocusedMailLayout ? "sm" : "md"}
               className="flex-shrink-0 shadow-sm"
               disableImages={hideJunkAvatarImages}
             />
@@ -316,7 +317,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                       ? "text-muted-foreground"
                       : "text-muted-foreground/80"
                   )}>
-                    {email.preview || "No preview available"}
+                    {trimmedPreview || "No preview available"}
                   </p>
                 )}
               </>
@@ -366,7 +367,8 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     const isMobile = useUIStore((state) => state.isMobile);
     const { latestEmail, participantNames, hasUnread, hasStarred, hasAttachment, hasAnswered, hasForwarded, emailCount } = thread;
     const isFocusedMailLayout = mailLayout === 'focus';
-    const inlinePreview = showPreview && latestEmail.preview ? ` ${latestEmail.preview}` : '';
+    const trimmedPreview = stripInvisibleLeading(latestEmail.preview ?? '');
+    const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
 
     const { selectedMailbox, mailboxes, selectedEmailIds, toggleEmailSelection, selectRangeEmails, clearSelection, isUnifiedView } = useEmailStore();
     const getAccountById = useAccountStore((state) => state.getAccountById);
@@ -506,8 +508,8 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
           style={{ minHeight: isFocusedMailLayout ? undefined : 'var(--list-item-height)' }}
         >
           <div
-            className={cn('px-3', isFocusedMailLayout ? 'flex items-center py-2.5' : 'flex items-start')}
-            style={isFocusedMailLayout ? { gap: '12px' } : { gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
+            className={cn('px-3', isFocusedMailLayout ? 'flex items-center' : 'flex items-start')}
+            style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
           >
             {/* Checkbox for thread selection - only visible when in selection mode */}
             {selectedEmailIds.size > 0 && (
@@ -562,11 +564,11 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
               </div>
             )}
 
-            {!isFocusedMailLayout && density !== 'extra-compact' && (
+            {density !== 'extra-compact' && (
               <Avatar
                 name={avatarPerson?.name}
                 email={avatarPerson?.email}
-                size="md"
+                size={isFocusedMailLayout ? "sm" : "md"}
                 className="flex-shrink-0 shadow-sm"
                 disableImages={hideJunkAvatarImages}
               />
@@ -722,7 +724,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                         ? "text-muted-foreground"
                         : "text-muted-foreground/80"
                     )}>
-                      {latestEmail.preview || "No preview available"}
+                      {trimmedPreview || "No preview available"}
                     </p>
                   )}
                 </>

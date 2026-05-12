@@ -562,6 +562,15 @@
       "to": "Para: {recipients}"
     },
     "remove_sub_address": "Eliminar sub-dirección",
+    "from_override": {
+      "toggle_off": "Anular",
+      "toggle_on": "Cancelar anulación",
+      "toggle_tooltip": "Edita libremente el nombre y la dirección del remitente. El correo aún se envía a través de tu identidad — solo cambia el encabezado De visible.",
+      "name_label": "Nombre del remitente",
+      "name_placeholder": "Nombre",
+      "email_label": "Dirección de correo del remitente",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Plantilla",
     "save_as_template": "Guardar como plantilla",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "Panel dividido",
         "split_description": "Mantener la lista de mensajes y el panel de lectura visibles uno al lado del otro.",
         "focus": "Lista enfocada",
-        "focus_description": "Mostrar una línea por mensaje y abrir el correo a ancho completo manteniendo visible la barra lateral de carpetas."
+        "focus_description": "Mostrar una línea por mensaje y abrir el correo a ancho completo manteniendo visible la barra lateral de carpetas.",
+        "horizontal": "Panel de lectura abajo",
+        "horizontal_description": "Muestra la lista de mensajes arriba y abre el mensaje seleccionado en un panel de lectura debajo."
       },
       "disable_threading": {
         "label": "Desactivar agrupación de conversaciones",
@@ -989,6 +1000,16 @@
       "auto_select_reply_identity": {
         "label": "Seleccionar dirección de respuesta automáticamente",
         "description": "Al responder, cambia automáticamente la dirección del remitente a la identidad que recibió el mensaje original"
+      },
+      "signature_position": {
+        "label": "Posición de la firma",
+        "description": "Dónde insertar tu firma en respuestas y reenvíos. Encima del texto citado se lee de forma natural como cierre de la respuesta; debajo mantiene el mensaje original contiguo.",
+        "above_quote": "Antes del texto citado",
+        "below_quote": "Después del texto citado"
+      },
+      "signature_separator": {
+        "label": "Delimitador de firma",
+        "description": "Anteponer a la firma la línea delimitadora estándar \"-- \" (RFC 3676). Desactiva si prefieres pasar directamente del mensaje a la firma."
       },
       "sub_address_delimiter": {
         "label": "Delimitador de sub-dirección",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "Nueva subcarpeta...",
     "new_folder": "Nueva carpeta...",
     "rename": "Renombrar...",
+    "import_email": "Importar .eml...",
     "empty_folder": "Vaciar carpeta",
     "empty_folder_generic": "Vaciar carpeta",
     "delete_folder": "Eliminar carpeta",

@@ -562,6 +562,15 @@
       "to": "Para: {recipients}"
     },
     "remove_sub_address": "Remover sub-endereço",
+    "from_override": {
+      "toggle_off": "Substituir",
+      "toggle_on": "Cancelar substituição",
+      "toggle_tooltip": "Edite livremente o nome e o endereço do remetente. O email ainda é enviado através da sua identidade — apenas o cabeçalho De visível muda.",
+      "name_label": "Nome do remetente",
+      "name_placeholder": "Nome",
+      "email_label": "Endereço de email do remetente",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Modelo",
     "save_as_template": "Salvar como modelo",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "Painel dividido",
         "split_description": "Manter a lista de mensagens e o painel de leitura visíveis lado a lado.",
         "focus": "Lista focada",
-        "focus_description": "Mostrar uma linha por mensagem e abrir o e-mail em largura total mantendo a barra lateral de pastas visível."
+        "focus_description": "Mostrar uma linha por mensagem e abrir o e-mail em largura total mantendo a barra lateral de pastas visível.",
+        "horizontal": "Painel de leitura em baixo",
+        "horizontal_description": "Mostre a lista de mensagens em cima e abra a mensagem selecionada num painel de leitura abaixo."
       },
       "disable_threading": {
         "label": "Desativar agrupamento de conversas",
@@ -989,6 +1000,16 @@
       "auto_select_reply_identity": {
         "label": "Selecionar automaticamente o endereço de resposta",
         "description": "Ao responder, muda automaticamente o endereço do remetente para a identidade que recebeu a mensagem original"
+      },
+      "signature_position": {
+        "label": "Posição da assinatura",
+        "description": "Onde inserir a sua assinatura em respostas e encaminhamentos. Acima do texto citado lê-se naturalmente como fecho da resposta; abaixo mantém a mensagem original contígua.",
+        "above_quote": "Antes do texto citado",
+        "below_quote": "Depois do texto citado"
+      },
+      "signature_separator": {
+        "label": "Delimitador de assinatura",
+        "description": "Anteceder a assinatura com a linha delimitadora padrão \"-- \" (RFC 3676). Desative se preferir passar direto da mensagem para a assinatura."
       },
       "sub_address_delimiter": {
         "label": "Delimitador de sub-endereço",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "Nova subpasta...",
     "new_folder": "Nova pasta...",
     "rename": "Renomear...",
+    "import_email": "Importar .eml...",
     "empty_folder": "Esvaziar pasta",
     "empty_folder_generic": "Esvaziar pasta",
     "delete_folder": "Excluir pasta",

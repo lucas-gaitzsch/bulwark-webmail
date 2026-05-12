@@ -196,6 +196,7 @@ const tabSearchPaths: Record<Tab, string[]> = {
     'settings.email_behavior.attachment_reminder',
     'settings.email_behavior.auto_select_reply_identity',
     'settings.email_behavior.default_mail_program',
+    'settings.email_behavior.signature_position',
     'settings.email_behavior.sub_address_delimiter',
   ],
   identities: ['settings.identities'],

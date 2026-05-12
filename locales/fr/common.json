@@ -562,6 +562,15 @@
       "to": "À : {recipients}"
     },
     "remove_sub_address": "Retirer le sous-adressage",
+    "from_override": {
+      "toggle_off": "Remplacer",
+      "toggle_on": "Annuler le remplacement",
+      "toggle_tooltip": "Modifiez librement le nom et l'adresse d'expéditeur. Le courrier est toujours envoyé via votre identité — seul l'en-tête De visible change.",
+      "name_label": "Nom de l'expéditeur",
+      "name_placeholder": "Nom",
+      "email_label": "Adresse e-mail de l'expéditeur",
+      "email_placeholder": "alias@example.com"
+    },
     "use_template": "Modèle",
     "save_as_template": "Enregistrer comme modèle",
     "validation": {
@@ -976,7 +985,9 @@
         "split": "Volet divisé",
         "split_description": "Garder la liste des messages et le volet de lecture visibles côte à côte.",
         "focus": "Liste focalisée",
-        "focus_description": "Afficher une ligne par message et ouvrir le courrier en pleine largeur tout en gardant la barre latérale des dossiers visible."
+        "focus_description": "Afficher une ligne par message et ouvrir le courrier en pleine largeur tout en gardant la barre latérale des dossiers visible.",
+        "horizontal": "Volet de lecture en bas",
+        "horizontal_description": "Afficher la liste des messages en haut et ouvrir le message sélectionné dans un volet de lecture en dessous."
       },
       "disable_threading": {
         "label": "Désactiver le regroupement par conversation",
@@ -989,6 +1000,16 @@
       "auto_select_reply_identity": {
         "label": "Sélection automatique de l'adresse de réponse",
         "description": "Lors d'une réponse, bascule automatiquement l'adresse d'expédition vers l'identité qui a reçu le message d'origine"
+      },
+      "signature_position": {
+        "label": "Position de la signature",
+        "description": "Où insérer votre signature dans les réponses et les transferts. Au-dessus du texte cité, elle se lit naturellement comme la conclusion de la réponse ; en dessous, elle garde le message d'origine contigu.",
+        "above_quote": "Avant le texte cité",
+        "below_quote": "Après le texte cité"
+      },
+      "signature_separator": {
+        "label": "Délimiteur de signature",
+        "description": "Préfixer la signature par la ligne de délimitation standard \"-- \" (RFC 3676). Désactivez si vous préférez enchaîner directement du message à la signature."
       },
       "sub_address_delimiter": {
         "label": "Délimiteur de sous-adresse",
@@ -1719,6 +1740,7 @@
     "new_subfolder": "Nouveau sous-dossier...",
     "new_folder": "Nouveau dossier...",
     "rename": "Renommer...",
+    "import_email": "Importer un .eml...",
     "empty_folder": "Vider le dossier",
     "empty_folder_generic": "Vider le dossier",
     "delete_folder": "Supprimer le dossier",
