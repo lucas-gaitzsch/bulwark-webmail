@@ -165,10 +165,10 @@ export default function CalendarPage() {
     if (initialCheckDone && !isAuthenticated && !authLoading) {
       try { sessionStorage.setItem('redirect_after_login', window.location.pathname); } catch { /* ignore */ }
       redirectToLogin();
-    } else if (client && !supportsCalendar && !pendingWebcalAccountChoice && !hasPendingWebcal()) {
+    } else if (client && !supportsCalendar && !pendingWebcalAccountChoice && !isProtocolAccountSwitching && !pendingSubscription && !showWebcalActionChoice && !hasPendingWebcal()) {
       router.push("/");
     }
-  }, [initialCheckDone, isAuthenticated, authLoading, client, supportsCalendar, pendingWebcalAccountChoice, router]);
+  }, [initialCheckDone, isAuthenticated, authLoading, client, supportsCalendar, pendingWebcalAccountChoice, isProtocolAccountSwitching, pendingSubscription, showWebcalActionChoice, router]);
 
   useEffect(() => {
     if (error) {
