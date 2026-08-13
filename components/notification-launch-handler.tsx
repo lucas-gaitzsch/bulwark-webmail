@@ -26,7 +26,7 @@ async function clearRememberedNotificationLaunch(): Promise<void> {
   await cache.delete(NOTIFICATION_LAUNCH_KEY);
 }
 
-export function PwaLaunchHandler() {
+export function NotificationLaunchHandler() {
   useEffect(() => {
     void consumeRememberedNotificationLaunch();
     const navigate = (targetURL: string): boolean => {
