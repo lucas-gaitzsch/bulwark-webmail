@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { getPathPrefix } from "@/lib/browser-navigation";
+import { subscribeToPwaLaunches } from "@/lib/pwa-launch-queue";
 import { parseMailto } from "@/lib/protocol-handlers/mailto";
 import { parseWebcal } from "@/lib/protocol-handlers/webcal";
 import {
@@ -87,24 +88,20 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
   }, [pathname, router, t]);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.launchQueue) return;
-
-    window.launchQueue.setConsumer((launchParams) => {
-      if (!launchParams.targetURL) return;
-
-      const launch = getProtocolLaunch(launchParams.targetURL);
-      if (!launch) return;
+    return subscribeToPwaLaunches((targetURL) => {
+      const launch = getProtocolLaunch(targetURL);
+      if (!launch) return false;
 
       if (launch.kind === "mailto") {
         const parsed = parseMailto(launch.raw);
-        if (!parsed) return;
+        if (!parsed) return true;
 
         if (useSettingsStore.getState().protocolOpenMode === "new-tab") {
-          if (openProtocolInNewTab("mailto", launch.raw)) return;
+          if (openProtocolInNewTab("mailto", launch.raw)) return true;
           savePendingMailto(parsed);
           notifyPendingMailto();
           if (pathname !== "/") router.push("/");
-          return;
+          return true;
         }
 
         void requestOpenMailtoInExistingClient(parsed).then((delivered) => {
@@ -113,19 +110,20 @@ export function ProtocolLaunchHandlerProvider({ children }: ProtocolLaunchHandle
           notifyPendingMailto();
           if (pathname !== "/") router.push("/");
         });
-        return;
+        return true;
       }
 
       const parsed = parseWebcal(launch.raw);
-      if (!parsed) return;
+      if (!parsed) return true;
 
       if (useSettingsStore.getState().protocolOpenMode === "new-tab") {
-        if (openProtocolInNewTab("webcal", launch.raw)) return;
+        if (openProtocolInNewTab("webcal", launch.raw)) return true;
       }
 
       savePendingWebcal(parsed);
       notifyPendingWebcal();
       if (pathname !== "/calendar") router.push("/calendar");
+      return true;
     });
   }, [pathname, router]);
 

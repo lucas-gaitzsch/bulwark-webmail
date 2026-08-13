@@ -4,6 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { headers } from "next/headers";
 import { getLocale, getTranslations } from "next-intl/server";
 import { ServiceWorkerRegistration } from "@/components/service-worker-registration";
+import { PwaLaunchHandler } from "@/components/pwa-launch-handler";
 import { FaviconBadge } from "@/components/favicon-badge";
 import { ThemeColorSync } from "@/components/theme-color-sync";
 import { configManager } from "@/lib/admin/config-manager";
@@ -163,6 +164,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ServiceWorkerRegistration />
+        <PwaLaunchHandler />
         {!themeColorConfigured && <ThemeColorSync />}
         <FaviconBadge />
         {children}

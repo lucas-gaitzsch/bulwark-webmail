@@ -17,6 +17,7 @@ import {
   WebPushUnsupportedError,
   disableWebPush,
   enableWebPush,
+  getStoredPushRelayUrl,
   isWebPushEnabled,
   isWebPushSupported,
 } from '@/lib/web-push';
@@ -26,7 +27,7 @@ type PushStatus =
   | { kind: 'busy' }
   | { kind: 'enabled' }
   | { kind: 'unsupported' }
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string; enabled?: boolean };
 
 export function NotificationSettings() {
   const t = useTranslations('settings.notifications');
@@ -44,6 +45,7 @@ export function NotificationSettings() {
   const pushRelayLocked = usePolicyStore((s) => s.policy.pushRelayUrlLocked) === true;
   const client = useAuthStore((s) => s.client);
   const username = useAuthStore((s) => s.username);
+  const localAccountId = useAuthStore((s) => s.activeAccountId);
   const { dialogProps: confirmDialogProps, confirm: confirmDialog } = useConfirmDialog();
 
   const supported = typeof window !== 'undefined' && isWebPushSupported();
@@ -65,15 +67,23 @@ export function NotificationSettings() {
   }, [adminUrl, pushRelayLocked]);
 
   useEffect(() => {
+    if (!localAccountId || pushRelayLocked) return;
+    const storedRelay = getStoredPushRelayUrl(localAccountId);
+    setRelayUrl(storedRelay || adminUrl || DEFAULT_RELAY_BASE_URL);
+  }, [adminUrl, localAccountId, pushRelayLocked]);
+
+  useEffect(() => {
     if (!supported) return;
-    if (!client) return;
+    if (!client || !localAccountId) return;
     const accountId = client.getAccountId();
     if (!accountId) return;
+    let cancelled = false;
     void (async () => {
-      const enabled = await isWebPushEnabled(accountId);
-      setPushStatus(enabled ? { kind: 'enabled' } : { kind: 'idle' });
+      const enabled = await isWebPushEnabled(localAccountId, accountId, client);
+      if (!cancelled) setPushStatus(enabled ? { kind: 'enabled' } : { kind: 'idle' });
     })();
-  }, [supported, client]);
+    return () => { cancelled = true; };
+  }, [supported, client, localAccountId]);
 
   const trimmedRelay = relayUrl.trim().replace(/\/+$/, '');
   const isValidRelay = /^https?:\/\/.+/i.test(trimmedRelay);
@@ -92,6 +102,7 @@ export function NotificationSettings() {
     try {
       await enableWebPush({
         client,
+        localAccountId: localAccountId ?? undefined,
         relayBaseUrl: trimmedRelay,
         accountLabel: username ?? undefined,
       });
@@ -119,13 +130,31 @@ export function NotificationSettings() {
     if (!confirmed) return;
     setPushStatus({ kind: 'busy' });
     try {
-      await disableWebPush({ client, relayBaseUrl: trimmedRelay });
+      await disableWebPush({ client, localAccountId: localAccountId ?? undefined });
       setPushStatus({ kind: 'idle' });
     } catch (err) {
       setPushStatus({
         kind: 'error',
         message: err instanceof Error ? err.message : 'Failed to disable push',
+        enabled: true,
       });
+    }
+  };
+
+  const handleEmailNotificationsChange = async (checked: boolean) => {
+    updateSetting('emailNotificationsEnabled', checked);
+    if (checked || !client) return;
+    setPushStatus({ kind: 'busy' });
+    try {
+      await disableWebPush({ client, localAccountId: localAccountId ?? undefined });
+      setPushStatus({ kind: 'idle' });
+    } catch (err) {
+      setPushStatus({
+        kind: 'error',
+        message: err instanceof Error ? err.message : 'Failed to disable push',
+        enabled: true,
+      });
+      updateSetting('emailNotificationsEnabled', true);
     }
   };
 
@@ -170,7 +199,7 @@ export function NotificationSettings() {
             >
               {pushStatus.kind === 'enabled' ? t('push.reenable') : t('push.enable')}
             </Button>
-            {pushStatus.kind === 'enabled' && (
+            {(pushStatus.kind === 'enabled' || (pushStatus.kind === 'error' && pushStatus.enabled)) && (
               <Button variant="outline" onClick={handleDisablePush} disabled={busy}>
                 {t('push.disable')}
               </Button>
@@ -219,7 +248,7 @@ export function NotificationSettings() {
         >
           <ToggleSwitch
             checked={emailNotificationsEnabled}
-            onChange={(checked) => updateSetting('emailNotificationsEnabled', checked)}
+            onChange={(checked) => { void handleEmailNotificationsChange(checked); }}
           />
         </SettingItem>
         )}

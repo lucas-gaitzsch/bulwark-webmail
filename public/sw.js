@@ -24,6 +24,11 @@ function getBasePath() {
 
 const BASE_PATH = getBasePath();
 const MAILTO_CLIENTS = new Map();
+const NOTIFICATION_LAUNCH_CACHE = "bulwark-notification-launch-v1";
+const NOTIFICATION_LAUNCH_KEY = `${BASE_PATH}/__notification_launch__`;
+const PUSH_ACCOUNT_CACHE = "bulwark-push-accounts-v1";
+const DISABLED_PUSH_ACCOUNT_CACHE = "bulwark-disabled-push-accounts-v1";
+const AMBIGUOUS_ACCOUNT = "__ambiguous__";
 
 self.addEventListener("install", () => {
   self.skipWaiting();
@@ -46,6 +51,16 @@ self.addEventListener("notificationclick", (event) => {
 
 self.addEventListener("message", (event) => {
   const data = event.data || {};
+  if (data.type === "register-push-account"
+    && typeof data.jmapAccountId === "string"
+    && typeof data.localAccountId === "string") {
+    event.waitUntil(rememberPushAccount(data.jmapAccountId, data.localAccountId));
+    return;
+  }
+  if (data.type === "disable-push-account" && typeof data.jmapAccountId === "string") {
+    event.waitUntil(disablePushAccount(data.jmapAccountId, data.localAccountId));
+    return;
+  }
   if (data.type === "mailto-client-ready") {
     if (event.source && event.source.id) {
       MAILTO_CLIENTS.set(event.source.id, {
@@ -97,6 +112,9 @@ async function handlePush(event) {
   const accountLabel = (payload && typeof payload.accountLabel === "string")
     ? payload.accountLabel
     : "";
+  const payloadAccountId = (payload && typeof payload.accountId === "string")
+    ? payload.accountId
+    : "";
 
   // JMAP StateChange wraps changes in { changed: { [accountId]: {...} } }.
   // The relay forwards a single account's StateChange per push, so the first
@@ -107,6 +125,9 @@ async function handlePush(event) {
     ? payload.changed
     : null;
   const accountId = changed ? Object.keys(changed)[0] || "" : "";
+  const rememberedAccountId = accountId ? await readPushAccount(accountId) : "";
+  const effectiveLocalAccountId = payloadAccountId || rememberedAccountId;
+  if (accountId && await isPushAccountDisabled(accountId, effectiveLocalAccountId)) return;
 
   // Best effort: ask the webmail to look up the latest unread email so we can
   // build a useful notification. If the request fails (offline, session
@@ -116,7 +137,7 @@ async function handlePush(event) {
   let previewOk = false;
   try {
     const previewUrl = accountId
-      ? `${BASE_PATH}/api/push/preview?accountId=${encodeURIComponent(accountId)}`
+      ? `${BASE_PATH}/api/push/preview?accountId=${encodeURIComponent(accountId)}${effectiveLocalAccountId ? `&localAccountId=${encodeURIComponent(effectiveLocalAccountId)}` : ""}`
       : `${BASE_PATH}/api/push/preview`;
     const res = await fetch(previewUrl, {
       credentials: "include",
@@ -134,6 +155,10 @@ async function handlePush(event) {
   const unreadTotal = preview && typeof preview.unreadTotal === "number"
     ? preview.unreadTotal
     : 0;
+  const localAccountId = preview && typeof preview.accountId === "string"
+    ? preview.accountId
+    : effectiveLocalAccountId;
+  const notificationAccountKey = localAccountId || accountId;
 
   // Push subscription is scoped to EmailDelivery, but stragglers from the
   // older broader-types subscription, marking-as-read races and verification
@@ -147,19 +172,20 @@ async function handlePush(event) {
 
   let title;
   let body;
-  let tag = "bulwark-mail";
-  let data = { kind: "mail-list" };
+  let tag = "bulwark-mail" + (notificationAccountKey ? `:${notificationAccountKey}` : "");
+  let data = { kind: "mail-list", accountId: localAccountId };
 
   if (email) {
     const sender = email.from && email.from[0];
     const senderName = (sender && sender.name) || (sender && sender.email) || "New mail";
     title = senderName + (accountLabel ? ` (${accountLabel})` : "");
     body = email.subject || email.preview || "(no subject)";
-    tag = "bulwark-mail:" + email.id;
+    tag = "bulwark-mail:" + (notificationAccountKey ? `${notificationAccountKey}:` : "") + email.id;
     data = {
       kind: "email",
       emailId: email.id,
       threadId: email.threadId,
+      accountId: localAccountId,
     };
   } else {
     title = accountLabel ? `New mail (${accountLabel})` : "New mail";
@@ -187,6 +213,7 @@ async function handleNotificationClick(event) {
   }
 
   const targetUrl = buildClickUrl(data);
+  const absoluteTargetUrl = new URL(targetUrl, self.location.origin).href;
 
   const allClients = await self.clients.matchAll({
     type: "window",
@@ -202,24 +229,130 @@ async function handleNotificationClick(event) {
     }
   }
 
-  for (const client of allClients) {
-    // Reuse an existing tab whenever possible - users on desktop browsers
-    // get annoyed when each notification opens a fresh window.
-    if ("focus" in client) {
-      try {
-        if ("navigate" in client && targetUrl) {
-          await client.navigate(targetUrl);
-        }
-        return client.focus();
-      } catch (_) {
-        // navigate() can reject for cross-origin or detached clients - fall
-        // through and open a new window below.
+  // WindowClient does not expose its display mode. The app reports it through
+  // MAILTO_CLIENTS, so prefer a running standalone window when one is known.
+  const standaloneClient = allClients.find((client) => MAILTO_CLIENTS.get(client.id)?.standalone === true);
+  if (standaloneClient && "focus" in standaloneClient) {
+    try {
+      const navigatedClient = "navigate" in standaloneClient
+        ? await standaloneClient.navigate(absoluteTargetUrl)
+        : standaloneClient;
+      return await (navigatedClient || standaloneClient).focus();
+    } catch {
+      // Detached client - fall through to opening the installed app/window.
+    }
+  }
+
+  // Chrome for Android routes openWindow() URLs inside the manifest scope to
+  // the installed WebAPK/PWA. Do this before focusing arbitrary browser tabs;
+  // otherwise a background Chrome tab can swallow the notification click.
+  const isAndroid = /\bAndroid\b/i.test(self.navigator?.userAgent || "");
+  if (isAndroid && self.clients.openWindow) {
+    await rememberNotificationLaunch(absoluteTargetUrl);
+    try {
+      const openedClient = await self.clients.openWindow(absoluteTargetUrl);
+      if (openedClient && "focus" in openedClient) {
+        openedClient.postMessage({ kind: "notificationnavigate", targetUrl: absoluteTargetUrl });
+        return await openedClient.focus();
       }
+      if (openedClient) return openedClient;
+    } catch {
+      // Fall back to a live client if the browser rejects opening a window.
+      await forgetNotificationLaunch();
+    }
+  }
+
+  // Preserve desktop behaviour: reuse a browser window rather than opening a
+  // new tab for every notification.
+  for (const client of allClients) {
+    if (!("focus" in client)) continue;
+    try {
+      const navigatedClient = "navigate" in client
+        ? await client.navigate(absoluteTargetUrl)
+        : client;
+      return await (navigatedClient || client).focus();
+    } catch {
+      // Closed or detached client - try the next one.
     }
   }
 
   if (self.clients.openWindow) {
-    return self.clients.openWindow(targetUrl || `${BASE_PATH}/`);
+    await rememberNotificationLaunch(absoluteTargetUrl);
+    return self.clients.openWindow(absoluteTargetUrl);
+  }
+}
+
+async function rememberNotificationLaunch(targetUrl) {
+  if (!("caches" in self)) return;
+  try {
+    const cache = await caches.open(NOTIFICATION_LAUNCH_CACHE);
+    await cache.put(NOTIFICATION_LAUNCH_KEY, new Response(targetUrl, {
+      headers: { "content-type": "text/plain" },
+    }));
+  } catch {
+    // Navigation still proceeds; this is only a fallback for WebKit launches.
+  }
+}
+
+async function forgetNotificationLaunch() {
+  if (!("caches" in self)) return;
+  try {
+    const cache = await caches.open(NOTIFICATION_LAUNCH_CACHE);
+    await cache.delete(NOTIFICATION_LAUNCH_KEY);
+  } catch {
+    // Best-effort cleanup; fallback navigation can still continue.
+  }
+}
+
+async function rememberPushAccount(jmapAccountId, localAccountId) {
+  if (!("caches" in self)) return;
+  const cache = await caches.open(PUSH_ACCOUNT_CACHE);
+  const key = `${BASE_PATH}/__push_account__/${encodeURIComponent(jmapAccountId)}`;
+  const existing = await cache.match(key);
+  const existingAccountId = existing ? await existing.text() : "";
+  const storedAccountId = existingAccountId && existingAccountId !== localAccountId
+    ? AMBIGUOUS_ACCOUNT
+    : localAccountId;
+  await cache.put(key, new Response(storedAccountId));
+  const disabled = await caches.open(DISABLED_PUSH_ACCOUNT_CACHE);
+  await disabled.delete(`${BASE_PATH}/__disabled_push_account__/${encodeURIComponent(localAccountId)}`);
+}
+
+async function readPushAccount(jmapAccountId) {
+  if (!("caches" in self)) return "";
+  try {
+    const cache = await caches.open(PUSH_ACCOUNT_CACHE);
+    const response = await cache.match(`${BASE_PATH}/__push_account__/${encodeURIComponent(jmapAccountId)}`);
+    const accountId = response ? await response.text() : "";
+    return accountId === AMBIGUOUS_ACCOUNT ? "" : accountId;
+  } catch {
+    return "";
+  }
+}
+
+async function disablePushAccount(jmapAccountId, localAccountId) {
+  if (!("caches" in self)) return;
+  const cache = await caches.open(DISABLED_PUSH_ACCOUNT_CACHE);
+  const key = localAccountId || jmapAccountId;
+  await cache.put(`${BASE_PATH}/__disabled_push_account__/${encodeURIComponent(key)}`, new Response("1"));
+  const notifications = await self.registration.getNotifications();
+  for (const notification of notifications) {
+    const data = notification.data || {};
+    if ((localAccountId && data.accountId === localAccountId)
+      || (!localAccountId && notification.tag?.includes(jmapAccountId))) {
+      notification.close();
+    }
+  }
+}
+
+async function isPushAccountDisabled(jmapAccountId, localAccountId) {
+  if (!("caches" in self)) return false;
+  try {
+    const cache = await caches.open(DISABLED_PUSH_ACCOUNT_CACHE);
+    const key = localAccountId || jmapAccountId;
+    return !!(await cache.match(`${BASE_PATH}/__disabled_push_account__/${encodeURIComponent(key)}`));
+  } catch {
+    return false;
   }
 }
 
@@ -356,13 +489,15 @@ function getReusableClientScore(state) {
 
 function buildClickUrl(data) {
   if (!data) return `${BASE_PATH}/`;
+  const accountQuery = data.accountId
+    ? `?account=${encodeURIComponent(data.accountId)}`
+    : "";
   if (data.kind === "email" && data.emailId) {
     // Permalink (#733). Under NEXT_PUBLIC_LOCALE_PREFIX=always the proxy
     // redirects this to the localised path; the worker has no locale to add.
-    return `${BASE_PATH}/mail/message/${encodeURIComponent(data.emailId)}`;
+    return `${BASE_PATH}/mail/message/${encodeURIComponent(data.emailId)}${accountQuery}`;
   }
-  // Generic "New mail" toast (preview API failed or returned no email): land
-  // the user on the latest unread message in their Inbox rather than just the
-  // app shell, so the click still feels purposeful.
-  return `${BASE_PATH}/?openLatestUnread=1`;
+  // Generic notifications still carry their account when preview resolution
+  // succeeded, so at minimum they open the correct account's Inbox.
+  return `${BASE_PATH}/mail/folder/inbox${accountQuery}`;
 }

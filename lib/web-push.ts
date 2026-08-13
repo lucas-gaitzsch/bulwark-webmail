@@ -13,6 +13,58 @@ import type { IJMAPClient } from '@/lib/jmap/client-interface';
 // so a globally-shared key meant re-registering account B overwrote A.
 const DEVICE_CLIENT_ID_PREFIX = 'bulwark.push.deviceClientId.v1.';
 const SUBSCRIPTION_ID_PREFIX = 'bulwark.push.subscriptionId.v1.';
+const PUSH_METADATA_PREFIX = 'bulwark.push.metadata.v2.';
+
+interface PushMetadata {
+  localAccountId: string;
+  jmapAccountId: string;
+  deviceClientId: string;
+  serverSubscriptionId: string;
+  relayBaseUrl: string;
+  vapidPublicKey: string;
+}
+
+function metadataKey(localAccountId: string): string {
+  return PUSH_METADATA_PREFIX + localAccountId;
+}
+
+function readMetadata(localAccountId: string): PushMetadata | null {
+  try {
+    const raw = localStorage.getItem(metadataKey(localAccountId));
+    if (!raw) return null;
+    const value = JSON.parse(raw) as Partial<PushMetadata>;
+    return typeof value.jmapAccountId === 'string'
+      && typeof value.deviceClientId === 'string'
+      && typeof value.serverSubscriptionId === 'string'
+      && typeof value.relayBaseUrl === 'string'
+      && typeof value.vapidPublicKey === 'string'
+      ? value as PushMetadata
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeMetadata(metadata: PushMetadata): void {
+  localStorage.setItem(metadataKey(metadata.localAccountId), JSON.stringify(metadata));
+}
+
+function removeMetadata(localAccountId: string): void {
+  localStorage.removeItem(metadataKey(localAccountId));
+}
+
+function allMetadata(exceptLocalAccountId?: string): PushMetadata[] {
+  const result: PushMetadata[] = [];
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (!key?.startsWith(PUSH_METADATA_PREFIX)) continue;
+    const localAccountId = key.slice(PUSH_METADATA_PREFIX.length);
+    if (localAccountId === exceptLocalAccountId) continue;
+    const metadata = readMetadata(localAccountId);
+    if (metadata) result.push(metadata);
+  }
+  return result;
+}
 
 function deviceClientIdKey(accountId: string): string {
   return DEVICE_CLIENT_ID_PREFIX + accountId;
@@ -52,10 +104,12 @@ function sameTypes(a: readonly string[] | null | undefined, b: readonly string[]
 
 export interface EnableWebPushParams {
   client: IJMAPClient;
+  localAccountId?: string;
   // Optional - falls back to DEFAULT_RELAY_BASE_URL.
   relayBaseUrl?: string;
   // Free-form label the relay shows in /metrics; never returned in pushes.
   accountLabel?: string;
+  allowRelayMigration?: boolean;
 }
 
 export interface EnableWebPushResult {
@@ -108,6 +162,71 @@ function anyOtherAccountHasSubscription(accountId: string): boolean {
     if (k && k !== skip && k.startsWith(SUBSCRIPTION_ID_PREFIX)) return true;
   }
   return false;
+}
+
+function resolveLocalAccountId(client: IJMAPClient, localAccountId?: string): string {
+  return localAccountId || client.getAccountId();
+}
+
+function migrateLegacyMetadata(
+  client: IJMAPClient,
+  localAccountId: string,
+  relayBaseUrl: string,
+  vapidPublicKey = '',
+): PushMetadata | null {
+  const existing = readMetadata(localAccountId);
+  if (existing) return existing;
+  const jmapAccountId = client.getAccountId();
+  const deviceClientId = localStorage.getItem(deviceClientIdKey(jmapAccountId));
+  const serverSubscriptionId = localStorage.getItem(subscriptionIdKey(jmapAccountId));
+  if (!deviceClientId || !serverSubscriptionId) return null;
+  if (allMetadata(localAccountId).some((metadata) => metadata.deviceClientId === deviceClientId)) {
+    return null;
+  }
+  const migrated = {
+    localAccountId,
+    jmapAccountId,
+    deviceClientId,
+    serverSubscriptionId,
+    relayBaseUrl,
+    vapidPublicKey,
+  };
+  writeMetadata(migrated);
+  return migrated;
+}
+
+function legacyMetadataClaimedByAnotherAccount(
+  localAccountId: string,
+  jmapAccountId: string,
+): boolean {
+  const legacyDeviceClientId = localStorage.getItem(deviceClientIdKey(jmapAccountId));
+  return allMetadata(localAccountId).some((metadata) =>
+    metadata.jmapAccountId === jmapAccountId
+    || (!!legacyDeviceClientId && metadata.deviceClientId === legacyDeviceClientId),
+  );
+}
+
+let pushOperationQueue = Promise.resolve();
+const pushOperationGenerations = new Map<string, number>();
+
+function currentPushOperationGeneration(localAccountId: string): number {
+  return pushOperationGenerations.get(localAccountId) ?? 0;
+}
+
+export function cancelWebPushOperations(localAccountId: string): void {
+  pushOperationGenerations.set(localAccountId, currentPushOperationGeneration(localAccountId) + 1);
+}
+
+function assertPushOperationCurrent(localAccountId: string, generation: number): void {
+  if (currentPushOperationGeneration(localAccountId) !== generation) {
+    throw new Error('Web Push operation was cancelled');
+  }
+}
+
+function queuePushOperation<T>(operation: () => Promise<T>): Promise<T> {
+  const run = pushOperationQueue.then(operation);
+  pushOperationQueue = run.then(() => undefined, () => undefined);
+  return run;
 }
 
 // PushManager.subscribe wants the VAPID public key as a BufferSource.
@@ -168,7 +287,10 @@ async function ensureServiceWorker(): Promise<ServiceWorkerRegistration> {
   // push handler is in place.
   let registration = await navigator.serviceWorker.getRegistration(SW_SCOPE);
   if (!registration) {
-    registration = await navigator.serviceWorker.register(SW_URL, { scope: SW_SCOPE });
+    registration = await navigator.serviceWorker.register(SW_URL, {
+      scope: SW_SCOPE,
+      updateViaCache: 'none',
+    });
   }
   await navigator.serviceWorker.ready;
   return registration;
@@ -184,6 +306,7 @@ async function registerWithRelay(params: {
     keys: { p256dh: string; auth: string };
   };
   accountLabel?: string;
+  accountId?: string;
 }): Promise<void> {
   const { endpoint, keys } = params.subscription;
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
@@ -196,6 +319,7 @@ async function registerWithRelay(params: {
       subscriptionId: params.subscriptionId,
       subscription: { endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } },
       accountLabel: params.accountLabel,
+      accountId: params.accountId,
     }),
   });
   if (!res.ok) {
@@ -233,6 +357,7 @@ async function relayReportsDead(
 async function pollVerificationCode(
   relayBaseUrl: string,
   subscriptionId: string,
+  assertCurrent: () => void,
 ): Promise<string> {
   // Stalwart per-account rate-limits PushVerification posts (default 60s).
   // If there are leftover unverified subscriptions on the account, our new
@@ -241,6 +366,7 @@ async function pollVerificationCode(
   const timeoutAt = Date.now() + 75_000;
   let delay = 400;
   while (Date.now() < timeoutAt) {
+    assertCurrent();
     const res = await fetch(
       buildRelayUrl(relayBaseUrl, `/api/push/verify/${encodeURIComponent(subscriptionId)}`),
     );
@@ -275,8 +401,9 @@ async function refreshSubscriptionExpires(
   }
 }
 
-export async function enableWebPush(
+async function enableWebPushNow(
   params: EnableWebPushParams,
+  generation: number,
 ): Promise<EnableWebPushResult> {
   if (!isWebPushSupported()) {
     throw new WebPushUnsupportedError(
@@ -291,17 +418,48 @@ export async function enableWebPush(
   const registration = await ensureServiceWorker();
 
   const vapidPublicKey = await fetchVapidPublicKey(relayBaseUrl);
+  const jmapAccountId = params.client.getAccountId();
+  const localAccountId = resolveLocalAccountId(params.client, params.localAccountId);
+  const assertCurrent = () => assertPushOperationCurrent(localAccountId, generation);
+  assertCurrent();
+  const legacyClaimed = legacyMetadataClaimedByAnotherAccount(localAccountId, jmapAccountId);
+  let previousMetadata = migrateLegacyMetadata(
+    params.client,
+    localAccountId,
+    relayBaseUrl,
+    vapidPublicKey,
+  );
+  const siblings = allMetadata(localAccountId);
+  const incompatibleSibling = siblings.find((metadata) =>
+    metadata.relayBaseUrl !== relayBaseUrl
+    || (metadata.vapidPublicKey && metadata.vapidPublicKey !== vapidPublicKey),
+  );
+  if (incompatibleSibling && !params.allowRelayMigration) {
+    throw new Error('All accounts on this site must use the same push relay and VAPID key');
+  }
+  const currentRelayChanged = previousMetadata && (
+    previousMetadata.relayBaseUrl !== relayBaseUrl
+    || (previousMetadata.vapidPublicKey && previousMetadata.vapidPublicKey !== vapidPublicKey)
+  );
+  if (currentRelayChanged) {
+    await disableWebPushNow({ client: params.client, localAccountId });
+    previousMetadata = null;
+  }
 
   // Reuse an existing browser PushSubscription when possible - resubscribing
   // with the same VAPID key produces the same endpoint, but the call still
   // costs a network round-trip the user can feel.
   let pushSubscription = await registration.pushManager.getSubscription();
-  if (pushSubscription) {
-    const keyMatches = pushSubscription.options?.applicationServerKey;
-    if (!keyMatches) {
-      await pushSubscription.unsubscribe();
-      pushSubscription = null;
-    }
+  const expectedKey = urlBase64ToUint8Array(vapidPublicKey);
+  const existingKey = pushSubscription?.options?.applicationServerKey;
+  const keyMatches = existingKey && (() => {
+    const actual = new Uint8Array(existingKey);
+    return actual.byteLength === expectedKey.byteLength
+      && actual.every((value, index) => value === expectedKey[index]);
+  })();
+  if (pushSubscription && !keyMatches) {
+    await pushSubscription.unsubscribe();
+    pushSubscription = null;
   }
   if (!pushSubscription) {
     pushSubscription = await registration.pushManager.subscribe({
@@ -310,8 +468,10 @@ export async function enableWebPush(
     });
   }
 
-  const accountId = params.client.getAccountId();
-  const deviceClientId = getOrCreateDeviceClientId(accountId);
+  const deviceClientId = previousMetadata?.deviceClientId || getOrCreateDeviceClientId(localAccountId);
+
+  const existingSubs = await params.client.listPushSubscriptions();
+  assertCurrent();
 
   await registerWithRelay({
     relayBaseUrl,
@@ -324,18 +484,23 @@ export async function enableWebPush(
       },
     },
     accountLabel: params.accountLabel,
+    accountId: localAccountId,
   });
 
   // Reuse the JMAP-side PushSubscription if the server still has it, just
   // refreshing the expiry so it doesn't time out between sessions.
-  const existingSubs = await params.client.listPushSubscriptions().catch(() => []);
-  const subIdKey = subscriptionIdKey(accountId);
-  const storedServerId = localStorage.getItem(subIdKey);
+  const subIdKey = subscriptionIdKey(jmapAccountId);
+  const storedServerId = previousMetadata?.serverSubscriptionId
+    || (!legacyClaimed ? localStorage.getItem(subIdKey) : null);
   if (storedServerId) {
     const match = existingSubs.find((s) => s.id === storedServerId);
     if (match) {
       const refreshed = await refreshSubscriptionExpires(params.client, match);
-      if (refreshed) return { subscriptionId: storedServerId };
+      assertCurrent();
+      if (refreshed) {
+        writeMetadata({ localAccountId, jmapAccountId, deviceClientId, serverSubscriptionId: storedServerId, relayBaseUrl, vapidPublicKey });
+        return { subscriptionId: storedServerId };
+      }
       await params.client.destroyPushSubscription(storedServerId).catch(() => undefined);
     }
     localStorage.removeItem(subIdKey);
@@ -366,22 +531,44 @@ export async function enableWebPush(
     }
   }
 
-  const serverAssignedId = await params.client.createPushSubscription({
-    deviceClientId,
-    url: buildRelayUrl(relayBaseUrl, `/api/push/jmap/${encodeURIComponent(deviceClientId)}`),
-    types: [...PUSH_TYPES],
-    expires: expiresFromNow(SUBSCRIPTION_EXPIRES_DAYS),
-  });
+  let serverAssignedId: string | null = null;
+  try {
+    serverAssignedId = await params.client.createPushSubscription({
+      deviceClientId,
+      url: buildRelayUrl(relayBaseUrl, `/api/push/jmap/${encodeURIComponent(deviceClientId)}`),
+      types: [...PUSH_TYPES],
+      expires: expiresFromNow(SUBSCRIPTION_EXPIRES_DAYS),
+    });
 
-  const verificationCode = await pollVerificationCode(relayBaseUrl, deviceClientId);
-  await params.client.verifyPushSubscription(serverAssignedId, verificationCode);
-  localStorage.setItem(subIdKey, serverAssignedId);
+    const verificationCode = await pollVerificationCode(relayBaseUrl, deviceClientId, assertCurrent);
+    assertCurrent();
+    await params.client.verifyPushSubscription(serverAssignedId, verificationCode);
+    assertCurrent();
+    localStorage.setItem(subIdKey, serverAssignedId);
+    writeMetadata({ localAccountId, jmapAccountId, deviceClientId, serverSubscriptionId: serverAssignedId, relayBaseUrl, vapidPublicKey });
 
-  return { subscriptionId: serverAssignedId };
+    return { subscriptionId: serverAssignedId };
+  } catch (error) {
+    if (serverAssignedId) {
+      await params.client.destroyPushSubscription(serverAssignedId).catch(() => undefined);
+    }
+    await fetch(
+      buildRelayUrl(relayBaseUrl, `/api/push/register/${encodeURIComponent(deviceClientId)}`),
+      { method: 'DELETE' },
+    ).catch(() => undefined);
+    throw error;
+  }
+}
+
+export function enableWebPush(params: EnableWebPushParams): Promise<EnableWebPushResult> {
+  const localAccountId = resolveLocalAccountId(params.client, params.localAccountId);
+  const generation = currentPushOperationGeneration(localAccountId);
+  return queuePushOperation(() => enableWebPushNow(params, generation));
 }
 
 export interface DisableWebPushParams {
   client: IJMAPClient;
+  localAccountId?: string;
   relayBaseUrl?: string;
 }
 
@@ -389,33 +576,44 @@ export interface DisableWebPushParams {
 // (only when no other accounts still need it) the browser-wide
 // PushSubscription. Any single failure is swallowed so the user always ends
 // up in a "disabled" state locally.
-export async function disableWebPush(params: DisableWebPushParams): Promise<void> {
-  const relayBaseUrl = (params.relayBaseUrl ?? DEFAULT_RELAY_BASE_URL).replace(/\/+$/, '');
+async function disableWebPushNow(params: DisableWebPushParams): Promise<void> {
   const accountId = params.client.getAccountId();
+  const localAccountId = resolveLocalAccountId(params.client, params.localAccountId);
+  const metadata = readMetadata(localAccountId);
+  const relayBaseUrl = (
+    params.relayBaseUrl ?? metadata?.relayBaseUrl ?? DEFAULT_RELAY_BASE_URL
+  ).replace(/\/+$/, '');
 
   const subIdKey = subscriptionIdKey(accountId);
-  const devIdKey = deviceClientIdKey(accountId);
+  const devIdKey = deviceClientIdKey(localAccountId);
 
-  const storedServerId = localStorage.getItem(subIdKey);
-  if (storedServerId) {
-    await params.client.destroyPushSubscription(storedServerId).catch(() => undefined);
-    localStorage.removeItem(subIdKey);
-  }
-
-  const deviceClientId = localStorage.getItem(devIdKey);
+  const storedServerId = metadata?.serverSubscriptionId || localStorage.getItem(subIdKey);
+  const deviceClientId = metadata?.deviceClientId || localStorage.getItem(devIdKey);
   if (deviceClientId && relayBaseUrl) {
-    await fetch(
+    const response = await fetch(
       buildRelayUrl(relayBaseUrl, `/api/push/register/${encodeURIComponent(deviceClientId)}`),
       { method: 'DELETE' },
-    ).catch(() => undefined);
+    ).catch(() => null);
+    if (!response || (!response.ok && response.status !== 404)) {
+      throw new Error('Failed to remove the push relay registration');
+    }
+  }
+  if (storedServerId) {
+    const subscriptions = await params.client.listPushSubscriptions();
+    if (subscriptions.some((subscription) => subscription.id === storedServerId)) {
+      await params.client.destroyPushSubscription(storedServerId);
+    }
+    localStorage.removeItem(subIdKey);
   }
   // Keep the deviceClientId around so a later re-enable for this account
   // reuses the same relay subscriptionId rather than scattering orphans.
+  removeMetadata(localAccountId);
 
   // The browser-wide PushSubscription is shared by every account on this
   // origin, so only tear it down if no other account is still using it.
   if (
-    !anyOtherAccountHasSubscription(accountId)
+    allMetadata(localAccountId).length === 0
+    && !anyOtherAccountHasSubscription(accountId)
     && typeof navigator !== 'undefined'
     && 'serviceWorker' in navigator
   ) {
@@ -425,11 +623,98 @@ export async function disableWebPush(params: DisableWebPushParams): Promise<void
   }
 }
 
-export async function isWebPushEnabled(accountId: string): Promise<boolean> {
+export function disableWebPush(params: DisableWebPushParams): Promise<void> {
+  return queuePushOperation(() => disableWebPushNow(params));
+}
+
+export async function isWebPushEnabled(
+  accountId: string,
+  _jmapAccountId = accountId,
+  client?: IJMAPClient,
+): Promise<boolean> {
   if (!isWebPushSupported()) return false;
   if (Notification.permission !== 'granted') return false;
   const registration = await navigator.serviceWorker.getRegistration(SW_SCOPE);
   if (!registration) return false;
   const sub = await registration.pushManager.getSubscription();
-  return sub !== null && localStorage.getItem(subscriptionIdKey(accountId)) !== null;
+  const metadata = readMetadata(accountId);
+  const storedServerId = metadata?.serverSubscriptionId
+    || null;
+  if (!sub || !storedServerId) return false;
+  if (!client) return true;
+  try {
+    const serverSubscription = (await client.listPushSubscriptions())
+      .find((candidate) => candidate.id === storedServerId);
+    if (!serverSubscription) return false;
+    if (!serverSubscription.expires) return true;
+    return new Date(serverSubscription.expires).getTime() > Date.now();
+  } catch {
+    // A transient server failure must not make the UI claim push is disabled.
+    return true;
+  }
+}
+
+export function getStoredPushRelayUrl(localAccountId: string): string | null {
+  return readMetadata(localAccountId)?.relayBaseUrl ?? null;
+}
+
+export async function maintainWebPush(params: EnableWebPushParams): Promise<void> {
+  if (!isWebPushSupported() || Notification.permission !== 'granted') return;
+  const localAccountId = resolveLocalAccountId(params.client, params.localAccountId);
+  const metadata = readMetadata(localAccountId)
+    ?? migrateLegacyMetadata(
+      params.client,
+      localAccountId,
+      params.relayBaseUrl ?? DEFAULT_RELAY_BASE_URL,
+    );
+  if (!metadata) return;
+  const configuredRelay = params.relayBaseUrl?.replace(/\/+$/, '');
+  await enableWebPush({
+    ...params,
+    localAccountId,
+    relayBaseUrl: configuredRelay || metadata.relayBaseUrl,
+    allowRelayMigration: !!configuredRelay,
+  });
+}
+
+export async function suppressWebPushForAccount(
+  client: IJMAPClient,
+  localAccountId?: string,
+): Promise<void> {
+  return suppressWebPushForJmapAccount(client.getAccountId(), localAccountId);
+}
+
+async function suppressWebPushForJmapAccount(
+  jmapAccountId: string,
+  localAccountId?: string,
+): Promise<void> {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  const registration = await navigator.serviceWorker.getRegistration(SW_SCOPE);
+  if (!registration) return;
+  const worker = navigator.serviceWorker.controller ?? registration.active;
+  worker?.postMessage({ type: 'disable-push-account', jmapAccountId, localAccountId });
+}
+
+export async function disableStoredWebPush(localAccountId: string): Promise<void> {
+  const metadata = readMetadata(localAccountId);
+  if (!metadata) return;
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    await suppressWebPushForJmapAccount(metadata.jmapAccountId, localAccountId);
+  }
+  const response = await fetch(
+    buildRelayUrl(metadata.relayBaseUrl, `/api/push/register/${encodeURIComponent(metadata.deviceClientId)}`),
+    { method: 'DELETE' },
+  ).catch(() => null);
+  if (response && (response.ok || response.status === 404)) {
+    removeMetadata(localAccountId);
+  }
+}
+
+export async function unsubscribeWebPushIfUnused(): Promise<void> {
+  if (allMetadata().length > 0 || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return;
+  }
+  const registration = await navigator.serviceWorker.getRegistration(SW_SCOPE);
+  const subscription = await registration?.pushManager.getSubscription();
+  if (subscription) await subscription.unsubscribe().catch(() => undefined);
 }

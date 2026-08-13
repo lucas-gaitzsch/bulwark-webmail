@@ -14,6 +14,7 @@ const mocks = vi.hoisted(() => ({
       getAccountId: () => string;
     },
     username: "alice@example.com",
+    activeAccountId: "account-1",
     isAuthenticated: true,
     isDemoMode: false,
   },
@@ -77,6 +78,7 @@ describe("PushNotificationPrompt", () => {
     mocks.enabled = false;
     mocks.authState.client = { getAccountId: () => "account-1" };
     mocks.authState.username = "alice@example.com";
+    mocks.authState.activeAccountId = "account-1";
     mocks.authState.isAuthenticated = true;
     mocks.authState.isDemoMode = false;
     mocks.settingsState.emailNotificationsEnabled = true;
@@ -98,7 +100,7 @@ describe("PushNotificationPrompt", () => {
     await advancePromptDelay();
 
     expect(screen.getByText("title")).toBeInTheDocument();
-    expect(mocks.isWebPushEnabled).toHaveBeenCalledWith("account-1");
+    expect(mocks.isWebPushEnabled).toHaveBeenCalledWith("account-1", "account-1");
   });
 
   it("enables push through the existing web-push flow", async () => {
@@ -112,6 +114,7 @@ describe("PushNotificationPrompt", () => {
 
     expect(mocks.enableWebPush).toHaveBeenCalledWith({
       client: mocks.authState.client,
+      localAccountId: "account-1",
       relayBaseUrl: "https://notifications.relay.bulwarkmail.org",
       accountLabel: "alice@example.com",
     });
@@ -165,12 +168,14 @@ describe("PushNotificationPrompt", () => {
     fireEvent.click(screen.getByText("not_now"));
 
     mocks.authState.client = { getAccountId: () => "account-2" };
+    mocks.authState.activeAccountId = "account-2";
     rerender(<PushNotificationPrompt />);
     await advancePromptDelay();
     expect(screen.getByText("title")).toBeInTheDocument();
     fireEvent.click(screen.getByText("not_now"));
 
     mocks.authState.client = { getAccountId: () => "account-1" };
+    mocks.authState.activeAccountId = "account-1";
     rerender(<PushNotificationPrompt />);
     await advancePromptDelay();
     expect(screen.queryByText("title")).not.toBeInTheDocument();
@@ -199,7 +204,7 @@ describe("PushNotificationPrompt", () => {
     });
     await advancePromptDelay();
 
-    expect(mocks.isWebPushEnabled).toHaveBeenCalledWith("account-1");
+    expect(mocks.isWebPushEnabled).toHaveBeenCalledWith("account-1", "account-1");
     expect(screen.getByText("title")).toBeInTheDocument();
   });
 });

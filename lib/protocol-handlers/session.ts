@@ -305,9 +305,14 @@ export function listenForMailtoRequests(
     };
     navigator.serviceWorker.addEventListener("message", handleServiceWorkerMessage);
     notifyServiceWorker(MAILTO_CLIENT_READY, { ...clientInfo, clientId: BROWSER_CLIENT_ID });
+    const handleControllerChange = () => {
+      notifyServiceWorker(MAILTO_CLIENT_READY, { ...getClientInfo(), clientId: BROWSER_CLIENT_ID });
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
     cleanup.push(() => {
       notifyServiceWorker(MAILTO_CLIENT_GONE, { ...clientInfo, clientId: BROWSER_CLIENT_ID });
       navigator.serviceWorker.removeEventListener("message", handleServiceWorkerMessage);
+      navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
     });
   }
 

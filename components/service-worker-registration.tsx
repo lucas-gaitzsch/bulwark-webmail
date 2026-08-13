@@ -25,7 +25,11 @@ export function ServiceWorkerRegistration() {
     }
 
     navigator.serviceWorker
-      .register(`${BASE_PATH}/sw.js`, { scope: `${BASE_PATH}/` })
+      .register(`${BASE_PATH}/sw.js`, {
+        scope: `${BASE_PATH}/`,
+        // Do not reuse the browser HTTP cache when checking the worker script.
+        updateViaCache: "none",
+      })
       .then((registration) => {
         console.log("Service Worker registered successfully:", registration);
       })

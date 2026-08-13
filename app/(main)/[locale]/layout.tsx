@@ -12,6 +12,7 @@ import { PluginDialogHost } from "@/components/plugins/plugin-dialog-host";
 import { PluginConsentDialog } from "@/components/plugins/plugin-consent-dialog";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";
+import { PushLifecycleManager } from "@/components/push-lifecycle-manager";
 import { locales } from "@/i18n/routing";
 
 export default async function LocaleLayout({
@@ -47,6 +48,7 @@ export default async function LocaleLayout({
                   <PluginConsentDialog />
                   <PWAInstallPrompt />
                   <PushNotificationPrompt />
+                  <PushLifecycleManager />
                 </ProtocolLaunchHandlerProvider>
               </TourProvider>
             </EmbeddedBridgeProvider>

@@ -133,7 +133,7 @@ export function AccountSwitcher({ variant = "rail", className }: AccountSwitcher
     e.stopPropagation();
     const label = account.email || account.username;
     if (!window.confirm(t("remove_account_confirm", { account: label }))) return;
-    removeAccount(account.id);
+    void removeAccount(account.id);
   };
 
   const handleLogout = () => {

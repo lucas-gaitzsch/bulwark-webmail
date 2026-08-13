@@ -3,6 +3,14 @@ import * as browserNavigation from '@/lib/browser-navigation';
 import { useAuthStore } from '../auth-store';
 import { useAccountStore } from '../account-store';
 
+const webPushMocks = vi.hoisted(() => ({
+  cancelWebPushOperations: vi.fn(),
+  disableWebPush: vi.fn(),
+  unsubscribeWebPushIfUnused: vi.fn(),
+}));
+
+vi.mock('@/lib/web-push', () => webPushMocks);
+
 type FetchInput = Parameters<typeof fetch>[0];
 type FetchInit = Parameters<typeof fetch>[1];
 
@@ -11,6 +19,9 @@ describe('auth-store logout redirects', () => {
     vi.restoreAllMocks();
     sessionStorage.clear();
     localStorage.clear();
+    webPushMocks.disableWebPush.mockReset().mockResolvedValue(undefined);
+    webPushMocks.cancelWebPushOperations.mockReset();
+    webPushMocks.unsubscribeWebPushIfUnused.mockReset().mockResolvedValue(undefined);
     window.history.pushState({}, '', '/en');
 
     useAccountStore.setState({
@@ -53,6 +64,55 @@ describe('auth-store logout redirects', () => {
 
     expect(replaceSpy).toHaveBeenCalledWith('/fr/login');
     expect(fetchMock).toHaveBeenCalledWith('/api/auth/session?slot=0', { method: 'DELETE', keepalive: true });
+  });
+
+  it('waits for push cleanup before disconnecting the active account', async () => {
+    let finishCleanup: (() => void) | undefined;
+    webPushMocks.disableWebPush.mockImplementation(() => new Promise<void>((resolve) => {
+      finishCleanup = resolve;
+    }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({}) }));
+    vi.spyOn(browserNavigation, 'replaceWindowLocation').mockImplementation(() => {});
+    const disconnect = vi.fn();
+    const client = { disconnect, getAccountId: () => 'jmap-1' };
+    const account = {
+      id: 'alice@mail.example',
+      label: 'Alice',
+      serverUrl: 'https://mail.example',
+      username: 'alice',
+      authMode: 'basic' as const,
+      cookieSlot: 0,
+      rememberMe: true,
+      displayName: 'Alice',
+      email: 'alice@mail.example',
+      avatarColor: '#000000',
+      lastLoginAt: Date.now(),
+      isConnected: true,
+      hasError: false,
+      isDefault: true,
+    };
+    useAccountStore.setState({
+      accounts: [account],
+      activeAccountId: account.id,
+      defaultAccountId: account.id,
+    });
+    useAuthStore.setState({
+      isAuthenticated: true,
+      activeAccountId: account.id,
+      client: client as never,
+    });
+
+    const logout = useAuthStore.getState().logout();
+    await vi.waitFor(() => expect(webPushMocks.disableWebPush).toHaveBeenCalledWith({
+      client,
+      localAccountId: account.id,
+    }));
+    expect(disconnect).not.toHaveBeenCalled();
+
+    finishCleanup?.();
+    await logout;
+
+    expect(disconnect).toHaveBeenCalledOnce();
   });
 
   it('marks session expiry, preserves the current path, and redirects to login when the refresh is rejected (401)', async () => {

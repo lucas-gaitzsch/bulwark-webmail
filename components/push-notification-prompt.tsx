@@ -57,6 +57,7 @@ export function PushNotificationPrompt() {
   const username = useAuthStore((state) => state.username);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isDemoMode = useAuthStore((state) => state.isDemoMode);
+  const localAccountId = useAuthStore((state) => state.activeAccountId);
   const emailNotificationsEnabled = useSettingsStore(
     (state) => state.emailNotificationsEnabled,
   );
@@ -136,7 +137,7 @@ export function PushNotificationPrompt() {
     }
 
     timer = setTimeout(() => {
-      void isWebPushEnabled(accountId)
+      void isWebPushEnabled(localAccountId ?? accountId, accountId)
         .then((enabled) => {
           if (!cancelled && !enabled) setShowPrompt(true);
         })
@@ -152,6 +153,7 @@ export function PushNotificationPrompt() {
     };
   }, [
     accountId,
+    localAccountId,
     client,
     emailNotificationsEnabled,
     isAuthenticated,
@@ -169,6 +171,7 @@ export function PushNotificationPrompt() {
     try {
       await enableWebPush({
         client,
+        localAccountId: localAccountId ?? undefined,
         relayBaseUrl,
         accountLabel: username ?? undefined,
       });

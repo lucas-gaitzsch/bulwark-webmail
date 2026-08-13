@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger';
-import { MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
+import { generateAccountId, MAX_ACCOUNT_SLOTS } from '@/lib/account-utils';
 import { readStalwartAuthContextFromStore } from '@/lib/stalwart/auth-context';
 import {
   getStalwartCredentials,
@@ -15,18 +15,27 @@ interface ResolvedTarget {
   authHeader: string;
   apiUrl: string;
   accountId: string;
+  localAccountId: string;
 }
 
 // When the SW passes ?accountId=, we need the slot whose JMAP session owns
 // that account - not just "the first signed-in slot", which is what
 // getStalwartCredentials() defaults to. Probe each candidate's session in
 // parallel and return the first match.
-async function resolveTargetForAccount(accountId: string): Promise<ResolvedTarget | null> {
+async function resolveTargetForAccount(
+  accountId: string,
+  localAccountId?: string | null,
+): Promise<ResolvedTarget | null> {
   const cookieStore = await cookies();
-  const probes: Promise<ResolvedTarget | null>[] = [];
+  const contexts = [];
   for (let slot = 0; slot < MAX_ACCOUNT_SLOTS; slot++) {
     const ctx = readStalwartAuthContextFromStore(cookieStore, slot);
     if (!ctx) continue;
+    if (localAccountId && generateAccountId(ctx.username, ctx.serverUrl) !== localAccountId) continue;
+    contexts.push(ctx);
+  }
+  const probes: Promise<ResolvedTarget | null>[] = [];
+  for (const ctx of contexts) {
     const serverUrl = ctx.serverUrl.replace(/\/+$/, '');
     probes.push(
       (async () => {
@@ -42,15 +51,38 @@ async function resolveTargetForAccount(accountId: string): Promise<ResolvedTarge
           const mailAccountId = session.primaryAccounts?.['urn:ietf:params:jmap:mail'];
           if (!session.apiUrl || !mailAccountId) return null;
           if (mailAccountId !== accountId) return null;
-          return { authHeader: ctx.authHeader, apiUrl: session.apiUrl, accountId: mailAccountId };
+          return {
+            authHeader: ctx.authHeader,
+            apiUrl: session.apiUrl,
+            accountId: mailAccountId,
+            localAccountId: generateAccountId(ctx.username, ctx.serverUrl),
+          };
         } catch {
           return null;
         }
       })(),
     );
   }
-  const results = await Promise.all(probes);
-  return results.find((r): r is ResolvedTarget => r !== null) ?? null;
+  if (localAccountId) return (await probes[0]) ?? null;
+  return await new Promise((resolve) => {
+    if (probes.length === 0) return resolve(null);
+    let remaining = probes.length;
+    const timeout = setTimeout(() => resolve(null), 5_000);
+    for (const probe of probes) {
+      void probe.then((result) => {
+        if (result) {
+          clearTimeout(timeout);
+          resolve(result);
+          return;
+        }
+        remaining -= 1;
+        if (remaining === 0) {
+          clearTimeout(timeout);
+          resolve(null);
+        }
+      });
+    }
+  });
 }
 
 async function resolveDefaultTarget(creds: StalwartCredentials): Promise<ResolvedTarget | null> {
@@ -65,7 +97,12 @@ async function resolveDefaultTarget(creds: StalwartCredentials): Promise<Resolve
   const apiUrl = session.apiUrl;
   const accountId = session.primaryAccounts?.['urn:ietf:params:jmap:mail'];
   if (!apiUrl || !accountId) return null;
-  return { authHeader: creds.authHeader, apiUrl, accountId };
+  return {
+    authHeader: creds.authHeader,
+    apiUrl,
+    accountId,
+    localAccountId: generateAccountId(creds.username, creds.serverUrl),
+  };
 }
 
 /**
@@ -87,11 +124,12 @@ export async function GET(request: NextRequest) {
     // clients (and the manual /api/push/preview probe) omit it and fall back
     // to the first signed-in slot.
     const requestedAccountId = request.nextUrl.searchParams.get('accountId');
+    const requestedLocalAccountId = request.nextUrl.searchParams.get('localAccountId');
 
     let target: ResolvedTarget | null = null;
     let authHeader: string;
     if (requestedAccountId) {
-      target = await resolveTargetForAccount(requestedAccountId);
+      target = await resolveTargetForAccount(requestedAccountId, requestedLocalAccountId);
       if (!target) {
         return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
       }
@@ -146,6 +184,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         email: null,
         unreadTotal: 0,
+        accountId: target.localAccountId,
       }, {
         headers: {
           'Cache-Control': 'no-store',
@@ -225,6 +264,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       email,
       unreadTotal,
+      accountId: target.localAccountId,
     }, {
       headers: {
         // SW already gates on its own logic - don't let push events get

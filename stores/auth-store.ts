@@ -45,7 +45,7 @@ interface AuthState {
   refreshAccessToken: () => Promise<string | null>;
   logout: () => Promise<void>;
   logoutAll: () => Promise<void>;
-  removeAccount: (accountId: string) => void;
+  removeAccount: (accountId: string) => Promise<void>;
   switchAccount: (accountId: string) => Promise<void>;
   checkAuth: () => Promise<void>;
   clearError: () => void;
@@ -521,6 +521,48 @@ function clearAllRefreshTimers(): void {
   refreshTimers.clear();
   refreshPromises.clear();
   refreshFailureCounts.clear();
+}
+
+const WEB_PUSH_CLEANUP_TIMEOUT_MS = 5_000;
+
+async function cleanupWebPushBeforeDisconnect(
+  client: IJMAPClient | null | undefined,
+  localAccountId?: string | null,
+): Promise<void> {
+  if (!localAccountId || typeof window === 'undefined') return;
+  if (!client) {
+    await import('@/lib/web-push')
+      .then(({ cancelWebPushOperations, disableStoredWebPush }) => {
+        cancelWebPushOperations(localAccountId);
+        return disableStoredWebPush(localAccountId);
+      })
+      .catch(() => undefined);
+    return;
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const webPush = await import('@/lib/web-push');
+    webPush.cancelWebPushOperations(localAccountId);
+    await Promise.race([
+      Promise.resolve().then(async () => {
+        try {
+          await webPush.disableWebPush({ client, localAccountId });
+        } catch (error) {
+          debug.warn('auth', 'Failed to clean up Web Push before disconnect:', error);
+        }
+      }),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, WEB_PUSH_CLEANUP_TIMEOUT_MS);
+      }),
+    ]);
+  } catch (error) {
+    debug.warn('auth', 'Could not start Web Push cleanup before disconnect:', error);
+  } finally {
+    if (timer) clearTimeout(timer);
+    await import('@/lib/web-push')
+      .then(({ suppressWebPushForAccount }) => suppressWebPushForAccount(client, localAccountId))
+      .catch(() => undefined);
+  }
 }
 
 /**
@@ -1226,6 +1268,7 @@ export const useAuthStore = create<AuthState>()(
         // Disconnect and null out the client BEFORE clearing stores so the
         // page doesn't fire data-loading effects with the stale client.
         const oldClient = state.client;
+        if (!wasDemoMode) await cleanupWebPushBeforeDisconnect(oldClient, accountId);
         set({ client: null });
         oldClient?.disconnect();
 
@@ -1319,8 +1362,8 @@ export const useAuthStore = create<AuthState>()(
       // drop it from the registry, and clear its per-slot cookies. If asked to
       // remove the active account, defer to logout() which handles switching
       // away or redirecting.
-      removeAccount: (accountId: string) => {
-        if (accountId === get().activeAccountId) { get().logout(); return; }
+      removeAccount: async (accountId: string) => {
+        if (accountId === get().activeAccountId) { await get().logout(); return; }
         const accountStore = useAccountStore.getState();
         const account = accountStore.getAccountById(accountId);
         if (!account) return;
@@ -1329,6 +1372,7 @@ export const useAuthStore = create<AuthState>()(
 
         clearRefreshTimer(accountId);
         const client = clients.get(accountId);
+        await cleanupWebPushBeforeDisconnect(client, accountId);
         if (client) { try { client.disconnect(); } catch { /* noop */ } }
         clients.delete(accountId);
         evictAccount(accountId);
@@ -1349,8 +1393,20 @@ export const useAuthStore = create<AuthState>()(
           return;
         }
 
+        const connectedClients = [...clients.entries()];
+        const registeredAccountIds = useAccountStore.getState().accounts.map((account) => account.id);
+        await Promise.all(connectedClients.map(([accountId, client]) =>
+          cleanupWebPushBeforeDisconnect(client, accountId)));
+        const connectedAccountIds = new Set(connectedClients.map(([accountId]) => accountId));
+        await Promise.all(registeredAccountIds
+          .filter((accountId) => !connectedAccountIds.has(accountId))
+          .map((accountId) => cleanupWebPushBeforeDisconnect(undefined, accountId)));
+        await import('@/lib/web-push')
+          .then(({ unsubscribeWebPushIfUnused }) => unsubscribeWebPushIfUnused())
+          .catch(() => undefined);
+
         // Disconnect all clients
-        for (const c of clients.values()) {
+        for (const [, c] of connectedClients) {
           c.disconnect();
         }
         clients.clear();
