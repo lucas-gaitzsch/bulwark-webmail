@@ -112,33 +112,51 @@ async function handlePush(event) {
   const accountLabel = (payload && typeof payload.accountLabel === "string")
     ? payload.accountLabel
     : "";
-  const payloadAccountId = (payload && typeof payload.accountId === "string")
-    ? payload.accountId
-    : "";
-
-  // JMAP StateChange wraps changes in { changed: { [accountId]: {...} } }.
-  // The relay forwards a single account's StateChange per push, so the first
-  // key is the one this notification is for. Without this the preview API
-  // would just fall back to the first signed-in slot and surface mail from
-  // the wrong account.
+  // Two payload shapes reach us from the relay:
+  //   - "jmap-email-push": the server evaluated our per-account delivery
+  //     filter (draft-ietf-jmap-emailpush) and this is a list of the new
+  //     message ids that passed it - spam filed into Junk never gets here.
+  //   - "jmap-state-change" (older servers): a bare EmailDelivery ping wrapped
+  //     as { changed: { [accountId]: {...} } }, fired for every ingested
+  //     message including junk. The relay forwards a single account per push,
+  //     so the first key is the one this notification is for.
   const changed = payload && payload.changed && typeof payload.changed === "object"
     ? payload.changed
     : null;
-  const accountId = changed ? Object.keys(changed)[0] || "" : "";
+  const accountId = (payload && typeof payload.accountId === "string" && payload.accountId)
+    || (changed ? Object.keys(changed)[0] || "" : "");
   const rememberedAccountId = accountId ? await readPushAccount(accountId) : "";
-  const effectiveLocalAccountId = payloadAccountId || rememberedAccountId;
+  const effectiveLocalAccountId = rememberedAccountId;
   if (accountId && await isPushAccountDisabled(accountId, effectiveLocalAccountId)) return;
+  const emailIds = payload && Array.isArray(payload.emailIds)
+    ? payload.emailIds.filter((id) => typeof id === "string" && id)
+    : [];
 
-  // Best effort: ask the webmail to look up the latest unread email so we can
-  // build a useful notification. If the request fails (offline, session
-  // expired, server down) we fall back to a generic "New mail" so the user
-  // still sees something.
+  // Never notify twice for the same message. A push can be redelivered (relay
+  // retry, browser replay after coming back online) and, on the older
+  // state-change path, a junk delivery wakes us while an unread message we
+  // already announced is still sitting in the Inbox - without this we would
+  // re-buzz for that old message.
+  const notified = await readNotifiedIds(accountId);
+  const freshIds = emailIds.filter((id) => !notified.includes(id));
+  if (emailIds.length > 0 && freshIds.length === 0) {
+    return;
+  }
+
+  // Best effort: ask the webmail to look up the email so we can build a useful
+  // notification. With ids from the server we ask for exactly the newest of
+  // them; otherwise the API falls back to the newest unread Inbox message. If
+  // the request fails (offline, session expired, server down) we fall back to
+  // a generic "New mail" so the user still sees something.
   let preview = null;
   let previewOk = false;
   try {
-    const previewUrl = accountId
-      ? `${BASE_PATH}/api/push/preview?accountId=${encodeURIComponent(accountId)}${effectiveLocalAccountId ? `&localAccountId=${encodeURIComponent(effectiveLocalAccountId)}` : ""}`
-      : `${BASE_PATH}/api/push/preview`;
+    const query = [];
+    if (accountId) query.push(`accountId=${encodeURIComponent(accountId)}`);
+    if (effectiveLocalAccountId) query.push(`localAccountId=${encodeURIComponent(effectiveLocalAccountId)}`);
+    if (freshIds.length > 0) query.push(`emailId=${encodeURIComponent(freshIds[freshIds.length - 1])}`);
+    const qs = query.join("&");
+    const previewUrl = `${BASE_PATH}/api/push/preview${qs ? `?${qs}` : ""}`;
     const res = await fetch(previewUrl, {
       credentials: "include",
       cache: "no-store",
@@ -170,9 +188,22 @@ async function handlePush(event) {
     return;
   }
 
+  // State-change path only (no ids from the server): the newest unread Inbox
+  // message is one we already announced, so whatever woke us was not new
+  // Inbox mail - typically a delivery into Junk or a Sieve-filed folder.
+  if (emailIds.length === 0 && previewOk && email && notified.includes(email.id)) {
+    return;
+  }
+
+  // Group per account under one shared tag so a burst of new mail collapses
+  // into a single, self-updating notification instead of one toast per message
+  // (Android renders one notification per unique tag, which is why 50 arrivals
+  // used to stack 50 toasts). The newest message is the headline and a
+  // Gmail-style "+N more" line carries the rest, counted from the account's
+  // unread total.
+  const groupTag = "bulwark-mail:" + (notificationAccountKey || "default");
   let title;
   let body;
-  let tag = "bulwark-mail" + (notificationAccountKey ? `:${notificationAccountKey}` : "");
   let data = { kind: "mail-list", accountId: localAccountId };
 
   if (email) {
@@ -180,13 +211,20 @@ async function handlePush(event) {
     const senderName = (sender && sender.name) || (sender && sender.email) || "New mail";
     title = senderName + (accountLabel ? ` (${accountLabel})` : "");
     body = email.subject || email.preview || "(no subject)";
-    tag = "bulwark-mail:" + (notificationAccountKey ? `${notificationAccountKey}:` : "") + email.id;
-    data = {
-      kind: "email",
-      emailId: email.id,
-      threadId: email.threadId,
-      accountId: localAccountId,
-    };
+    const more = unreadTotal > 1 ? unreadTotal - 1 : 0;
+    if (more > 0) {
+      // Several unread: this is a group. Keep the newest as the headline, add
+      // the "+N more" count, and open the inbox (not one message) on click.
+      body += "\n" + (more === 1 ? "+1 more message" : `+${more} more messages`);
+    } else {
+      // Exactly one unread: deep-link straight to that message on click.
+      data = {
+        kind: "email",
+        emailId: email.id,
+        threadId: email.threadId,
+        accountId: localAccountId,
+      };
+    }
   } else {
     title = accountLabel ? `New mail (${accountLabel})` : "New mail";
     body = unreadTotal > 1 ? `${unreadTotal} unread messages` : "You have new mail";
@@ -194,7 +232,9 @@ async function handlePush(event) {
 
   await self.registration.showNotification(title, {
     body,
-    tag,
+    // Shared per-account tag: each new push replaces the account's single
+    // notification rather than adding another.
+    tag: groupTag,
     // Branded app icon via the PWA-icon endpoint (admin-configured, else the
     // built-in default). The static /icon-192x192.png ignored admin branding.
     icon: `${BASE_PATH}/api/pwa-icon/192`,
@@ -202,6 +242,49 @@ async function handlePush(event) {
     data,
     renotify: true,
   });
+
+  const announced = freshIds.length > 0 ? freshIds : (email ? [email.id] : []);
+  if (announced.length > 0) {
+    await writeNotifiedIds(accountId, notified.concat(announced));
+  }
+}
+
+// Per-account list of message ids we have already shown a notification for.
+// Service workers have no localStorage; the Cache API is the cheapest durable
+// store that survives the worker being killed between pushes. Failures are
+// swallowed - dedupe is a nicety, delivering the notification is not.
+const PUSH_STATE_CACHE = "bulwark-push-state-v1";
+const NOTIFIED_IDS_LIMIT = 200;
+
+function notifiedIdsKey(accountId) {
+  return `${self.location.origin}${BASE_PATH}/__push-state/notified/${encodeURIComponent(accountId || "default")}`;
+}
+
+async function readNotifiedIds(accountId) {
+  try {
+    const cache = await caches.open(PUSH_STATE_CACHE);
+    const res = await cache.match(notifiedIdsKey(accountId));
+    if (!res) return [];
+    const data = await res.json();
+    return Array.isArray(data.ids) ? data.ids.filter((id) => typeof id === "string") : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+async function writeNotifiedIds(accountId, ids) {
+  try {
+    const cache = await caches.open(PUSH_STATE_CACHE);
+    const unique = Array.from(new Set(ids)).slice(-NOTIFIED_IDS_LIMIT);
+    await cache.put(
+      notifiedIdsKey(accountId),
+      new Response(JSON.stringify({ ids: unique }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  } catch (_) {
+    // Best effort only.
+  }
 }
 
 async function handleNotificationClick(event) {

@@ -247,6 +247,10 @@
     "mark_read": "סמן כנקרא",
     "print": "הדפס",
     "view_source": "צפה במקור",
+
+    "fullscreen": "מסך מלא",
+
+    "exit_fullscreen": "יציאה ממסך מלא",
     "export_email": "ייצא כ-.eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": "ייבוא .eml",
@@ -537,6 +541,7 @@
   },
   "email_composer": {
     "new_message": "הודעה חדשה",
+    "signature_edit_hint": "לחץ לחיצה כפולה לעריכת החתימה",
     "reply": "השב",
     "reply_all": "השב לכולם",
     "forward": "קדימה",
@@ -713,7 +718,10 @@
     "rate_limited_title": "אימות השרת מוגבל באופן זמני בקצב.",
     "rate_limited_detail": "Bulwark השהתה בקשות ברקע כדי למנוע נעילה. מנסה שוב ב-{seconds}s.",
     "rate_limited_action_title": "הבקשה הושהתה כדי למנוע נעילה.",
-    "rate_limited_action_detail": "Bulwark ממתין עד שקירור השרת יסתיים לפני שליחת בקשות מאומתות יותר. נסה שוב ב-{seconds}s."
+    "rate_limited_action_detail": "Bulwark ממתין עד שקירור השרת יסתיים לפני שליחת בקשות מאומתות יותר. נסה שוב ב-{seconds}s.",
+    "pull_to_refresh": "משוך לרענון",
+    "release_to_refresh": "שחרר לרענון",
+    "refreshing": "מרענן…"
   },
   "notifications": {
     "email_sent": "האימייל נשלח בהצלחה",
@@ -820,7 +828,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "עבור לפרסית"
+    "switch_to_farsi": "עבור לפרסית",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "עבור למונגולית"
   },
   "settings": {
     "title": "הגדרות",
@@ -875,6 +886,56 @@
       "advanced": "מתקדם"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "סדר רשימת ההודעות",
+        "description": "איך ההודעות מסודרות ברשימה. המיון מתבצע בשרת, ולכן חל על כל התיקייה ולא רק על ההודעות שנטענו.",
+        "preset": {
+          "chronological": "כרונולוגי (החדשות תחילה)",
+          "unread_first": "שלא נקראו תחילה",
+          "starred_first": "מסומנות בכוכב תחילה",
+          "tagged_first": "מתויגות תחילה",
+          "custom": "מותאם אישית"
+        },
+        "tag_label": "תגית",
+        "advanced_show": "מתקדם: עריכת רמות המיון",
+        "advanced_hide": "הסתרת מתקדם",
+        "criterion_label": "קריטריון רמה {n}",
+        "direction_label": "כיוון רמה {n}",
+        "criteria": {
+          "unread": "לא נקרא",
+          "starred": "מסומן בכוכב",
+          "tag": "תגית",
+          "receivedAt": "תאריך קבלה",
+          "sentAt": "תאריך שליחה",
+          "from": "שולח",
+          "subject": "נושא",
+          "size": "גודל"
+        },
+        "direction": {
+          "unread_first": "שלא נקראו תחילה",
+          "read_first": "שנקראו תחילה",
+          "starred_first": "מסומנות בכוכב תחילה",
+          "unstarred_first": "ללא כוכב תחילה",
+          "tagged_first": "מתויגות תחילה",
+          "untagged_first": "ללא תגית תחילה",
+          "newest_first": "החדשות תחילה",
+          "oldest_first": "הישנות תחילה",
+          "a_to_z": "א → ת",
+          "z_to_a": "ת → א",
+          "largest_first": "הגדולות תחילה",
+          "smallest_first": "הקטנות תחילה"
+        },
+        "add_level": "הוספת רמה",
+        "remove_level": "הסרת רמה",
+        "move_up": "הזזה למעלה",
+        "move_down": "הזזה למטה",
+        "tiebreak_note": "עד שלוש רמות; הרמות הבאות מכריעות במקרה של שוויון. \"החדשות תחילה\" תמיד מוחל אחרון.",
+        "scope": {
+          "label": "החלה על כל התיקיות",
+          "description": "כשכבוי, הסדר חל על תיבת הדואר הנכנס בלבד; שאר התיקיות נשארות כרונולוגיות."
+        },
+        "unsupported_note": "שרת הדואר שלך אינו תומך במיון לפי מצב קריאה, כוכב או תגיות. רמות אלה מתעלמות והרשימה נשארת כרונולוגית."
+      },
       "title": "מראה",
       "description": "התאם אישית את המראה והתחושה של דואר האינטרנט שלך",
       "theme": {
@@ -1063,7 +1124,6 @@
         "relay_desc": "ברירת מחדל של ממסר Bulwark המתורח. שנה רק אם אתה מארח בעצמך.",
         "relay_locked": "הוגדר על ידי מנהל",
         "relay_locked_desc": "כתובת ממסר הדחיפה הוגדרה על ידי מנהל שלך ולא ניתן לשנות אותה.",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "פעיל בהתקן זה",
         "status_inactive": "לא מופעל בהתקן זה",
         "status_unsupported": "דפדפן זה אינו תומך בדחיפה ברשת",
@@ -1074,7 +1134,23 @@
         "confirm_disable_title": "השבת התראות בדפדפן?",
         "confirm_disable_message": "התקן זה יפסיק לקבל התראות כאשר האתר סגור.",
         "dismiss_aria": "בטל הודעת התראות",
-        "ios_hint": "ב־iOS, התקן קודם כל את האתר בהיתוך שלך - Safari מספק Web Push רק לPWA מותקנות."
+        "ios_hint": "ב־iOS, התקן קודם כל את האתר בהיתוך שלך - Safari מספק Web Push רק לPWA מותקנות.",
+        "devices_title": "מכשירים רשומים",
+        "devices_desc": "כל המכשירים הרשומים לקבלת התראות ברקע עבור חשבון זה. ביטול מכשיר מפסיק את הקבלה מיד.",
+        "devices_loading": "טוען מכשירים רשומים…",
+        "devices_empty": "אין מכשירים רשומים להתראות ברקע.",
+        "devices_error": "לא ניתן לטעון את המכשירים הרשומים.",
+        "devices_refresh": "רענון",
+        "device_this": "מכשיר זה",
+        "device_other": "מכשיר אחר",
+        "device_status_active": "מספק התראות",
+        "device_status_inactive": "מעולם לא סיפק התראה",
+        "device_status_unknown": "לא מוכר לממסר הזה",
+        "device_expires": "פג בתאריך {date}",
+        "revoke": "ביטול",
+        "confirm_revoke_title": "לבטל את המכשיר הזה?",
+        "confirm_revoke_message": "הוא יפסיק לקבל התראות ברקע מיד. הפעלה מחדש של פוש באותו מכשיר תרשום אותו מחדש.",
+        "confirm_revoke_message_this": "מכשיר זה יפסיק לקבל התראות ברקע מיד."
       }
     },
     "language_region": {
@@ -1115,6 +1191,12 @@
         "description": "התחל את השבוע ביום ראשון או שני",
         "sunday": "ראשון",
         "monday": "שני"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1142,6 +1224,12 @@
         "auto": "אוטומטי (מומלץ)",
         "always": "תמיד להוסיף מרווח",
         "edge": "מקצה לקצה"
+      },
+      "plain_text_font": {
+        "label": "גופן טקסט פשוט",
+        "description": "הגופן המשמש להודעות בטקסט פשוט",
+        "mono": "ברוחב קבוע",
+        "sans": "רגיל (כמו היישום)"
       },
       "archive_mode": {
         "label": "ארכיון ב",
@@ -1323,6 +1411,22 @@
       "return_to_list_after_action": {
         "label": "חזור לרשימה לאחר מחיקה או סימון שלא נקראו",
         "description": "לאחר מחיקה או סימון ההודעה הפתוחה כלא קרויה, חזור לרשימת ההודעות במקום לפתוח את ההודעה הבאה."
+      },
+      "swipe_right_action": {
+        "label": "פעולת החלקה ימינה (נייד)",
+        "description": "במכשירי מגע, הפעולה שמתבצעת כשמחליקים הודעה ימינה ברשימה."
+      },
+      "swipe_left_action": {
+        "label": "פעולת החלקה שמאלה (נייד)",
+        "description": "במכשירי מגע, הפעולה שמתבצעת כשמחליקים הודעה שמאלה ברשימה."
+      },
+      "swipe_actions": {
+        "none": "ללא",
+        "archive": "העבר לארכיון",
+        "delete": "מחק",
+        "mark_read": "החלף מצב נקרא",
+        "star": "החלף כוכב",
+        "spam": "סמן כספאם"
       },
       "rtl_editing": {
         "label": "תמיכה בעריכה מימין לשמאל",
@@ -1625,6 +1729,7 @@
       "create_subfolder": "צור תיקיית משנה",
       "reorder": "גרור לשינוי הסדר",
       "reorder_error": "שינוי סדר התיקיות נכשל",
+      "move_error": "העברת התיקייה נכשלה",
       "subfolder_of": "בתוך{name}",
       "subfolder_name": "שם תיקיית משנה",
       "new_folder_name": "שם התיקיה",
@@ -2841,7 +2946,12 @@
       "default_updated": "לוח שנה ברירת המחדל עודכן",
       "error_default": "נכשל בהגדרת לוח שנה ברירת מחדל",
       "share": "שתף לוח שנה",
-      "new_event_in_calendar": "אירוע חדש בלוח שנה זה"
+      "new_event_in_calendar": "אירוע חדש בלוח שנה זה",
+      "kind": "תוכן",
+      "kind_events": "אירועים",
+      "kind_tasks": "משימות",
+      "kind_both": "אירועים ומשימות",
+      "kind_hint": "קובע אילו אפליקציות יראו את היומן הזה כשהוא מסונכרן דרך CalDAV. לא ניתן לשנות זאת מאוחר יותר."
     },
     "subscription": {
       "title": "מנוי iCal",
@@ -2987,7 +3097,12 @@
     "search_hint": "השתמש במסננים מתקדמים לחיפוש מדויק",
     "advanced_filters_tooltip": "מסנני חיפוש מתקדמים",
     "results_found": "{count, plural, =0 {לא נמצאו תוצאות} one {נמצאה תוצאה אחת} other {נמצאו # תוצאות}}",
-    "results_found_more": "נמצאו תוצאות{count}+"
+    "results_found_more": "נמצאו תוצאות{count}+",
+    "suggestions_recent": "חיפושים אחרונים",
+    "suggestions_people": "אנשים",
+    "suggestions_from": "חיפוש הודעות מאת {address}",
+    "suggestions_to": "חיפוש הודעות אל {address}",
+    "suggestions_remove_recent": "הסרה מהחיפושים האחרונים"
   },
   "welcome": {
     "title": "ברוך הבא לתיבת הדואר שלך",

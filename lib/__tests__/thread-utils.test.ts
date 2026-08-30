@@ -152,6 +152,36 @@ describe('sortThreadGroups', () => {
     expect(sorted.map(g => g.threadId)).toEqual(['old-pinned', 'newest', 'mid']);
   });
 
+  it('mirrors a configured list order instead of re-sorting by date (#718)', () => {
+    // makeEmail defaults to $seen, so the unread group needs bare keywords.
+    const unreadOld = { ...makeGroup('unread-old', '2024-01-01T00:00:00Z'), hasUnread: true };
+    unreadOld.emails = [makeEmail({ id: 'u', receivedAt: '2024-01-01T00:00:00Z', keywords: {} })];
+    const readNew = makeGroup('read-new', '2024-06-01T00:00:00Z');
+    const sorted = sortThreadGroups([readNew, unreadOld], [{ criterion: 'unread', direction: 'desc' }]);
+    expect(sorted.map(g => g.threadId)).toEqual(['unread-old', 'read-new']);
+  });
+
+  it('places a thread where its best-ranked email sorts, not its latest', () => {
+    // An old unread reply keeps the thread in the unread block even though
+    // the newest email in it has been read.
+    const mixed = makeGroup('mixed', '2024-06-01T00:00:00Z');
+    mixed.emails = [
+      makeEmail({ id: 'newest-read', receivedAt: '2024-06-01T00:00:00Z', keywords: { $seen: true } }),
+      makeEmail({ id: 'old-unread', receivedAt: '2024-02-01T00:00:00Z', keywords: {} }),
+    ];
+    const readNewer = makeGroup('read-newer', '2024-07-01T00:00:00Z');
+    const sorted = sortThreadGroups([readNewer, mixed], [{ criterion: 'unread', direction: 'desc' }]);
+    expect(sorted.map(g => g.threadId)).toEqual(['mixed', 'read-newer']);
+  });
+
+  it('keeps pinned threads on top of a configured order', () => {
+    const pinnedRead = makeGroup('pinned-read', '2024-01-01T00:00:00Z', true);
+    const unread = makeGroup('unread', '2024-06-01T00:00:00Z');
+    unread.emails = [makeEmail({ id: 'u', receivedAt: '2024-06-01T00:00:00Z', keywords: {} })];
+    const sorted = sortThreadGroups([unread, pinnedRead], [{ criterion: 'unread', direction: 'desc' }]);
+    expect(sorted.map(g => g.threadId)).toEqual(['pinned-read', 'unread']);
+  });
+
   it('detects hasPinned from the $pinned keyword', () => {
     const emails = [
       makeEmail({ id: 'e1', keywords: { $seen: true } }),

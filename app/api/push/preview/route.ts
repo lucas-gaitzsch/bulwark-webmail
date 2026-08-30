@@ -7,6 +7,8 @@ import {
   getStalwartCredentials,
   type StalwartCredentials,
 } from '@/lib/stalwart/credentials';
+import { fetchJmapServer, isTrustedJmapServerUrl } from '@/lib/stalwart/server-fetch';
+import { DisallowedUrlError } from '@/lib/security/url-guard';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -16,6 +18,8 @@ interface ResolvedTarget {
   apiUrl: string;
   accountId: string;
   localAccountId: string;
+  /** See StalwartCredentials.trusted - false routes through the guarded fetch. */
+  trusted: boolean;
 }
 
 // When the SW passes ?accountId=, we need the slot whose JMAP session owns
@@ -40,9 +44,10 @@ async function resolveTargetForAccount(
     probes.push(
       (async () => {
         try {
-          const res = await fetch(`${serverUrl}/.well-known/jmap`, {
+          const trusted = await isTrustedJmapServerUrl(serverUrl);
+          const res = await fetchJmapServer(`${serverUrl}/.well-known/jmap`, {
             headers: { Authorization: ctx.authHeader },
-          });
+          }, trusted);
           if (!res.ok) return null;
           const session = (await res.json()) as {
             apiUrl?: string;
@@ -56,6 +61,7 @@ async function resolveTargetForAccount(
             apiUrl: session.apiUrl,
             accountId: mailAccountId,
             localAccountId: generateAccountId(ctx.username, ctx.serverUrl),
+            trusted,
           };
         } catch {
           return null;
@@ -86,9 +92,9 @@ async function resolveTargetForAccount(
 }
 
 async function resolveDefaultTarget(creds: StalwartCredentials): Promise<ResolvedTarget | null> {
-  const sessionRes = await fetch(`${creds.serverUrl}/.well-known/jmap`, {
+  const sessionRes = await fetchJmapServer(`${creds.serverUrl}/.well-known/jmap`, {
     headers: { Authorization: creds.authHeader },
-  });
+  }, creds.trusted);
   if (!sessionRes.ok) return null;
   const session = (await sessionRes.json()) as {
     apiUrl?: string;
@@ -102,6 +108,7 @@ async function resolveDefaultTarget(creds: StalwartCredentials): Promise<Resolve
     apiUrl,
     accountId,
     localAccountId: generateAccountId(creds.username, creds.serverUrl),
+    trusted: creds.trusted,
   };
 }
 
@@ -125,6 +132,11 @@ export async function GET(request: NextRequest) {
     // to the first signed-in slot.
     const requestedAccountId = request.nextUrl.searchParams.get('accountId');
     const requestedLocalAccountId = request.nextUrl.searchParams.get('localAccountId');
+    // With a server-side delivery filter (draft-ietf-jmap-emailpush) the push
+    // carries the id of the message that was actually delivered, so the SW
+    // asks for that one instead of guessing "newest unread in the Inbox" -
+    // which is wrong whenever Sieve filed the new message into a folder.
+    const requestedEmailId = request.nextUrl.searchParams.get('emailId');
 
     let target: ResolvedTarget | null = null;
     let authHeader: string;
@@ -146,9 +158,9 @@ export async function GET(request: NextRequest) {
       authHeader = creds.authHeader;
     }
 
-    const { apiUrl, accountId } = target;
+    const { apiUrl, accountId, trusted } = target;
 
-    const inboxRes = await fetch(apiUrl, {
+    const inboxRes = await fetchJmapServer(apiUrl, {
       method: 'POST',
       headers: {
         Authorization: authHeader,
@@ -164,7 +176,7 @@ export async function GET(request: NextRequest) {
           ],
         ],
       }),
-    });
+    }, trusted);
 
     if (!inboxRes.ok) {
       return NextResponse.json({ error: 'JMAP mailbox query failed' }, { status: 502 });
@@ -179,8 +191,9 @@ export async function GET(request: NextRequest) {
     )?.[1] as { ids?: string[] } | undefined;
 
     const inboxId = inboxBody?.ids?.[0];
+    const emailProperties = ['id', 'threadId', 'from', 'subject', 'preview', 'receivedAt'];
 
-    if (!inboxId) {
+    if (!inboxId && !requestedEmailId) {
       return NextResponse.json({
         email: null,
         unreadTotal: 0,
@@ -192,10 +205,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Pull the most recent unread message from the resolved Inbox mailbox.
-    const requestBody = {
-      using: ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
-      methodCalls: [
+    // Pull the most recent unread message from the resolved Inbox mailbox
+    // (and its unread total for the "+N more" line). When the SW named the
+    // delivered message, fetch that one too and prefer it.
+    const methodCalls: unknown[] = [];
+    if (inboxId) {
+      methodCalls.push(
         [
           'Email/query',
           {
@@ -218,21 +233,32 @@ export async function GET(request: NextRequest) {
           {
             accountId,
             '#ids': { resultOf: 'eq', name: 'Email/query', path: '/ids' },
-            properties: ['id', 'threadId', 'from', 'subject', 'preview', 'receivedAt'],
+            properties: emailProperties,
           },
           'eg',
         ],
-      ],
+      );
+    }
+    if (requestedEmailId) {
+      methodCalls.push([
+        'Email/get',
+        { accountId, ids: [requestedEmailId], properties: emailProperties },
+        'delivered',
+      ]);
+    }
+    const requestBody = {
+      using: ['urn:ietf:params:jmap:core', 'urn:ietf:params:jmap:mail'],
+      methodCalls,
     };
 
-    const jmapRes = await fetch(apiUrl, {
+    const jmapRes = await fetchJmapServer(apiUrl, {
       method: 'POST',
       headers: {
         Authorization: authHeader,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(requestBody),
-    });
+    }, trusted);
     if (!jmapRes.ok) {
       return NextResponse.json({ error: 'JMAP request failed' }, { status: 502 });
     }
@@ -250,15 +276,27 @@ export async function GET(request: NextRequest) {
     };
 
     let email: EmailLite | null = null;
+    let delivered: EmailLite | null = null;
     let unreadTotal = 0;
-    for (const [method, body] of data.methodResponses) {
+    for (const [method, body, callId] of data.methodResponses) {
       if (method === 'Email/query') {
         unreadTotal = ((body as { total?: number }).total) ?? 0;
       }
       if (method === 'Email/get') {
         const list = (body as { list?: EmailLite[] }).list ?? [];
-        email = list[0] ?? null;
+        if (callId === 'delivered') delivered = list[0] ?? null;
+        else email = list[0] ?? null;
       }
+    }
+    // The message the server said it delivered beats "newest unread in the
+    // Inbox" - it may have been filed elsewhere by Sieve. Keep the Inbox
+    // unread total for the group line; count the delivered one if it isn't
+    // already in it (unread total is Inbox-scoped).
+    if (delivered) {
+      if (!email || email.id !== delivered.id) {
+        unreadTotal = Math.max(unreadTotal, 1);
+      }
+      email = delivered;
     }
 
     return NextResponse.json({
@@ -273,6 +311,10 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof DisallowedUrlError) {
+      logger.warn('push preview refused non-public server address', { error: error.message });
+      return NextResponse.json({ error: 'JMAP server address is not allowed' }, { status: 502 });
+    }
     // `fetch failed` from undici is too generic to debug - the real reason
     // (ENOTFOUND, ECONNREFUSED, TLS error, …) is on `error.cause`.
     const err = error as Error & { cause?: { code?: string; message?: string } };

@@ -300,6 +300,10 @@
     "move": "انتقال",
     "print": "چاپ",
     "view_source": "مشاهده منبع",
+
+    "fullscreen": "تمام‌صفحه",
+
+    "exit_fullscreen": "خروج از تمام‌صفحه",
     "export_email": "خروجی .eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": "وارد کردن .eml یا .zip",
@@ -574,6 +578,7 @@
     "read_receipt_on": "درخواست تأیید خواندن فعال (کلیک برای غیرفعال کردن)",
     "read_receipt_off": "درخواست تأیید خواندن",
     "new_message": "پیام جدید",
+    "signature_edit_hint": "برای ویرایش امضا دوبار کلیک کنید",
     "reply": "پاسخ",
     "reply_all": "پاسخ به همه",
     "forward": "ارسال مجدد",
@@ -748,7 +753,10 @@
     "rate_limited_title": "احراز هویت سرور موقتاً محدود شده است.",
     "rate_limited_detail": "Bulwark درخواست‌های پس‌زمینه را متوقف کرده است. تلاش مجدد در {seconds} ثانیه.",
     "rate_limited_action_title": "درخواست برای جلوگیری از قفل متوقف شد.",
-    "rate_limited_action_detail": "Bulwark منتظر پایان زمان انتظار سرور است. در {seconds} ثانیه دوباره تلاش کنید."
+    "rate_limited_action_detail": "Bulwark منتظر پایان زمان انتظار سرور است. در {seconds} ثانیه دوباره تلاش کنید.",
+    "pull_to_refresh": "برای تازه‌سازی بکشید",
+    "release_to_refresh": "برای تازه‌سازی رها کنید",
+    "refreshing": "در حال تازه‌سازی…"
   },
   "notifications": {
     "email_sent": "ایمیل با موفقیت ارسال شد",
@@ -855,7 +863,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "تغییر به فارسی"
+    "switch_to_farsi": "تغییر به فارسی",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "تغییر به مغولی"
   },
   "settings": {
     "title": "تنظیمات",
@@ -913,6 +924,56 @@
       "advanced": "پیشرفته"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "ترتیب فهرست پیام‌ها",
+        "description": "نحوهٔ مرتب‌سازی پیام‌ها در فهرست. مرتب‌سازی را سرور انجام می‌دهد، بنابراین کل پوشه را در بر می‌گیرد، نه فقط پیام‌های بارگذاری‌شده را.",
+        "preset": {
+          "chronological": "زمانی (جدیدترین ابتدا)",
+          "unread_first": "خوانده‌نشده‌ها ابتدا",
+          "starred_first": "ستاره‌دارها ابتدا",
+          "tagged_first": "برچسب‌دارها ابتدا",
+          "custom": "سفارشی"
+        },
+        "tag_label": "برچسب",
+        "advanced_show": "پیشرفته: ویرایش سطوح مرتب‌سازی",
+        "advanced_hide": "پنهان کردن پیشرفته",
+        "criterion_label": "معیار سطح {n}",
+        "direction_label": "جهت سطح {n}",
+        "criteria": {
+          "unread": "خوانده‌نشده",
+          "starred": "ستاره‌دار",
+          "tag": "برچسب",
+          "receivedAt": "تاریخ دریافت",
+          "sentAt": "تاریخ ارسال",
+          "from": "فرستنده",
+          "subject": "موضوع",
+          "size": "اندازه"
+        },
+        "direction": {
+          "unread_first": "خوانده‌نشده‌ها ابتدا",
+          "read_first": "خوانده‌شده‌ها ابتدا",
+          "starred_first": "ستاره‌دارها ابتدا",
+          "unstarred_first": "بدون ستاره ابتدا",
+          "tagged_first": "برچسب‌دارها ابتدا",
+          "untagged_first": "بدون برچسب ابتدا",
+          "newest_first": "جدیدترین ابتدا",
+          "oldest_first": "قدیمی‌ترین ابتدا",
+          "a_to_z": "الف → ی",
+          "z_to_a": "ی → الف",
+          "largest_first": "بزرگ‌ترین ابتدا",
+          "smallest_first": "کوچک‌ترین ابتدا"
+        },
+        "add_level": "افزودن سطح",
+        "remove_level": "حذف سطح",
+        "move_up": "انتقال به بالا",
+        "move_down": "انتقال به پایین",
+        "tiebreak_note": "حداکثر سه سطح؛ سطوح بعدی در صورت تساوی تصمیم می‌گیرند. «جدیدترین ابتدا» همیشه در آخر اعمال می‌شود.",
+        "scope": {
+          "label": "اعمال بر همهٔ پوشه‌ها",
+          "description": "در حالت خاموش، ترتیب فقط بر صندوق ورودی اعمال می‌شود؛ پوشه‌های دیگر زمانی می‌مانند."
+        },
+        "unsupported_note": "سرور ایمیل شما مرتب‌سازی بر اساس وضعیت خواندن، ستاره یا برچسب را پشتیبانی نمی‌کند. این سطوح نادیده گرفته می‌شوند و فهرست زمانی می‌ماند."
+      },
       "title": "ظاهر",
       "description": "ظاهر و حس ایمیل تحت وب خود را سفارشی کنید",
       "theme": {
@@ -1077,7 +1138,6 @@
         "relay_desc": "پیش‌فرض رله میزبانی شده Bulwark",
         "relay_locked": "تنظیم شده توسط مدیر",
         "relay_locked_desc": "قابل تغییر نیست",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "فعال روی این دستگاه",
         "status_inactive": "فعال نشده",
         "status_unsupported": "مرورگر پشتیبانی نمی‌کند",
@@ -1088,7 +1148,23 @@
         "confirm_disable_title": "غیرفعال کردن اعلان‌های پس‌زمینه؟",
         "confirm_disable_message": "این دستگاه دیگر هشدار دریافت نمی‌کند",
         "dismiss_aria": "رد کردن پیشنهاد اعلان‌ها",
-        "ios_hint": "در iOS ابتدا سایت را به صفحه اصلی اضافه کنید"
+        "ios_hint": "در iOS ابتدا سایت را به صفحه اصلی اضافه کنید",
+        "devices_title": "دستگاه‌های ثبت‌شده",
+        "devices_desc": "همهٔ دستگاه‌هایی که برای دریافت اعلان‌های پس‌زمینهٔ این حساب ثبت شده‌اند. با لغو یک دستگاه، دریافت بی‌درنگ متوقف می‌شود.",
+        "devices_loading": "در حال بارگذاری دستگاه‌های ثبت‌شده…",
+        "devices_empty": "هیچ دستگاهی برای اعلان‌های پس‌زمینه ثبت نشده است.",
+        "devices_error": "بارگذاری دستگاه‌های ثبت‌شده ممکن نشد.",
+        "devices_refresh": "بازخوانی",
+        "device_this": "این دستگاه",
+        "device_other": "دستگاه دیگر",
+        "device_status_active": "در حال تحویل اعلان‌ها",
+        "device_status_inactive": "هرگز اعلانی تحویل نداده است",
+        "device_status_unknown": "برای این بازپخش ناشناس",
+        "device_expires": "انقضا در {date}",
+        "revoke": "لغو",
+        "confirm_revoke_title": "این دستگاه لغو شود؟",
+        "confirm_revoke_message": "بی‌درنگ دریافت اعلان‌های پس‌زمینه را متوقف می‌کند. با روشن‌کردن دوبارهٔ پوش روی آن دستگاه، دوباره ثبت می‌شود.",
+        "confirm_revoke_message_this": "این دستگاه بی‌درنگ دریافت اعلان‌های پس‌زمینه را متوقف می‌کند."
       },
       "sound_selection": {
         "title": "صدای اعلان",
@@ -1153,6 +1229,12 @@
         "description": "یکشنبه یا دوشنبه",
         "sunday": "یکشنبه",
         "monday": "دوشنبه"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1191,6 +1273,12 @@
         "auto": "خودکار (پیشنهادی)",
         "always": "همیشه فاصله اضافه شود",
         "edge": "لبه به لبه"
+      },
+      "plain_text_font": {
+        "label": "قلم متن ساده",
+        "description": "قلم مورد استفاده برای ایمیل‌های متن ساده",
+        "mono": "تک‌عرض",
+        "sans": "معمولی (مانند برنامه)"
       },
       "archive_mode": {
         "label": "بایگانی در",
@@ -1361,6 +1449,22 @@
       "return_to_list_after_action": {
         "label": "بازگشت به فهرست پس از حذف یا علامت‌گذاری به‌عنوان خوانده‌نشده",
         "description": "پس از حذف یا علامت‌گذاری پیام باز به‌عنوان خوانده‌نشده، به‌جای باز کردن پیام بعدی به فهرست پیام‌ها بازگردید."
+      },
+      "swipe_right_action": {
+        "label": "عملکرد کشیدن به راست (موبایل)",
+        "description": "در دستگاه‌های لمسی، عملی که هنگام کشیدن یک پیام به راست در فهرست انجام می‌شود."
+      },
+      "swipe_left_action": {
+        "label": "عملکرد کشیدن به چپ (موبایل)",
+        "description": "در دستگاه‌های لمسی، عملی که هنگام کشیدن یک پیام به چپ در فهرست انجام می‌شود."
+      },
+      "swipe_actions": {
+        "none": "هیچ",
+        "archive": "بایگانی",
+        "delete": "حذف",
+        "mark_read": "تغییر وضعیت خوانده‌شده",
+        "star": "تغییر وضعیت ستاره",
+        "spam": "علامت‌گذاری به عنوان هرزنامه"
       },
       "rtl_editing": {
         "label": "پشتیبانی از ویرایش راست‌به‌چپ",
@@ -1668,6 +1772,7 @@
       "create_subfolder": "ایجاد زیرپوشه",
       "reorder": "برای تغییر ترتیب بکشید",
       "reorder_error": "تغییر ترتیب پوشه‌ها ناموفق بود",
+      "move_error": "انتقال پوشه ناموفق بود",
       "subfolder_of": "داخل {name}",
       "subfolder_name": "نام زیرپوشه",
       "new_folder_name": "نام پوشه",
@@ -2949,7 +3054,12 @@
       "copy_url": "کپی آدرس CalDAV",
       "url_copied": "آدرس CalDAV در کلیپ‌بورد کپی شد",
       "share": "اشتراک‌گذاری تقویم",
-      "new_event_in_calendar": "رویداد جدید در این تقویم"
+      "new_event_in_calendar": "رویداد جدید در این تقویم",
+      "kind": "محتوا",
+      "kind_events": "رویدادها",
+      "kind_tasks": "وظایف",
+      "kind_both": "رویدادها و وظایف",
+      "kind_hint": "تعیین می‌کند کدام برنامه‌ها این تقویم را هنگام همگام‌سازی از طریق CalDAV می‌بینند. بعداً قابل تغییر نیست."
     },
     "subscription": {
       "title": "اشتراک iCal",
@@ -3082,7 +3192,12 @@
     "search_hint": "از فیلترهای پیشرفته برای جستجوی دقیق استفاده کنید",
     "advanced_filters_tooltip": "فیلترهای جستجوی پیشرفته",
     "results_found": "{count, plural, =0 {نتیجه‌ای یافت نشد} one {# نتیجه یافت شد} other {# نتیجه یافت شد}}",
-    "results_found_more": "+{count} نتیجه یافت شد"
+    "results_found_more": "+{count} نتیجه یافت شد",
+    "suggestions_recent": "جستجوهای اخیر",
+    "suggestions_people": "افراد",
+    "suggestions_from": "جستجوی ایمیل‌های از {address}",
+    "suggestions_to": "جستجوی ایمیل‌های به {address}",
+    "suggestions_remove_recent": "حذف از جستجوهای اخیر"
   },
   "welcome": {
     "title": "به صندوق پستی خود خوش آمدید",

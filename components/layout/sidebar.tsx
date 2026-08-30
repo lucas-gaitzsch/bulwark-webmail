@@ -57,6 +57,7 @@ import { UNIFIED_MAILBOX_IDS, CROSS_VIEW_IDS } from '@/lib/jmap/types';
 import type { UnifiedMailboxRole } from '@/lib/jmap/types';
 import { useDragDropContext } from "@/contexts/drag-drop-context";
 import { useMailboxDrop } from "@/hooks/use-mailbox-drop";
+import { MAILBOX_DRAG_MIME } from "@/components/pro/pro-shell-drop";
 import { useTagDrop } from "@/hooks/use-tag-drop";
 import { useUIStore } from "@/stores/ui-store";
 import { useAuthStore } from "@/stores/auth-store";
@@ -67,7 +68,7 @@ import { toast } from "@/stores/toast-store";
 import { debug } from "@/lib/debug";
 import { AccountSwitcher } from "./account-switcher";
 import { useIsEmbedded } from "@/hooks/use-is-embedded";
-import { buildSettingsPath } from "@/lib/deep-links";
+import { buildSettingsPath, SCHEDULED_MAILBOX_ID, scopedScheduledMailboxId } from "@/lib/deep-links";
 import { useTour } from "@/components/tour/tour-provider";
 
 interface SidebarProps {
@@ -84,12 +85,18 @@ interface SidebarProps {
   onMarkAllFoldersRead?: () => void;
   onEmptyFolder?: (mailboxId: string) => void;
   onCreateSubfolder?: (parentId: string) => void;
-  onCreateFolder?: () => void;
+  onCreateFolder?: (accountId?: string) => void;
   onRenameFolder?: (mailboxId: string) => void;
   onDeleteFolder?: (mailboxId: string) => void;
   onImportEmail?: (mailboxId: string) => void;
   onRefreshMailboxes?: () => void;
   scheduledTotal?: number;
+  /** Pending scheduled-send counts per JMAP account, for shared-account rows. */
+  scheduledTotalByAccount?: Record<string, number>;
+  /** JMAP account the scheduled view is currently narrowed to, if any. The
+   *  store keeps one virtual scheduled mailbox id, so the active shared row is
+   *  identified by this scope rather than by selectedMailbox alone. */
+  scheduledAccountScope?: string | null;
   showScheduledMailbox?: boolean;
   /** True when the unified view spans multiple login accounts (cross-account).
    *  Drives the section header: "All accounts" when true, else "Unified Mailbox". */
@@ -314,6 +321,7 @@ function SidebarRow({
       data-folder-name={testName ?? undefined}
       data-mailbox-id={testMailboxId ?? undefined}
       data-shared={testShared ? 'true' : undefined}
+      data-selected={isSelected ? 'true' : undefined}
       style={{ paddingBlock: 'var(--density-sidebar-py)' }}
       className={cn(
         "group w-full flex items-center max-lg:min-h-[44px] text-sm transition-colors duration-150",
@@ -338,6 +346,7 @@ function SidebarRow({
                 e.stopPropagation();
                 onExpandToggle();
               }}
+              data-testid="folder-expand-toggle"
               className="flex items-center justify-center rounded hover:bg-muted active:bg-accent transition-colors"
               style={{ width: CHEVRON_SLOT, height: CHEVRON_SLOT }}
               title={isExpanded ? t('collapse_tooltip') : t('expand_tooltip')}
@@ -394,6 +403,7 @@ function SidebarSectionHeader({
   icon,
   sub,
   testId,
+  onContextMenu,
 }: {
   label: string;
   expanded: boolean;
@@ -405,6 +415,7 @@ function SidebarSectionHeader({
   icon?: ReactNode;
   sub?: boolean;
   testId?: string;
+  onContextMenu?: (event: React.MouseEvent) => void;
 }) {
   if (isCollapsed) {
     return first ? null : <div className="h-px bg-border/50 mx-2 my-2" aria-hidden />;
@@ -419,6 +430,7 @@ function SidebarSectionHeader({
   return (
     <button
       onClick={onToggle}
+      onContextMenu={onContextMenu}
       data-testid={testId}
       data-section-name={label}
       data-expanded={expanded ? 'true' : 'false'}
@@ -472,6 +484,7 @@ function MailboxTreeItem({
   onUnreadFilterClick,
   colorful,
   onContextMenu,
+  dragAccountId = null,
 }: {
   node: MailboxNode;
   selectedMailbox: string;
@@ -482,6 +495,10 @@ function MailboxTreeItem({
   onUnreadFilterClick?: (mailboxId: string) => void;
   colorful: boolean;
   onContextMenu?: (e: React.MouseEvent, node: MailboxNode) => void;
+  /** Connected-account id this folder is listed under; null = active account.
+   *  Travels in the folder-drag payload so a folder tab fetches through the
+   *  right client. */
+  dragAccountId?: string | null;
 }) {
   const tNotifications = useTranslations('notifications');
   const tSidebar = useTranslations('sidebar');
@@ -492,6 +509,24 @@ function MailboxTreeItem({
   const isSelected = selectedMailbox === node.id;
   const roleKey = resolveRoleKey(node.role, node.name);
   const label = localizeMailboxName(node.role, node.name, (k) => tSidebar(`mailboxes.${k}`));
+
+  const isEmbedded = useIsEmbedded();
+  // Pro shell only: folder rows are drag sources so a folder can be dropped
+  // onto a tab strip / pane and open as its own tab. Native HTML5 DnD - the
+  // Pro shell's drop targets live outside any dnd-kit context.
+  const folderDragHandlers: Record<string, unknown> | undefined =
+    isEmbedded && !isVirtualNode
+      ? {
+          draggable: true,
+          onDragStart: (e: React.DragEvent) => {
+            e.dataTransfer.setData(
+              MAILBOX_DRAG_MIME,
+              JSON.stringify({ mailboxId: node.id, name: label, accountId: dragAccountId }),
+            );
+            e.dataTransfer.effectAllowed = 'copy';
+          },
+        }
+      : undefined;
 
   const { isDragging: globalDragging } = useDragDropContext();
   const { dropHandlers, isValidDropTarget, isInvalidDropTarget } = useMailboxDrop({
@@ -534,7 +569,14 @@ function MailboxTreeItem({
         onExpandToggle={() => onToggleExpand(node.id)}
         onUnreadClick={() => onUnreadFilterClick?.(node.id)}
         isCollapsed={isCollapsed}
-        dropHandlers={globalDragging ? (dropHandlers as Record<string, unknown>) : undefined}
+        dropHandlers={
+          folderDragHandlers || globalDragging
+            ? {
+                ...(folderDragHandlers ?? {}),
+                ...(globalDragging ? (dropHandlers as Record<string, unknown>) : {}),
+              }
+            : undefined
+        }
         isValidDropTarget={isValidDropTarget}
         isInvalidDropTarget={isInvalidDropTarget}
         onContextMenu={onContextMenu && !isVirtualNode ? (e) => onContextMenu(e, node) : undefined}
@@ -552,6 +594,7 @@ function MailboxTreeItem({
           onUnreadFilterClick={onUnreadFilterClick}
           colorful={colorful}
           onContextMenu={onContextMenu}
+          dragAccountId={dragAccountId}
         />
       ))}
     </>
@@ -779,6 +822,8 @@ export function Sidebar({
   onImportEmail,
   onRefreshMailboxes,
   scheduledTotal = 0,
+  scheduledTotalByAccount,
+  scheduledAccountScope = null,
   showScheduledMailbox = false,
   crossAccountActive = false,
   showCrossUnread = false,
@@ -985,21 +1030,36 @@ export function Sidebar({
       })
     : [];
 
-  const renderScheduledRow = (key: string) => showScheduledMailbox ? (
-    <SidebarRow
-      key={key}
-      icon={<CalendarClock className="w-4 h-4 flex-shrink-0 text-sky-600 dark:text-sky-400" />}
-      label={t('scheduled')}
-      depth={0}
-      isSelected={!selectedKeyword && selectedMailbox === '__scheduled__'}
-      total={scheduledTotal}
-      onClick={() => onMailboxSelect?.('__scheduled__')}
-      isCollapsed={isCollapsed}
-      testRole="scheduled"
-      testName="scheduled"
-      testMailboxId="__scheduled__"
-    />
-  ) : null;
+  // Scheduled row. Without an account it is the combined view (the user's own
+  // tree); with one it scopes the list to that shared account's scheduled mail,
+  // which lives in the shared JMAP account rather than the primary one (#874).
+  const renderScheduledRow = (key: string, account?: { accountId?: string; depth?: number }) => {
+    if (!showScheduledMailbox) return null;
+    const accountId = account?.accountId;
+    const mailboxId = accountId ? scopedScheduledMailboxId(accountId) : SCHEDULED_MAILBOX_ID;
+    const count = accountId
+      ? (scheduledTotalByAccount?.[accountId] ?? 0)
+      : scheduledTotal;
+    // selectedMailbox is always the plain virtual id, so the *scope* decides
+    // which of these rows is the active one.
+    const isScheduledSelected = selectedMailbox === SCHEDULED_MAILBOX_ID
+      && (scheduledAccountScope ?? null) === (accountId ?? null);
+    return (
+      <SidebarRow
+        key={key}
+        icon={<CalendarClock className="w-4 h-4 flex-shrink-0 text-sky-600 dark:text-sky-400" />}
+        label={t('scheduled')}
+        depth={account?.depth ?? 0}
+        isSelected={!selectedKeyword && isScheduledSelected}
+        total={count}
+        onClick={() => onMailboxSelect?.(mailboxId)}
+        isCollapsed={isCollapsed}
+        testRole="scheduled"
+        testName="scheduled"
+        testMailboxId={mailboxId}
+      />
+    );
+  };
 
   const getUnifiedIcon = (role: UnifiedMailboxRole) => {
     switch (role) {
@@ -1116,6 +1176,17 @@ export function Sidebar({
 
   const handleFoldersHeaderContextMenu = (e: React.MouseEvent) => {
     openMailboxContextMenu(e, { kind: "folders-section" });
+  };
+
+  // `buildMailboxTree()` groups shared mailboxes that carry no accountId under
+  // the placeholder id "unknown" (lib/utils.ts). Such a node cannot be a valid
+  // JMAP mutation target, so it gets no folder-creation menu at all rather than
+  // a menu that would create the folder in a non-existent account.
+  const sharedAccountMenuId = (accountId?: string) =>
+    accountId && accountId !== "unknown" ? accountId : undefined;
+
+  const handleSharedAccountContextMenu = (e: React.MouseEvent, accountId: string) => {
+    openMailboxContextMenu(e, { kind: "folders-section", accountId });
   };
 
   return (
@@ -1264,6 +1335,7 @@ export function Sidebar({
                               onUnreadFilterClick={isActive ? onUnreadFilterClick : undefined}
                               colorful={colorfulSidebarIcons}
                               onContextMenu={isActive ? handleMailboxContextMenu : undefined}
+                              dragAccountId={isActive ? null : account.id}
                             />
                             {isActive && node.role === 'drafts' && renderScheduledRow(`scheduled-${account.id}`)}
                           </Fragment>
@@ -1332,6 +1404,7 @@ export function Sidebar({
               <>
                 {sharedAccounts.map((account) => {
                   const accountExpanded = expandedSharedAccounts.has(account.id);
+                  const menuAccountId = sharedAccountMenuId(account.accountId);
                   return (
                     <div key={account.id}>
                       <SidebarSectionHeader
@@ -1342,21 +1415,33 @@ export function Sidebar({
                         sub
                         icon={<User className="w-3.5 h-3.5 text-muted-foreground" />}
                         testId="section-shared-account"
+                        onContextMenu={menuAccountId
+                          ? (e) => handleSharedAccountContextMenu(e, menuAccountId)
+                          : undefined}
                       />
-                      {accountExpanded && !isCollapsed && account.children.map((child) => (
-                        <MailboxTreeItem
-                          key={child.id}
-                          node={child}
-                          selectedMailbox={selectedKeyword ? "" : selectedMailbox}
-                          expandedFolders={expandedFolders}
-                          onMailboxSelect={onMailboxSelect}
-                          onToggleExpand={handleToggleExpand}
-                          isCollapsed={isCollapsed}
-                          onUnreadFilterClick={onUnreadFilterClick}
-                          colorful={colorfulSidebarIcons}
-                          onContextMenu={handleMailboxContextMenu}
-                        />
-                      ))}
+                      {accountExpanded && !isCollapsed && (
+                        <>
+                          {account.children.map((child) => (
+                            <Fragment key={child.id}>
+                              <MailboxTreeItem
+                                node={child}
+                                selectedMailbox={selectedKeyword ? "" : selectedMailbox}
+                                expandedFolders={expandedFolders}
+                                onMailboxSelect={onMailboxSelect}
+                                onToggleExpand={handleToggleExpand}
+                                isCollapsed={isCollapsed}
+                                onUnreadFilterClick={onUnreadFilterClick}
+                                colorful={colorfulSidebarIcons}
+                                onContextMenu={handleMailboxContextMenu}
+                              />
+                              {child.role === 'drafts' && menuAccountId
+                                && renderScheduledRow(`${account.id}-scheduled`, { accountId: menuAccountId })}
+                            </Fragment>
+                          ))}
+                          {menuAccountId && !account.children.some((child) => child.role === 'drafts')
+                            && renderScheduledRow(`${account.id}-scheduled`, { accountId: menuAccountId })}
+                        </>
+                      )}
                     </div>
                   );
                 })}

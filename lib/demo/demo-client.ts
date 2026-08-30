@@ -1,8 +1,9 @@
-import type { IJMAPClient, KeywordDiscoveryResult } from '@/lib/jmap/client-interface';
+import type { IJMAPClient, KeywordDiscoveryResult, KeywordMigration } from '@/lib/jmap/client-interface';
 import type { Email, Mailbox, StateChange, AccountStates, Thread, Identity, EmailAddress, ContactCard, AddressBook, VacationResponse, Calendar, CalendarEvent, CalendarEventFilter, CalendarTask, FileNode, ScheduledEmail, SendEmailResult, SharedAccount } from '@/lib/jmap/types';
 import type { SieveScript, SieveCapabilities } from '@/lib/jmap/sieve-types';
 import { getDemoData, type DemoData } from './demo-data';
 import { generateDemoId } from './demo-utils';
+import { compareEmails, type SortLevel } from '@/lib/message-list-order';
 
 /**
  * In-memory JMAP client for demo mode.
@@ -139,12 +140,12 @@ export class DemoJMAPClient implements IJMAPClient {
     return mb;
   }
 
-  async updateMailbox(mailboxId: string, changes: { name?: string; parentId?: string | null; role?: string | null; sortOrder?: number }): Promise<void> {
+  async updateMailbox(mailboxId: string, changes: { name?: string; parentId?: string | null; role?: string | null; sortOrder?: number }, _accountId?: string): Promise<void> {
     const mb = this.data.mailboxes.find(m => m.id === mailboxId);
     if (mb) Object.assign(mb, changes);
   }
 
-  async deleteMailbox(mailboxId: string): Promise<void> {
+  async deleteMailbox(mailboxId: string, _accountId?: string): Promise<void> {
     this.data.mailboxes = this.data.mailboxes.filter(m => m.id !== mailboxId);
     // Also remove emails in this mailbox
     this.data.emails = this.data.emails.filter(e => !e.mailboxIds[mailboxId]);
@@ -178,7 +179,7 @@ export class DemoJMAPClient implements IJMAPClient {
     return true;
   }
 
-  async getEmails(mailboxId?: string, _accountId?: string, limit: number = 50, position: number = 0, hasKeyword?: string, pinnedFirst?: boolean, extraFilter?: Record<string, unknown>): Promise<{ emails: Email[]; hasMore: boolean; total: number }> {
+  async getEmails(mailboxId?: string, _accountId?: string, limit: number = 50, position: number = 0, hasKeyword?: string, pinnedFirst?: boolean, extraFilter?: Record<string, unknown>, order: SortLevel[] = []): Promise<{ emails: Email[]; hasMore: boolean; total: number }> {
     let filtered = this.data.emails;
     if (mailboxId) {
       filtered = filtered.filter(e => e.mailboxIds[mailboxId]);
@@ -189,11 +190,9 @@ export class DemoJMAPClient implements IJMAPClient {
     if (extraFilter) {
       filtered = filtered.filter(e => this.matchesFilter(e, extraFilter));
     }
-    const pinRank = (e: Email) => (pinnedFirst && e.keywords?.['$pinned'] ? 1 : 0);
-    filtered.sort((a, b) =>
-      pinRank(b) - pinRank(a) ||
-      new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime()
-    );
+    // Same order the JMAP client asks the server for (pinned first, then the
+    // configured list order, then newest first).
+    filtered.sort(compareEmails(order, { pinnedFirst }));
     const total = filtered.length;
     const emails = filtered.slice(position, position + limit);
     return { emails, hasMore: position + limit < total, total };
@@ -210,6 +209,11 @@ export class DemoJMAPClient implements IJMAPClient {
     );
 
     return filtered;
+  }
+
+  getEmailQuerySortOptions(_accountId?: string): string[] | null {
+    // The demo sorts client-side and supports every criterion.
+    return null;
   }
 
   async getEmailsInMailbox(mailboxId: string): Promise<Email[]> {
@@ -382,16 +386,16 @@ export class DemoJMAPClient implements IJMAPClient {
     }
   }
 
-  async migrateKeyword(oldKeyword: string, newKeyword: string): Promise<number> {
-    let count = 0;
+  async migrateKeyword(oldKeyword: string, newKeyword: string): Promise<KeywordMigration> {
+    let migrated = 0;
     for (const email of this.data.emails) {
       if (email.keywords[oldKeyword]) {
         delete email.keywords[oldKeyword];
         email.keywords[newKeyword] = true;
-        count++;
+        migrated++;
       }
     }
-    return count;
+    return { migrated, refused: 0 };
   }
 
   async deleteEmail(emailId: string): Promise<void> {
@@ -501,6 +505,8 @@ export class DemoJMAPClient implements IJMAPClient {
     const junkMb = this.data.mailboxes.find(m => m.role === 'junk');
     if (email && junkMb) {
       email.mailboxIds = { [junkMb.id]: true };
+      email.keywords.$junk = true;
+      delete email.keywords.$notjunk;
       if (markAsRead) email.keywords.$seen = true;
     }
     this.recalcMailboxCounts();
@@ -508,7 +514,11 @@ export class DemoJMAPClient implements IJMAPClient {
 
   async undoSpam(emailId: string, originalMailboxId: string): Promise<void> {
     const email = this.data.emails.find(e => e.id === emailId);
-    if (email) email.mailboxIds = { [originalMailboxId]: true };
+    if (email) {
+      email.mailboxIds = { [originalMailboxId]: true };
+      delete email.keywords.$junk;
+      email.keywords.$notjunk = true;
+    }
     this.recalcMailboxCounts();
   }
 

@@ -32,6 +32,23 @@ import type { CalendarViewMode } from '@/stores/calendar-store';
 /** Sentinel mailbox id for the virtual "Scheduled" view (see the mail page). */
 export const SCHEDULED_MAILBOX_ID = '__scheduled__';
 
+/**
+ * Sidebar-only id for a shared account's "Scheduled" row. The store keeps a
+ * single virtual scheduled mailbox (SCHEDULED_MAILBOX_ID); the account is
+ * carried alongside it as a view scope, so this suffixed form never reaches
+ * the store or a deep link.
+ */
+export const scopedScheduledMailboxId = (accountId: string) => `${SCHEDULED_MAILBOX_ID}:${accountId}`;
+
+/** Splits a (possibly account-scoped) scheduled id into its parts. */
+export function parseScheduledMailboxId(mailboxId: string): { isScheduled: boolean; accountId: string | null } {
+  if (mailboxId === SCHEDULED_MAILBOX_ID) return { isScheduled: true, accountId: null };
+  if (mailboxId.startsWith(`${SCHEDULED_MAILBOX_ID}:`)) {
+    return { isScheduled: true, accountId: mailboxId.slice(SCHEDULED_MAILBOX_ID.length + 1) || null };
+  }
+  return { isScheduled: false, accountId: null };
+}
+
 // ---------------------------------------------------------------------------
 // URL assembly
 // ---------------------------------------------------------------------------
@@ -116,7 +133,7 @@ const ALIASED_ROLES = new Set(['inbox', 'sent', 'drafts', 'trash', 'archive', 'j
 
 export type MailDeepLink =
   | { kind: 'folder'; ref: string; accountId?: string }
-  | { kind: 'message'; id: string; accountId?: string }
+  | { kind: 'message'; id: string; accountId?: string; fullscreen?: boolean }
   | { kind: 'thread'; id: string; accountId?: string };
 
 export interface MailLinkState {
@@ -193,12 +210,16 @@ export function parseMailPath(
   search?: URLSearchParams,
 ): MailDeepLink | null {
   const accountId = search?.get('account') ?? undefined;
+  // `?view=fullscreen` asks for the message alone, no sidebar or list - what
+  // a mail dragged out into a new browser tab opens as. The Pro shell always
+  // opens message links as fullscreen email tabs and ignores the flag.
+  const fullscreen = search?.get('view') === 'fullscreen' || undefined;
   const [kind, value] = segments;
 
   if (kind && value) {
     const id = decodeSegment(value);
     if (id) {
-      if (kind === 'message') return { kind: 'message', id, accountId };
+      if (kind === 'message') return { kind: 'message', id, accountId, fullscreen };
       if (kind === 'thread') return { kind: 'thread', id, accountId };
       if (kind === 'folder') return { kind: 'folder', ref: id, accountId };
     }

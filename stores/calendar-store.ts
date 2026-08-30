@@ -1,9 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { IJMAPClient } from '@/lib/jmap/client-interface';
-import type { Calendar, CalendarEvent, CalendarParticipant, CalendarRights } from '@/lib/jmap/types';
+import type { Calendar, CalendarEvent, CalendarParticipant, CalendarRights, CreateCalendarOptions } from '@/lib/jmap/types';
 import { debug } from '@/lib/debug';
 import { normalizeAllDayDuration } from '@/lib/calendar-utils';
+import { displayNow } from '@/lib/timezone';
 import { parseDuration } from '@/components/calendar/event-card';
 import { sanitizeOutgoingCalendarEventData } from '@/lib/calendar-event-normalization';
 import { expandRecurringEvents } from '@/lib/recurrence-expansion';
@@ -279,7 +280,7 @@ interface CalendarStore {
   updateCalendar: (client: IJMAPClient, calendarId: string, updates: Partial<Calendar>) => Promise<void>;
   setDefaultCalendar: (client: IJMAPClient, calendarId: string) => Promise<void>;
   shareCalendar: (client: IJMAPClient, calendarId: string, principalId: string, rights: CalendarRights | null) => Promise<void>;
-  createCalendar: (client: IJMAPClient, calendar: Partial<Calendar>) => Promise<Calendar | null>;
+  createCalendar: (client: IJMAPClient, calendar: Partial<Calendar>, options?: CreateCalendarOptions) => Promise<Calendar | null>;
   removeCalendar: (client: IJMAPClient, calendarId: string) => Promise<void>;
   clearCalendarEvents: (client: IJMAPClient, calendarId: string) => Promise<number>;
   setSelectedDate: (date: Date) => void;
@@ -301,7 +302,7 @@ interface CalendarStore {
 const initialState = {
   calendars: [],
   events: [],
-  selectedDate: new Date(),
+  selectedDate: displayNow(),
   selectedCalendarIds: [] as string[],
   selectedEventId: null as string | null,
   isLoading: false,
@@ -330,10 +331,13 @@ export const useCalendarStore = create<CalendarStore>()(
           const calendars = await client.getAllCalendars();
           const { selectedCalendarIds } = get();
           const stillValid = reconcileSelectedIds(selectedCalendarIds, calendars);
+          // Default the visible selection to event calendars only - tasks-only
+          // calendars stay out of the event grid.
+          const defaultSelected = calendars.filter(c => !c.isTasksOnly).map(c => c.id);
           set({
             calendars,
             isLoading: false,
-            selectedCalendarIds: stillValid.length > 0 ? stillValid : calendars.map(c => c.id),
+            selectedCalendarIds: stillValid.length > 0 ? stillValid : defaultSelected,
           });
         } catch (error) {
           debug.error('Failed to fetch calendars:', error);
@@ -915,10 +919,10 @@ export const useCalendarStore = create<CalendarStore>()(
         }
       },
 
-      createCalendar: async (client, calendar) => {
+      createCalendar: async (client, calendar, options) => {
         set({ error: null });
         try {
-          const created = await client.createCalendar(calendar);
+          const created = await client.createCalendar(calendar, undefined, options);
           // Added with its raw id; the next aggregated refetch namespaces it and
           // reconcileSelectedIds() remaps the selection so it stays visible.
           set((state) => ({
@@ -1307,7 +1311,7 @@ export const useCalendarStore = create<CalendarStore>()(
         const preservedSubs = get().icalSubscriptions;
         set({
           ...initialState,
-          selectedDate: new Date(),
+          selectedDate: displayNow(),
           icalSubscriptions: preservedSubs,
         });
         import('./calendar-notification-store').then(({ useCalendarNotificationStore }) => {
@@ -1325,7 +1329,7 @@ export const useCalendarStore = create<CalendarStore>()(
 
         return {
           ...mergedState,
-          selectedDate: new Date(),
+          selectedDate: displayNow(),
           viewMode: getSafeCalendarViewMode(mergedState.viewMode),
         };
       },

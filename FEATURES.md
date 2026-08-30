@@ -22,6 +22,7 @@
 - Each tag can be configured to show always, only when there are unread mails or always be hidden
 - Tag names and colors live in the browser, while the tags themselves ride on your messages as JMAP keywords. A scan finds keywords no local tag explains and adds them back.
 - Star or unstar, with a configurable mark-as-read delay
+- Configurable message-list order: presets (unread first, starred first, tagged first) or up to three custom sort levels, applied server-side through the JMAP sort so the whole folder is ordered, for the Inbox only or every folder
 - Large mailboxes scroll virtually, and the first page of mail prefetches at login
 - A refresh button in the list toolbar that spins while the fetch is in flight, alongside the F5 / Ctrl+R / pull-to-refresh gestures it shares a code path with
 - Quick reply, hover actions, favicon-based sender avatars, recipient popovers

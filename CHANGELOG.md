@@ -1,5 +1,222 @@
 # Changelog
 
+## 1.9.2 (2026-08-26)
+
+Thank you for your donations:
+
+- _You? [Become a sponsor!](https://github.com/sponsors/bulwarkmail)_
+
+**One-time**
+
+- Anonymous
+- [@elsbrock](https://github.com/elsbrock)
+- [@getpankajyadav](https://github.com/getpankajyadav)
+
+**Monthly**
+
+- [@NABarnes](https://github.com/NABarnes)
+- [@felixzieger](https://github.com/felixzieger)
+- [@pr0ton11](https://github.com/pr0ton11)
+- [@zeddD1abl0](https://github.com/zeddD1abl0)
+- [@fpauser](https://github.com/fpauser)
+- [@proxforge](https://github.com/proxforge)
+- [@spss20](https://github.com/spss20)
+- [@elgringoYan](https://github.com/elgringoYan)
+- [@pauladams8](https://github.com/pauladams8)
+- [@djpriest](https://github.com/djpriest)
+- [@umakers](https://github.com/umakers)
+- [@zplizzi](https://github.com/zplizzi)
+- [@jeremiah](https://github.com/jeremiah)
+- [@Theoretisch1337](https://github.com/Theoretisch1337)
+- [@svandive](https://github.com/svandive)
+- [@HiltMundell](https://github.com/HiltMundell)
+
+### Security
+
+- **Calendar / Auth**: Pin the resolved IP address at socket-connect time when fetching caller-supplied URLs (iCalendar subscriptions, JMAP login and TOTP token-exchange servers). The public-host check used to run before `fetch()` opened its socket, so an attacker who controlled DNS for a hostname could rebind it to loopback, RFC-1918 or cloud-metadata addresses between the check and the connect and read up to 10 MB of the internal response through the unauthenticated `/api/fetch-ical` endpoint. Redirect targets are now validated the same way (GHSA-24w9-8r42-8jwm, thanks @Tike00)
+
+### Features
+
+- **Push**: Re-sync existing push registrations in the background on app start, so registrations created before the delivery filter existed — or whose Junk mailbox id went stale — get repaired without re-enabling notifications
+
+### Fixes
+
+- **Push**: Stop sending notifications for spam — the push subscription now carries a JMAP `emailPush` delivery filter that excludes `$junk` and the Junk mailbox (needs a server advertising the `emailPush` capability, e.g. Stalwart ≥ 0.16.16; older servers keep the previous behaviour)
+
+## 1.9.1 (2026-08-26)
+
+Thank you for your donations:
+
+- _You? [Become a sponsor!](https://github.com/sponsors/bulwarkmail)_
+
+**One-time**
+
+- Anonymous
+- [@elsbrock](https://github.com/elsbrock)
+- [@getpankajyadav](https://github.com/getpankajyadav)
+
+**Monthly**
+
+- [@NABarnes](https://github.com/NABarnes)
+- [@felixzieger](https://github.com/felixzieger)
+- [@pr0ton11](https://github.com/pr0ton11)
+- [@zeddD1abl0](https://github.com/zeddD1abl0)
+- [@fpauser](https://github.com/fpauser)
+- [@proxforge](https://github.com/proxforge)
+- [@spss20](https://github.com/spss20)
+- [@elgringoYan](https://github.com/elgringoYan)
+- [@pauladams8](https://github.com/pauladams8)
+- [@djpriest](https://github.com/djpriest)
+- [@umakers](https://github.com/umakers)
+- [@zplizzi](https://github.com/zplizzi)
+- [@jeremiah](https://github.com/jeremiah)
+- [@Theoretisch1337](https://github.com/Theoretisch1337)
+- [@svandive](https://github.com/svandive)
+- [@HiltMundell](https://github.com/HiltMundell)
+
+### Fixes
+
+- **Navigation**: Forward every request header through the proxy — Next 16.3's RSC header check rejected the stripped router headers and sent navigations into a 307 redirect loop (#919)
+- **Calendar**: Stop emitting `RSCALE=GREGORIAN;SKIP=OMIT` on plain Gregorian recurrence rules — DAVx5 rejected them as invalid and Android sync broke (#805, thanks @hildebrandttk)
+
+## 1.9.0 (2026-08-25)
+
+Thank you for your donations:
+
+- _You? [Become a sponsor!](https://github.com/sponsors/bulwarkmail)_
+
+**One-time**
+
+- Anonymous
+- [@elsbrock](https://github.com/elsbrock)
+- [@getpankajyadav](https://github.com/getpankajyadav)
+
+**Monthly**
+
+- [@felixzieger](https://github.com/felixzieger)
+- [@pr0ton11](https://github.com/pr0ton11)
+- [@zeddD1abl0](https://github.com/zeddD1abl0)
+- [@fpauser](https://github.com/fpauser)
+- [@proxforge](https://github.com/proxforge)
+- [@spss20](https://github.com/spss20)
+- [@elgringoYan](https://github.com/elgringoYan)
+- [@pauladams8](https://github.com/pauladams8)
+- [@djpriest](https://github.com/djpriest)
+- [@umakers](https://github.com/umakers)
+- [@zplizzi](https://github.com/zplizzi)
+- [@jeremiah](https://github.com/jeremiah)
+- [@Theoretisch1337](https://github.com/Theoretisch1337)
+- [@svandive](https://github.com/svandive)
+- [@HiltMundell](https://github.com/HiltMundell)
+
+### Features
+
+- **Mail**: Fullscreen email view in the standard interface
+- **Mail**: Drag a mail onto a new browser tab to open it fullscreen
+- **Mail**: Configurable message-list ordering (#718)
+- **Mail**: Search suggestions with recent searches and contact autocomplete (#845)
+- **Mail**: Render plain-text emails in the app font by default, with a monospace option (#830)
+- **Mail**: Pull-to-refresh indicator while dragging the list down (#826)
+- **Mail**: Redesigned unread favicon badge — a compact keyline badge
+- **Mobile**: Swipe message rows left or right for quick actions — archive, delete, toggle read, toggle star, or spam, configurable per direction, RTL-aware
+- **Pro**: Reworked split-screen shell with per-pane tab strips, drag & drop between panes, and pane-scoped overlays
+- **Pro**: Folder tabs via drag & drop
+- **Pro**: The address bar follows the focused tab, and deep links are delivered live to already-mounted surfaces
+- **Composer**: Real byte progress for attachment uploads, stock and plugin-offloaded; cancel now aborts the transfer itself
+- **Calendar**: Moving an event's start moves the end with it, keeping the event's length
+- **Contacts**: Trusted Senders address book enabled by default on contacts-capable accounts
+- **Settings**: Custom time zone setting that overrides browser detection (#755)
+- **Login**: Server dropdown on the OAuth-only login screen (#799)
+- **Push**: New-mail notifications grouped per account with a "+N more messages" line instead of one notification per message
+- **Push**: Per-device revoke for push subscriptions (#841)
+- **Admin**: Configurable Stalwart admin access to the dashboard (#870)
+- **Admin**: Push relay picked from an admin-defined list instead of a free URL field
+- **Branding**: OpenGraph/Twitter link previews with a generated card image
+- **Performance**: Halved time-to-mail-list — lazy locale catalogs, code-split viewer and composer, shorter auth waterfall, boot snapshot
+- **i18n**: Mongolian translation
+- **Plugins**: `jmap.uploadBlob`
+- **Plugins**: `onBeforeComposeOpenToReply` and sibling hooks let a plugin edit an email before it populates the composer for reply or forward
+- **Plugins**: `getPublicKeyFromWKD`
+- **Plugins**: Privileged plugins can fetch a byte range of a blob
+- **Plugins**: `progressFileId` on `api.http.post` so an offloaded upload reports byte progress to the composer chip
+- **Plugins**: `isActive` on `AccountResponse`
+- **Plugins**: Label settings and label reordering exposed to extensions
+- **Plugins**: JMAP keyword helpers and gateway keywords exposed to extensions
+- **Plugins**: Mailbox refresh hook
+- **Dev**: `AddressBook/set` in the dev mock JMAP server
+
+### Changes
+
+- **Plugins**: The PRF `getOrCreate` flow is split into separate get and create steps for better authenticator compatibility (#851)
+- **Dependencies**: Next 16.3.3, pdfjs-dist 6.2.108, DOMPurify 3.4.14 (npm audit)
+
+### Fixes
+
+- **Send**: Route scheduled sends to the account that owns the submission — mail scheduled from a shared address can now be listed, cancelled, and rescheduled instead of going out silently (#874)
+- **Send**: Split recipient lists whose angle brackets never close without dropping recipients
+- **Send**: `generateMessageId` crashed on insecure origins (`crypto.randomUUID` undefined), failing the send after the draft save
+- **Composer**: Keep attachments when re-opening a draft, also in the Pro draft tab, and destroy old draft versions only after a successful create or send (#849)
+- **Composer**: Keep the signature in saved drafts and embed it into re-opened drafts (#848)
+- **Composer**: Double-click unlocks the embedded signature for editing
+- **Composer**: Keep already written text when applying a template (#540)
+- **Composer**: Preselect the shared folder's identity for new messages
+- **Composer**: Namespace all accounts consistently in the Pro composer identity list
+- **Composer**: Opening a `mailto:` link runs the unsaved-draft dialog instead of replacing the draft outright
+- **Composer**: Keep the fresh-compose tab title clear of the selected email subject
+- **Composer**: Clear the viewer when sending destroys the displayed draft
+- **Reply**: Honour an external Reply-To even on a self-sent message
+- **Mail**: Flip `$junk`/`$notjunk` keywords on spam and not-spam (#850)
+- **Mail**: Remove keywords with `null` rather than `false` in `Email/set`, per RFC 8620
+- **Mail**: Escape the JSON Pointer in keyword patches so nested tags like `work/clients` patch the right keyword
+- **Mail**: Route keyword writes — tags, pins, flags — to the selected shared account so they persist
+- **Mail**: Route shared-folder management to the owner account, scoped to one server
+- **Mail**: Open the right conversations in a shared mailbox (#814)
+- **Mail**: Route multi-account email lookups and invitation parsing by source account (#847), and parse invitations in directly viewed shared folders against the folder owner (#867)
+- **Mail**: Folders containing a system folder name no longer disappear from the sidebar (#771)
+- **Mail**: Folder drag & drop can move folders into other parents (#855)
+- **Mail**: Keep the folder tree when a refresh burst hits `maxConcurrentRequests` (#780)
+- **Mail**: Stop All-Mail and cross-account views emptying on delete, star, or mark-read (#791)
+- **Mail**: Keep just-read or unstarred mail in the open Unread/Starred view
+- **Mail**: Search folder filter defaults to all folders and persists (#788)
+- **Mail**: Fixed-width read/unread toolbar button so buttons don't jump when a message opens (#864)
+- **Mail**: Transparent hover-action background on tagged rows
+- **Mail**: Enforce the external media preference on plugin-rendered bodies (#797)
+- **Mail**: Apply the `data:` URI allowlist to media tags and `srcset` candidates too
+- **Mail**: Make label reordering atomic
+- **Mail**: Pass PDF bytes to pdf.js instead of fetching the `blob:` URL that CSP `connect-src` blocks (#871)
+- **Mail**: Include email templates in cross-device settings sync (#825)
+- **Mail**: Toast store crashed on insecure origins, breaking every post-action acknowledgement
+- **Mobile**: Reach the tag and move submenus in the more-actions menu (#779)
+- **Mobile**: iOS Safari no longer zooms the viewport on every input focus (#838)
+- **Calendar**: Click and double-click create events at the clicked slot instead of near the current time
+- **Calendar**: Save and Cancel are available when an event is created, and the toolbar no longer overflows in edit mode
+- **Calendar**: Edit a single recurring occurrence via a one-shot override patch
+- **Calendar**: Hide tasks-only calendars from the event calendar
+- **Calendar**: Exclude subscription and read-only calendars from event creation (#762)
+- **Calendar**: Rights-first event editability, including alias organizers
+- **Calendar**: Pin `supported-calendar-component-set` on created calendars (#760)
+- **Calendar**: Gate first-touch calendar and contacts requests to stop duplicate default calendars (#907)
+- **Calendar/Contacts**: Namespace all accounts consistently on switch, so multi-account address-book aggregation and calendar selection survive an account switch
+- **Contacts**: Import vCard dates as RFC 9553 PartialDate and map common X- extensions (#224)
+- **Files**: Decode percent-encoded FileNode names from WebDAV-created nodes (#869)
+- **Files**: Reset the account-scoped Files drive on every account switch
+- **Accounts**: Refresh the account display name from the Stalwart principal on login, restore, and switch (#900)
+- **Auth**: Reuse the cached access token on session restore (#552)
+- **Auth**: Refresh TOTP-minted tokens with the default client id when no OAuth client is configured (#873)
+- **Auth**: Store the session cookie for relative JMAP server URLs
+- **Security**: Close IPv6 transition-address and redirect bypasses in the endpoint guard
+- **Security**: Add embedded custom app origins to CSP `frame-src` (#787)
+- **Security**: Per-account isolation for encryption at rest
+- **JMAP**: Cap live SSE streams per tab and keep exactly one stream per client, so many logins can't starve JMAP requests (#702)
+- **JMAP**: Check the specific capability a request declares (`principals:owner`), not a broader one
+- **JMAP**: Resolve relative session URLs without corrupting URI templates
+- **Settings**: Merge per-account maps on server load, fixing the compose identity switch
+- **Settings**: Leaving the Pro interface returns to the surface in use and keeps the settings scroll position
+- **UI**: Position portalled popovers before first paint to stop the layout flash on open
+- **Push**: Recreate the push subscription on re-register (#841)
+- **i18n**: Key parity across all 24 locales, Catalan and Mongolian registered in the client provider, and scoped translation hooks instead of relative namespace paths
+- **Docs**: Lengthen the example `SESSION_SECRET` so it meets the minimum length
+
 ## 1.8.1 (2026-08-07)
 
 A GitHub Actions incident left the 1.8.0 release build queued indefinitely, so no Docker image was ever published for that tag. 1.8.1 re-runs the release with the same code, plus one plugin slot that merged in the meantime.

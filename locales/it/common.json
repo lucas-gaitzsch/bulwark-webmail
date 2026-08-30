@@ -300,6 +300,10 @@
     "move": "Sposta",
     "print": "Stampa",
     "view_source": "Visualizza sorgente",
+
+    "fullscreen": "Schermo intero",
+
+    "exit_fullscreen": "Esci da schermo intero",
     "export_email": "Esporta come .eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": "Importa .eml o .zip",
@@ -574,6 +578,7 @@
     "read_receipt_on": "Conferma di lettura richiesta (clicca per disattivare)",
     "read_receipt_off": "Richiedi una conferma di lettura",
     "new_message": "Nuovo messaggio",
+    "signature_edit_hint": "Doppio clic per modificare la firma",
     "reply": "Rispondi",
     "reply_all": "Rispondi a tutti",
     "forward": "Inoltra",
@@ -748,7 +753,10 @@
     "rate_limited_title": "L'autenticazione del server e temporaneamente limitata.",
     "rate_limited_detail": "Bulwark ha sospeso le richieste in background per evitare il blocco. Nuovo tentativo tra {seconds}s.",
     "rate_limited_action_title": "Richiesta sospesa per evitare il blocco.",
-    "rate_limited_action_detail": "Bulwark attende che termini il cooldown del server prima di inviare altre richieste autenticate. Riprova tra {seconds}s."
+    "rate_limited_action_detail": "Bulwark attende che termini il cooldown del server prima di inviare altre richieste autenticate. Riprova tra {seconds}s.",
+    "pull_to_refresh": "Trascina per aggiornare",
+    "release_to_refresh": "Rilascia per aggiornare",
+    "refreshing": "Aggiornamento…"
   },
   "notifications": {
     "email_sent": "Messaggio inviato con successo",
@@ -855,7 +863,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "Passa al persiano"
+    "switch_to_farsi": "Passa al persiano",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "Passa al mongolo"
   },
   "settings": {
     "title": "Impostazioni",
@@ -910,6 +921,56 @@
       "advanced": "Avanzate"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "Ordine dell'elenco messaggi",
+        "description": "Come vengono ordinati i messaggi nell'elenco. L'ordinamento è eseguito dal server, quindi riguarda l'intera cartella e non solo i messaggi caricati.",
+        "preset": {
+          "chronological": "Cronologico (più recenti prima)",
+          "unread_first": "Non letti prima",
+          "starred_first": "Speciali prima",
+          "tagged_first": "Con tag prima",
+          "custom": "Personalizzato"
+        },
+        "tag_label": "Tag",
+        "advanced_show": "Avanzate: modifica i livelli di ordinamento",
+        "advanced_hide": "Nascondi avanzate",
+        "criterion_label": "Criterio del livello {n}",
+        "direction_label": "Direzione del livello {n}",
+        "criteria": {
+          "unread": "Non letto",
+          "starred": "Speciale",
+          "tag": "Tag",
+          "receivedAt": "Data di ricezione",
+          "sentAt": "Data di invio",
+          "from": "Mittente",
+          "subject": "Oggetto",
+          "size": "Dimensione"
+        },
+        "direction": {
+          "unread_first": "Non letti prima",
+          "read_first": "Letti prima",
+          "starred_first": "Speciali prima",
+          "unstarred_first": "Non speciali prima",
+          "tagged_first": "Con tag prima",
+          "untagged_first": "Senza tag prima",
+          "newest_first": "Più recenti prima",
+          "oldest_first": "Più vecchi prima",
+          "a_to_z": "A → Z",
+          "z_to_a": "Z → A",
+          "largest_first": "Più grandi prima",
+          "smallest_first": "Più piccoli prima"
+        },
+        "add_level": "Aggiungi livello",
+        "remove_level": "Rimuovi livello",
+        "move_up": "Sposta su",
+        "move_down": "Sposta giù",
+        "tiebreak_note": "Fino a tre livelli; i livelli successivi risolvono i pareggi. «Più recenti prima» viene sempre applicato per ultimo.",
+        "scope": {
+          "label": "Applica a tutte le cartelle",
+          "description": "Se disattivato, l'ordine vale solo per la Posta in arrivo; le altre cartelle restano cronologiche."
+        },
+        "unsupported_note": "Il tuo server di posta non supporta l'ordinamento per stato di lettura, speciali o tag. Questi livelli vengono ignorati e l'elenco resta cronologico."
+      },
       "title": "Aspetto",
       "description": "Personalizza l'aspetto della tua webmail",
       "theme": {
@@ -1104,12 +1165,27 @@
         "relay_label": "Relay push",
         "relay_locked": "Impostato dall'amministratore",
         "relay_locked_desc": "L'URL del relay push è stato impostato dall'amministratore e non può essere modificato.",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "Attivo su questo dispositivo",
         "status_busy": "In elaborazione…",
         "status_inactive": "Non abilitato su questo dispositivo",
         "status_unsupported": "Questo browser non supporta Web Push",
-        "title": "Notifiche in background"
+        "title": "Notifiche in background",
+        "devices_title": "Dispositivi registrati",
+        "devices_desc": "Tutti i dispositivi registrati per ricevere le notifiche in background di questo account. Revocandone uno, smette subito di riceverle.",
+        "devices_loading": "Caricamento dei dispositivi registrati…",
+        "devices_empty": "Nessun dispositivo è registrato per le notifiche in background.",
+        "devices_error": "Impossibile caricare i dispositivi registrati.",
+        "devices_refresh": "Aggiorna",
+        "device_this": "Questo dispositivo",
+        "device_other": "Altro dispositivo",
+        "device_status_active": "Consegna le notifiche",
+        "device_status_inactive": "Non ha mai consegnato una notifica",
+        "device_status_unknown": "Sconosciuto a questo relay",
+        "device_expires": "Scade il {date}",
+        "revoke": "Revoca",
+        "confirm_revoke_title": "Revocare questo dispositivo?",
+        "confirm_revoke_message": "Smetterà subito di ricevere le notifiche in background. Riattivando il push su quel dispositivo verrà registrato di nuovo.",
+        "confirm_revoke_message_this": "Questo dispositivo smetterà subito di ricevere le notifiche in background."
       }
     },
     "language_region": {
@@ -1150,6 +1226,12 @@
         "description": "Inizia la settimana di domenica o lunedì",
         "sunday": "Domenica",
         "monday": "Lunedì"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1188,6 +1270,12 @@
         "auto": "Automatica (consigliata)",
         "always": "Aggiungi sempre spaziatura",
         "edge": "Da bordo a bordo"
+      },
+      "plain_text_font": {
+        "label": "Carattere del testo semplice",
+        "description": "Carattere usato per le email in testo semplice",
+        "mono": "Monospazio",
+        "sans": "Normale (come l'app)"
       },
       "archive_mode": {
         "label": "Archivia in",
@@ -1358,6 +1446,22 @@
       "return_to_list_after_action": {
         "label": "Torna all'elenco dopo l'eliminazione o il contrassegno come non letto",
         "description": "Dopo aver eliminato o segnato come non letto il messaggio aperto, torna all'elenco dei messaggi invece di aprire il messaggio successivo."
+      },
+      "swipe_right_action": {
+        "label": "Azione per lo scorrimento a destra (mobile)",
+        "description": "Sui dispositivi touch, l'azione eseguita quando scorri un messaggio verso destra nell'elenco."
+      },
+      "swipe_left_action": {
+        "label": "Azione per lo scorrimento a sinistra (mobile)",
+        "description": "Sui dispositivi touch, l'azione eseguita quando scorri un messaggio verso sinistra nell'elenco."
+      },
+      "swipe_actions": {
+        "none": "Nessuna",
+        "archive": "Archivia",
+        "delete": "Elimina",
+        "mark_read": "Alterna letto",
+        "star": "Alterna stella",
+        "spam": "Segna come spam"
       },
       "rtl_editing": {
         "label": "Supporto alla scrittura da destra a sinistra",
@@ -1661,6 +1765,7 @@
       "create_subfolder": "Crea sottocartella",
       "reorder": "Trascina per riordinare",
       "reorder_error": "Impossibile riordinare le cartelle",
+      "move_error": "Impossibile spostare la cartella",
       "subfolder_of": "Dentro {name}",
       "subfolder_name": "Nome della sottocartella",
       "new_folder_name": "Nome della cartella",
@@ -2922,7 +3027,12 @@
       "events_cleared": "{count} eventi cancellati",
       "error_clear": "Impossibile cancellare gli eventi del calendario",
       "share": "Condividi calendario",
-      "new_event_in_calendar": "Nuovo evento in questo calendario"
+      "new_event_in_calendar": "Nuovo evento in questo calendario",
+      "kind": "Contenuto",
+      "kind_events": "Eventi",
+      "kind_tasks": "Attività",
+      "kind_both": "Eventi e attività",
+      "kind_hint": "Determina quali app vedono questo calendario quando viene sincronizzato tramite CalDAV. Non può essere modificato in seguito."
     },
     "subscription": {
       "title": "Abbonamento iCal",
@@ -3059,7 +3169,12 @@
     "search_hint": "Usa i filtri avanzati per una ricerca precisa",
     "advanced_filters_tooltip": "Filtri di ricerca avanzati",
     "results_found": "{count, plural, =0 {Nessun risultato trovato} one {# risultato trovato} other {# risultati trovati}}",
-    "results_found_more": "{count}+ risultati trovati"
+    "results_found_more": "{count}+ risultati trovati",
+    "suggestions_recent": "Ricerche recenti",
+    "suggestions_people": "Persone",
+    "suggestions_from": "Cerca email da {address}",
+    "suggestions_to": "Cerca email a {address}",
+    "suggestions_remove_recent": "Rimuovi dalle ricerche recenti"
   },
   "welcome": {
     "title": "Benvenuto nella tua casella di posta",

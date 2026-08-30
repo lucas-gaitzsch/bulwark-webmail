@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   supported: true,
   enableWebPush: vi.fn(),
   isWebPushEnabled: vi.fn(),
+  resyncWebPush: vi.fn(),
   authState: {
     client: { getAccountId: () => "account-1" } as {
       getAccountId: () => string;
@@ -18,10 +19,14 @@ const mocks = vi.hoisted(() => ({
     isAuthenticated: true,
     isDemoMode: false,
   },
-  settingsState: { emailNotificationsEnabled: true },
+  settingsState: { emailNotificationsEnabled: true, pushRelayUrl: "" },
   policyState: {
     loaded: true,
-    policy: { pushRelayUrl: "https://notifications.relay.bulwarkmail.org" },
+    policy: {
+      pushRelayUrl: "https://notifications.relay.bulwarkmail.org",
+      pushRelays: [] as { label: string; url: string }[],
+      pushRelayUrlLocked: false,
+    },
   },
 }));
 
@@ -50,6 +55,7 @@ vi.mock("@/lib/web-push", () => ({
   enableWebPush: mocks.enableWebPush,
   isWebPushSupported: () => mocks.supported,
   isWebPushEnabled: mocks.isWebPushEnabled,
+  resyncWebPush: mocks.resyncWebPush,
 }));
 
 function setNotificationPermission(permission: NotificationPermission) {
@@ -82,11 +88,15 @@ describe("PushNotificationPrompt", () => {
     mocks.authState.isAuthenticated = true;
     mocks.authState.isDemoMode = false;
     mocks.settingsState.emailNotificationsEnabled = true;
+    mocks.settingsState.pushRelayUrl = "";
     mocks.policyState.loaded = true;
     mocks.policyState.policy.pushRelayUrl =
       "https://notifications.relay.bulwarkmail.org";
+    mocks.policyState.policy.pushRelays = [];
+    mocks.policyState.policy.pushRelayUrlLocked = false;
     mocks.enableWebPush.mockReset().mockResolvedValue({ subscriptionId: "sub-1" });
     mocks.isWebPushEnabled.mockReset().mockImplementation(async () => mocks.enabled);
+    mocks.resyncWebPush.mockReset().mockResolvedValue(false);
     setNotificationPermission("default");
   });
 
@@ -121,12 +131,72 @@ describe("PushNotificationPrompt", () => {
     expect(screen.queryByText("title")).not.toBeInTheDocument();
   });
 
+  it("registers with the relay the user picked from the admin list", async () => {
+    mocks.policyState.policy.pushRelays = [
+      { label: "Company", url: "https://push.company.example" },
+    ];
+    mocks.settingsState.pushRelayUrl = "https://push.company.example";
+
+    render(<PushNotificationPrompt />);
+    await advancePromptDelay();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("enable"));
+      await Promise.resolve();
+    });
+
+    expect(mocks.enableWebPush).toHaveBeenCalledWith(
+      expect.objectContaining({ relayBaseUrl: "https://push.company.example" }),
+    );
+  });
+
+  it("falls back to the default relay when the user's pick is no longer offered", async () => {
+    mocks.settingsState.pushRelayUrl = "https://push.removed.example";
+
+    render(<PushNotificationPrompt />);
+    await advancePromptDelay();
+
+    await act(async () => {
+      fireEvent.click(screen.getByText("enable"));
+      await Promise.resolve();
+    });
+
+    expect(mocks.enableWebPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        relayBaseUrl: "https://notifications.relay.bulwarkmail.org",
+      }),
+    );
+  });
+
   it("does not render when push is already enabled", async () => {
     mocks.enabled = true;
     render(<PushNotificationPrompt />);
     await advancePromptDelay();
 
     expect(screen.queryByText("title")).not.toBeInTheDocument();
+  });
+
+  it("re-syncs an existing registration in the background on mount", async () => {
+    mocks.enabled = true;
+    render(<PushNotificationPrompt />);
+    await advancePromptDelay();
+
+    expect(mocks.resyncWebPush).toHaveBeenCalledTimes(1);
+    expect(mocks.resyncWebPush).toHaveBeenCalledWith(
+      expect.objectContaining({
+        relayBaseUrl: "https://notifications.relay.bulwarkmail.org",
+      }),
+    );
+    // Only the explicit Enable button may start the interactive flow.
+    expect(mocks.enableWebPush).not.toHaveBeenCalled();
+  });
+
+  it("does not touch push in demo mode", async () => {
+    mocks.authState.isDemoMode = true;
+    render(<PushNotificationPrompt />);
+    await advancePromptDelay();
+
+    expect(mocks.resyncWebPush).not.toHaveBeenCalled();
   });
 
   it("does not render when browser notifications are blocked", async () => {

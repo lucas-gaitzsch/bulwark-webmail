@@ -300,6 +300,10 @@
     "move": "Mutare",
     "print": "Imprimare",
     "view_source": "Vizualizați sursa",
+
+    "fullscreen": "Ecran complet",
+
+    "exit_fullscreen": "Ieșire din ecran complet",
     "export_email": "Exportați ca fișier .eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": "Importați fișiere .eml sau .zip",
@@ -574,6 +578,7 @@
     "read_receipt_on": "Solicitare confirmare de citire (faceți clic pentru a dezactiva)",
     "read_receipt_off": "Solicitați o confirmare de citire",
     "new_message": "Mesaj nou",
+    "signature_edit_hint": "Dublu clic pentru a edita semnătura",
     "reply": "Răspunde",
     "reply_all": "Răspunde tuturor",
     "forward": "Redirecționează",
@@ -748,7 +753,10 @@
     "rate_limited_title": "Autentificarea pe server este temporar limitată ca frecvență.",
     "rate_limited_detail": "Bulwark A suspendat solicitările de fundal pentru a evita blocarea. Se va încerca din nou în câteva {seconds} s.",
     "rate_limited_action_title": "Solicitarea a fost pusă în așteptare pentru a evita blocarea contului.",
-    "rate_limited_action_detail": "Bulwark Așteaptă încheierea perioadei de așteptare a serverului înainte de a trimite alte cereri autentificate. Încercați din nou în câteva {seconds}."
+    "rate_limited_action_detail": "Bulwark Așteaptă încheierea perioadei de așteptare a serverului înainte de a trimite alte cereri autentificate. Încercați din nou în câteva {seconds}.",
+    "pull_to_refresh": "Trageți pentru a reîmprospăta",
+    "release_to_refresh": "Eliberați pentru a reîmprospăta",
+    "refreshing": "Se reîmprospătează…"
   },
   "notifications": {
     "email_sent": "E-mailul a fost trimis cu succes",
@@ -855,7 +863,10 @@
     "zh": "Chineză simplificată",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "Comută la persană"
+    "switch_to_farsi": "Comută la persană",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "Comută la mongolă"
   },
   "settings": {
     "title": "Setări",
@@ -913,6 +924,56 @@
       "advanced": "Nivel avansat"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "Ordinea listei de mesaje",
+        "description": "Cum sunt ordonate mesajele în listă. Sortarea este făcută de server, deci acoperă întregul dosar, nu doar mesajele încărcate.",
+        "preset": {
+          "chronological": "Cronologic (cele mai noi primele)",
+          "unread_first": "Necitite primele",
+          "starred_first": "Cu stea primele",
+          "tagged_first": "Etichetate primele",
+          "custom": "Personalizat"
+        },
+        "tag_label": "Etichetă",
+        "advanced_show": "Avansat: editează nivelurile de sortare",
+        "advanced_hide": "Ascunde avansat",
+        "criterion_label": "Criteriul nivelului {n}",
+        "direction_label": "Direcția nivelului {n}",
+        "criteria": {
+          "unread": "Necitit",
+          "starred": "Cu stea",
+          "tag": "Etichetă",
+          "receivedAt": "Data primirii",
+          "sentAt": "Data trimiterii",
+          "from": "Expeditor",
+          "subject": "Subiect",
+          "size": "Dimensiune"
+        },
+        "direction": {
+          "unread_first": "Necitite primele",
+          "read_first": "Citite primele",
+          "starred_first": "Cu stea primele",
+          "unstarred_first": "Fără stea primele",
+          "tagged_first": "Etichetate primele",
+          "untagged_first": "Neetichetate primele",
+          "newest_first": "Cele mai noi primele",
+          "oldest_first": "Cele mai vechi primele",
+          "a_to_z": "A → Z",
+          "z_to_a": "Z → A",
+          "largest_first": "Cele mai mari primele",
+          "smallest_first": "Cele mai mici primele"
+        },
+        "add_level": "Adaugă nivel",
+        "remove_level": "Elimină nivelul",
+        "move_up": "Mută în sus",
+        "move_down": "Mută în jos",
+        "tiebreak_note": "Până la trei niveluri; nivelurile următoare departajează egalitățile. „Cele mai noi primele” se aplică întotdeauna la final.",
+        "scope": {
+          "label": "Aplică la toate dosarele",
+          "description": "Dezactivat, ordinea se aplică doar la Inbox; celelalte dosare rămân cronologice."
+        },
+        "unsupported_note": "Serverul tău de e-mail nu acceptă sortarea după starea de citire, stele sau etichete. Aceste niveluri sunt ignorate, iar lista rămâne cronologică."
+      },
       "title": "Aspect",
       "description": "Personalizați aspectul și funcționalitatea serviciului dvs. de webmail",
       "theme": {
@@ -1077,7 +1138,6 @@
         "relay_desc": "Implicit este setat serverul de retransmitere găzduit Bulwark. Modificați această setare numai dacă utilizați un server propriu.",
         "relay_locked": "Configurat de administrator",
         "relay_locked_desc": "Relay-ul push URL a fost configurat de administratorul dvs. și nu poate fi modificat.",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "Activ pe acest dispozitiv",
         "status_inactive": "Nu este activat pe acest dispozitiv",
         "status_unsupported": "Acest browser nu acceptă Web Push",
@@ -1088,7 +1148,23 @@
         "confirm_disable_title": "Dezactivați notificările din fundal?",
         "confirm_disable_message": "Acest dispozitiv nu va mai primi alerte atunci când site-ul este închis.",
         "dismiss_aria": "Ignorați solicitarea de notificări",
-        "ios_hint": "Pe iOS, instalați mai întâi site-ul pe ecranul de start – Safari trimite notificări Web Push numai către aplicațiile web progresive (PWA) instalate."
+        "ios_hint": "Pe iOS, instalați mai întâi site-ul pe ecranul de start – Safari trimite notificări Web Push numai către aplicațiile web progresive (PWA) instalate.",
+        "devices_title": "Dispozitive înregistrate",
+        "devices_desc": "Toate dispozitivele înregistrate să primească notificări în fundal pentru acest cont. Revocarea unuia îl oprește imediat din a le primi.",
+        "devices_loading": "Se încarcă dispozitivele înregistrate…",
+        "devices_empty": "Niciun dispozitiv nu este înregistrat pentru notificări în fundal.",
+        "devices_error": "Dispozitivele înregistrate nu au putut fi încărcate.",
+        "devices_refresh": "Reîmprospătează",
+        "device_this": "Acest dispozitiv",
+        "device_other": "Alt dispozitiv",
+        "device_status_active": "Livrează notificări",
+        "device_status_inactive": "Nu a livrat niciodată o notificare",
+        "device_status_unknown": "Necunoscut acestui releu",
+        "device_expires": "Expiră la {date}",
+        "revoke": "Revocă",
+        "confirm_revoke_title": "Revocați acest dispozitiv?",
+        "confirm_revoke_message": "Va înceta imediat să primească notificări în fundal. Reactivarea push pe acel dispozitiv îl va înregistra din nou.",
+        "confirm_revoke_message_this": "Acest dispozitiv va înceta imediat să primească notificări în fundal."
       },
       "sound_selection": {
         "title": "Sunet de notificare",
@@ -1153,6 +1229,12 @@
         "description": "Începeți săptămâna duminică sau luni",
         "sunday": "Duminică",
         "monday": "Luni"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1191,6 +1273,12 @@
         "auto": "Automat (recomandat)",
         "always": "Adaugă întotdeauna spațiere",
         "edge": "Din margine în margine"
+      },
+      "plain_text_font": {
+        "label": "Font pentru text simplu",
+        "description": "Fontul folosit pentru e-mailurile în text simplu",
+        "mono": "Monospațiat",
+        "sans": "Normal (la fel ca aplicația)"
       },
       "archive_mode": {
         "label": "Arhivați în",
@@ -1361,6 +1449,22 @@
       "return_to_list_after_action": {
         "label": "Revenire la listă după ștergere sau marcare ca necitit",
         "description": "După ștergerea sau marcarea mesajului deschis ca necitit, reveniți la lista de mesaje în loc să deschideți mesajul următor."
+      },
+      "swipe_right_action": {
+        "label": "Acțiune la glisare spre dreapta (mobil)",
+        "description": "Pe dispozitivele tactile, acțiunea efectuată când glisați un mesaj spre dreapta în listă."
+      },
+      "swipe_left_action": {
+        "label": "Acțiune la glisare spre stânga (mobil)",
+        "description": "Pe dispozitivele tactile, acțiunea efectuată când glisați un mesaj spre stânga în listă."
+      },
+      "swipe_actions": {
+        "none": "Niciuna",
+        "archive": "Arhivează",
+        "delete": "Șterge",
+        "mark_read": "Comută citit",
+        "star": "Comută steaua",
+        "spam": "Marchează ca spam"
       },
       "rtl_editing": {
         "label": "Suport pentru editare de la dreapta la stânga",
@@ -1668,6 +1772,7 @@
       "create_subfolder": "Creați un subfolder",
       "reorder": "Trageți pentru a reordona",
       "reorder_error": "Reordonarea dosarelor a eșuat",
+      "move_error": "Mutarea dosarului a eșuat",
       "subfolder_of": "În interiorul {name}",
       "subfolder_name": "Numele subfolderului",
       "new_folder_name": "Numele folderului",
@@ -2949,7 +3054,12 @@
       "copy_url": "Copiați CalDAV URL",
       "url_copied": "CalDAV URL copiat în clipboard",
       "share": "Partajare calendar",
-      "new_event_in_calendar": "Eveniment nou în acest calendar"
+      "new_event_in_calendar": "Eveniment nou în acest calendar",
+      "kind": "Conținut",
+      "kind_events": "Evenimente",
+      "kind_tasks": "Sarcini",
+      "kind_both": "Evenimente și sarcini",
+      "kind_hint": "Stabilește ce aplicații văd acest calendar când este sincronizat prin CalDAV. Nu poate fi schimbat ulterior."
     },
     "subscription": {
       "title": "iCal Abonament",
@@ -3082,7 +3192,12 @@
     "search_hint": "Folosiți filtre avansate pentru o căutare precisă",
     "advanced_filters_tooltip": "Filtre de căutare avansate",
     "results_found": "{count, plural, =0 {Nu s-au găsit rezultate} one {# rezultat găsit} few {# rezultate găsite} other {# de rezultate găsite}}",
-    "results_found_more": "{count}+ rezultate găsite"
+    "results_found_more": "{count}+ rezultate găsite",
+    "suggestions_recent": "Căutări recente",
+    "suggestions_people": "Persoane",
+    "suggestions_from": "Caută e-mailuri de la {address}",
+    "suggestions_to": "Caută e-mailuri către {address}",
+    "suggestions_remove_recent": "Elimină din căutările recente"
   },
   "welcome": {
     "title": "Bine ați venit în căsuța dvs. poștală",

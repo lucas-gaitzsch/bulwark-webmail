@@ -228,4 +228,68 @@ describe('JMAPClient request limits', () => {
     expect(client.getMaxObjectsInGet()).toBe(500);
     expect(client.getMaxObjectsInSet()).toBe(500);
   });
+
+  // Stalwart also caps how many requests one user may have in flight
+  // (maxConcurrentRequests, default 4) and refuses the surplus with the same
+  // 400 jmap:error:limit shape - BEFORE running any method. A push event fans
+  // out several refreshes at once, so the ceiling is reached in ordinary use;
+  // a refused Mailbox/get used to be answered with a fake lone "Inbox" that
+  // then replaced the real folder tree in the sidebar (#780).
+  describe('maxConcurrentRequests', () => {
+    const inboxList = {
+      methodResponses: [['Mailbox/get', { list: [{ id: 'mb-inbox', name: 'Inbox', role: 'inbox' }] }, '0']],
+    };
+
+    it('backs off and replays a refused request instead of failing it', async () => {
+      const client = await connectedClient();
+      let call = 0;
+      fetchSpy.mockImplementation((async () => {
+        if (call++ === 0) return limitErrorResponse('maxConcurrentRequests');
+        return jsonResponse(inboxList);
+      }) as never);
+
+      const mailboxes = await client.getMailboxes();
+
+      expect(call).toBe(2);
+      expect(mailboxes.map(m => m.id)).toEqual(['mb-inbox']);
+    });
+
+    it('does not replay other limit refusals', async () => {
+      const client = await connectedClient();
+      fetchSpy.mockImplementation((async () => limitErrorResponse('maxCallsInRequest')) as never);
+
+      await expect(client.getMailboxes()).rejects.toThrow('Request failed: 400');
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('gives up after a few attempts and reports the failure - never a placeholder Inbox', async () => {
+      const client = await connectedClient();
+      fetchSpy.mockImplementation((async () => limitErrorResponse('maxConcurrentRequests')) as never);
+      vi.useFakeTimers();
+      try {
+        const outcome = client.getMailboxes().then(() => 'resolved', (e: Error) => e.message);
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(await outcome).toMatch(/Request failed: 400/);
+        expect(fetchSpy.mock.calls.length).toBeGreaterThan(1);
+        expect(fetchSpy.mock.calls.length).toBeLessThanOrEqual(4);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('getAllMailboxes surfaces the failure rather than substituting a placeholder', async () => {
+      const client = await connectedClient();
+      fetchSpy.mockImplementation((async () => limitErrorResponse('maxConcurrentRequests')) as never);
+      vi.useFakeTimers();
+      try {
+        const outcome = client.getAllMailboxes().then(() => null, (e: Error) => e);
+        await vi.advanceTimersByTimeAsync(10_000);
+
+        expect(await outcome).toBeInstanceOf(Error);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

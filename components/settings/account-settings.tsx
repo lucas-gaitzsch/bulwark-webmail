@@ -54,7 +54,10 @@ export function AccountSettings() {
   const draggedIndexRef = useRef<number | null>(null);
 
   const quotaPercentage = quota && quota.total > 0 ? Math.min(Math.round((quota.used / quota.total) * 100), 100) : 0;
-  const displayName = primaryIdentity?.name || account?.displayName || (isDemoMode ? 'Demo User' : undefined);
+  // `account.displayName` is refreshed from the server on every login/restore
+  // (Stalwart principal "Full name" when available - #900); the identity name
+  // is only a fallback until that entry exists.
+  const displayName = account?.displayName || primaryIdentity?.name || (isDemoMode ? 'Demo User' : undefined);
   const email = primaryIdentity?.email || account?.email || username;
   const max = getMaxAccounts();
 

@@ -300,6 +300,10 @@
     "move": "Verplaatsen",
     "print": "Afdrukken",
     "view_source": "Bron bekijken",
+
+    "fullscreen": "Volledig scherm",
+
+    "exit_fullscreen": "Volledig scherm sluiten",
     "export_email": "Exporteren als .eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": ".eml of .zip importeren",
@@ -574,6 +578,7 @@
     "read_receipt_on": "Leesbevestiging aangevraagd (klik om uit te schakelen)",
     "read_receipt_off": "Leesbevestiging aanvragen",
     "new_message": "Nieuw bericht",
+    "signature_edit_hint": "Dubbelklik om de handtekening te bewerken",
     "reply": "Beantwoorden",
     "reply_all": "Allen beantwoorden",
     "forward": "Doorsturen",
@@ -748,7 +753,10 @@
     "rate_limited_title": "Serverauthenticatie is tijdelijk beperkt.",
     "rate_limited_detail": "Bulwark heeft achtergrondverzoeken gepauzeerd om een blokkade te voorkomen. Nieuwe poging over {seconds}s.",
     "rate_limited_action_title": "Verzoek gepauzeerd om blokkade te voorkomen.",
-    "rate_limited_action_detail": "Bulwark wacht tot de servercooldown voorbij is voordat er nieuwe geauthenticeerde verzoeken worden verzonden. Probeer het over {seconds}s opnieuw."
+    "rate_limited_action_detail": "Bulwark wacht tot de servercooldown voorbij is voordat er nieuwe geauthenticeerde verzoeken worden verzonden. Probeer het over {seconds}s opnieuw.",
+    "pull_to_refresh": "Trek om te vernieuwen",
+    "release_to_refresh": "Laat los om te vernieuwen",
+    "refreshing": "Vernieuwen…"
   },
   "notifications": {
     "email_sent": "E-mail succesvol verzonden",
@@ -855,7 +863,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "Overschakelen naar Farsi"
+    "switch_to_farsi": "Overschakelen naar Farsi",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "Overschakelen naar Mongools"
   },
   "settings": {
     "title": "Instellingen",
@@ -910,6 +921,56 @@
       "advanced": "Geavanceerd"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "Volgorde van de berichtenlijst",
+        "description": "Hoe berichten in de lijst worden gesorteerd. De server sorteert, dus het geldt voor de hele map en niet alleen voor de geladen berichten.",
+        "preset": {
+          "chronological": "Chronologisch (nieuwste eerst)",
+          "unread_first": "Ongelezen eerst",
+          "starred_first": "Met ster eerst",
+          "tagged_first": "Met label eerst",
+          "custom": "Aangepast"
+        },
+        "tag_label": "Label",
+        "advanced_show": "Geavanceerd: sorteerniveaus bewerken",
+        "advanced_hide": "Geavanceerd verbergen",
+        "criterion_label": "Criterium van niveau {n}",
+        "direction_label": "Richting van niveau {n}",
+        "criteria": {
+          "unread": "Ongelezen",
+          "starred": "Met ster",
+          "tag": "Label",
+          "receivedAt": "Ontvangstdatum",
+          "sentAt": "Verzenddatum",
+          "from": "Afzender",
+          "subject": "Onderwerp",
+          "size": "Grootte"
+        },
+        "direction": {
+          "unread_first": "Ongelezen eerst",
+          "read_first": "Gelezen eerst",
+          "starred_first": "Met ster eerst",
+          "unstarred_first": "Zonder ster eerst",
+          "tagged_first": "Met label eerst",
+          "untagged_first": "Zonder label eerst",
+          "newest_first": "Nieuwste eerst",
+          "oldest_first": "Oudste eerst",
+          "a_to_z": "A → Z",
+          "z_to_a": "Z → A",
+          "largest_first": "Grootste eerst",
+          "smallest_first": "Kleinste eerst"
+        },
+        "add_level": "Niveau toevoegen",
+        "remove_level": "Niveau verwijderen",
+        "move_up": "Omhoog",
+        "move_down": "Omlaag",
+        "tiebreak_note": "Maximaal drie niveaus; latere niveaus beslissen bij gelijke stand. 'Nieuwste eerst' wordt altijd als laatste toegepast.",
+        "scope": {
+          "label": "Op alle mappen toepassen",
+          "description": "Uitgeschakeld geldt de volgorde alleen voor het Postvak IN; andere mappen blijven chronologisch."
+        },
+        "unsupported_note": "Je mailserver ondersteunt geen sortering op leesstatus, ster of label. Die niveaus worden genegeerd en de lijst blijft chronologisch."
+      },
       "title": "Uiterlijk",
       "description": "Pas het uiterlijk van je webmail aan",
       "theme": {
@@ -1104,12 +1165,27 @@
         "relay_label": "Push-relay",
         "relay_locked": "Ingesteld door beheerder",
         "relay_locked_desc": "De push-relay-URL is ingesteld door je beheerder en kan niet worden gewijzigd.",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "Actief op dit apparaat",
         "status_busy": "Bezig…",
         "status_inactive": "Niet ingeschakeld op dit apparaat",
         "status_unsupported": "Deze browser ondersteunt geen Web Push",
-        "title": "Achtergrondmeldingen"
+        "title": "Achtergrondmeldingen",
+        "devices_title": "Geregistreerde apparaten",
+        "devices_desc": "Alle apparaten die achtergrondmeldingen voor dit account ontvangen. Trek je er een in, dan stopt de ontvangst meteen.",
+        "devices_loading": "Geregistreerde apparaten laden…",
+        "devices_empty": "Er zijn geen apparaten geregistreerd voor achtergrondmeldingen.",
+        "devices_error": "Kan de geregistreerde apparaten niet laden.",
+        "devices_refresh": "Vernieuwen",
+        "device_this": "Dit apparaat",
+        "device_other": "Ander apparaat",
+        "device_status_active": "Levert meldingen af",
+        "device_status_inactive": "Heeft nooit een melding afgeleverd",
+        "device_status_unknown": "Niet bekend bij deze relay",
+        "device_expires": "Verloopt op {date}",
+        "revoke": "Intrekken",
+        "confirm_revoke_title": "Dit apparaat intrekken?",
+        "confirm_revoke_message": "Het ontvangt meteen geen achtergrondmeldingen meer. Push opnieuw inschakelen op dat apparaat registreert het opnieuw.",
+        "confirm_revoke_message_this": "Dit apparaat ontvangt meteen geen achtergrondmeldingen meer."
       }
     },
     "language_region": {
@@ -1150,6 +1226,12 @@
         "description": "Begin de week op zondag of maandag",
         "sunday": "Zondag",
         "monday": "Maandag"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1188,6 +1270,12 @@
         "auto": "Automatisch (aanbevolen)",
         "always": "Altijd ruimte toevoegen",
         "edge": "Rand tot rand"
+      },
+      "plain_text_font": {
+        "label": "Lettertype voor platte tekst",
+        "description": "Lettertype voor e-mails in platte tekst",
+        "mono": "Monospace",
+        "sans": "Normaal (zoals de app)"
       },
       "archive_mode": {
         "label": "Archiveren in",
@@ -1358,6 +1446,22 @@
       "return_to_list_after_action": {
         "label": "Terug naar lijst na verwijderen of markeren als ongelezen",
         "description": "Na het verwijderen of als ongelezen markeren van het geopende bericht terugkeren naar de berichtenlijst in plaats van het volgende bericht te openen."
+      },
+      "swipe_right_action": {
+        "label": "Actie bij naar rechts vegen (mobiel)",
+        "description": "Op aanraakapparaten de actie die wordt uitgevoerd wanneer je een bericht in de lijst naar rechts veegt."
+      },
+      "swipe_left_action": {
+        "label": "Actie bij naar links vegen (mobiel)",
+        "description": "Op aanraakapparaten de actie die wordt uitgevoerd wanneer je een bericht in de lijst naar links veegt."
+      },
+      "swipe_actions": {
+        "none": "Geen",
+        "archive": "Archiveren",
+        "delete": "Verwijderen",
+        "mark_read": "Gelezen omschakelen",
+        "star": "Ster omschakelen",
+        "spam": "Markeren als spam"
       },
       "rtl_editing": {
         "label": "Ondersteuning voor rechts-naar-links bewerken",
@@ -1661,6 +1765,7 @@
       "create_subfolder": "Submap maken",
       "reorder": "Sleep om te herschikken",
       "reorder_error": "Herschikken van mappen is mislukt",
+      "move_error": "Verplaatsen van map is mislukt",
       "subfolder_of": "In {name}",
       "subfolder_name": "Naam van submap",
       "new_folder_name": "Mapnaam",
@@ -2922,7 +3027,12 @@
       "events_cleared": "{count} afspraken verwijderd",
       "error_clear": "Kan agendagebeurtenissen niet verwijderen",
       "share": "Agenda delen",
-      "new_event_in_calendar": "Nieuwe afspraak in deze agenda"
+      "new_event_in_calendar": "Nieuwe afspraak in deze agenda",
+      "kind": "Inhoud",
+      "kind_events": "Afspraken",
+      "kind_tasks": "Taken",
+      "kind_both": "Afspraken en taken",
+      "kind_hint": "Bepaalt welke apps deze agenda zien wanneer die via CalDAV wordt gesynchroniseerd. Dit kan later niet meer worden gewijzigd."
     },
     "subscription": {
       "title": "iCal-abonnement",
@@ -3059,7 +3169,12 @@
     "search_hint": "Gebruik geavanceerde filters voor een nauwkeurige zoekopdracht",
     "advanced_filters_tooltip": "Geavanceerde zoekfilters",
     "results_found": "{count, plural, =0 {Geen resultaten gevonden} one {# resultaat gevonden} other {# resultaten gevonden}}",
-    "results_found_more": "{count}+ resultaten gevonden"
+    "results_found_more": "{count}+ resultaten gevonden",
+    "suggestions_recent": "Recente zoekopdrachten",
+    "suggestions_people": "Personen",
+    "suggestions_from": "E-mails van {address} zoeken",
+    "suggestions_to": "E-mails aan {address} zoeken",
+    "suggestions_remove_recent": "Verwijderen uit recente zoekopdrachten"
   },
   "welcome": {
     "title": "Welkom bij uw mailbox",

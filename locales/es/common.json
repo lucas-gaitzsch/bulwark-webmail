@@ -300,6 +300,10 @@
     "move": "Mover",
     "print": "Imprimir",
     "view_source": "Ver código fuente",
+
+    "fullscreen": "Pantalla completa",
+
+    "exit_fullscreen": "Salir de pantalla completa",
     "export_email": "Exportar como .eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": "Importar .eml o .zip",
@@ -574,6 +578,7 @@
     "read_receipt_on": "Confirmación de lectura solicitada (haz clic para desactivar)",
     "read_receipt_off": "Solicitar confirmación de lectura",
     "new_message": "Nuevo Mensaje",
+    "signature_edit_hint": "Haz doble clic para editar la firma",
     "reply": "Responder",
     "reply_all": "Responder a Todos",
     "forward": "Reenviar",
@@ -748,7 +753,10 @@
     "rate_limited_title": "La autenticación del servidor está limitada temporalmente.",
     "rate_limited_detail": "Bulwark ha pausado las solicitudes en segundo plano para evitar un bloqueo. Reintentando en {seconds}s.",
     "rate_limited_action_title": "Solicitud pausada para evitar el bloqueo.",
-    "rate_limited_action_detail": "Bulwark está esperando a que termine el enfriamiento del servidor antes de enviar más solicitudes autenticadas. Inténtalo de nuevo en {seconds}s."
+    "rate_limited_action_detail": "Bulwark está esperando a que termine el enfriamiento del servidor antes de enviar más solicitudes autenticadas. Inténtalo de nuevo en {seconds}s.",
+    "pull_to_refresh": "Desliza para actualizar",
+    "release_to_refresh": "Suelta para actualizar",
+    "refreshing": "Actualizando…"
   },
   "notifications": {
     "email_sent": "Correo enviado exitosamente",
@@ -855,7 +863,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "Cambiar a farsi"
+    "switch_to_farsi": "Cambiar a farsi",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "Cambiar a mongol"
   },
   "settings": {
     "title": "Configuración",
@@ -910,6 +921,56 @@
       "advanced": "Avanzado"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "Orden de la lista de mensajes",
+        "description": "Cómo se ordenan los mensajes en la lista. El servidor realiza la ordenación, por lo que abarca toda la carpeta, no solo los mensajes cargados.",
+        "preset": {
+          "chronological": "Cronológico (más recientes primero)",
+          "unread_first": "No leídos primero",
+          "starred_first": "Destacados primero",
+          "tagged_first": "Etiquetados primero",
+          "custom": "Personalizado"
+        },
+        "tag_label": "Etiqueta",
+        "advanced_show": "Avanzado: editar niveles de orden",
+        "advanced_hide": "Ocultar avanzado",
+        "criterion_label": "Criterio del nivel {n}",
+        "direction_label": "Dirección del nivel {n}",
+        "criteria": {
+          "unread": "No leído",
+          "starred": "Destacado",
+          "tag": "Etiqueta",
+          "receivedAt": "Fecha de recepción",
+          "sentAt": "Fecha de envío",
+          "from": "Remitente",
+          "subject": "Asunto",
+          "size": "Tamaño"
+        },
+        "direction": {
+          "unread_first": "No leídos primero",
+          "read_first": "Leídos primero",
+          "starred_first": "Destacados primero",
+          "unstarred_first": "No destacados primero",
+          "tagged_first": "Etiquetados primero",
+          "untagged_first": "Sin etiqueta primero",
+          "newest_first": "Más recientes primero",
+          "oldest_first": "Más antiguos primero",
+          "a_to_z": "A → Z",
+          "z_to_a": "Z → A",
+          "largest_first": "Más grandes primero",
+          "smallest_first": "Más pequeños primero"
+        },
+        "add_level": "Añadir nivel",
+        "remove_level": "Eliminar nivel",
+        "move_up": "Subir",
+        "move_down": "Bajar",
+        "tiebreak_note": "Hasta tres niveles; los niveles posteriores deshacen empates. «Más recientes primero» se aplica siempre al final.",
+        "scope": {
+          "label": "Aplicar a todas las carpetas",
+          "description": "Si está desactivado, el orden solo se aplica a la bandeja de entrada; las demás carpetas siguen siendo cronológicas."
+        },
+        "unsupported_note": "Tu servidor de correo no admite ordenar por estado de lectura, destacados o etiquetas. Esos niveles se ignoran y la lista sigue siendo cronológica."
+      },
       "title": "Apariencia",
       "description": "Personalice la apariencia de su correo web",
       "theme": {
@@ -1104,12 +1165,27 @@
         "relay_label": "Relay push",
         "relay_locked": "Establecido por el administrador",
         "relay_locked_desc": "La URL del relay push ha sido establecida por tu administrador y no se puede cambiar.",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "Activo en este dispositivo",
         "status_busy": "Trabajando…",
         "status_inactive": "No habilitado en este dispositivo",
         "status_unsupported": "Este navegador no admite Web Push",
-        "title": "Notificaciones en segundo plano"
+        "title": "Notificaciones en segundo plano",
+        "devices_title": "Dispositivos registrados",
+        "devices_desc": "Todos los dispositivos registrados para recibir notificaciones en segundo plano de esta cuenta. Al revocar uno, deja de recibirlas de inmediato.",
+        "devices_loading": "Cargando dispositivos registrados…",
+        "devices_empty": "No hay dispositivos registrados para notificaciones en segundo plano.",
+        "devices_error": "No se pudieron cargar los dispositivos registrados.",
+        "devices_refresh": "Actualizar",
+        "device_this": "Este dispositivo",
+        "device_other": "Otro dispositivo",
+        "device_status_active": "Entregando notificaciones",
+        "device_status_inactive": "Nunca ha entregado una notificación",
+        "device_status_unknown": "Desconocido para este relé",
+        "device_expires": "Caduca el {date}",
+        "revoke": "Revocar",
+        "confirm_revoke_title": "¿Revocar este dispositivo?",
+        "confirm_revoke_message": "Dejará de recibir notificaciones en segundo plano de inmediato. Si vuelves a activar las notificaciones push en ese dispositivo, se registrará de nuevo.",
+        "confirm_revoke_message_this": "Este dispositivo dejará de recibir notificaciones en segundo plano de inmediato."
       }
     },
     "language_region": {
@@ -1150,6 +1226,12 @@
         "description": "Iniciar la semana en domingo o lunes",
         "sunday": "Domingo",
         "monday": "Lunes"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1188,6 +1270,12 @@
         "auto": "Automático (recomendado)",
         "always": "Añadir espaciado siempre",
         "edge": "De borde a borde"
+      },
+      "plain_text_font": {
+        "label": "Fuente de texto sin formato",
+        "description": "Fuente utilizada para los correos de texto sin formato",
+        "mono": "Monoespaciada",
+        "sans": "Normal (igual que la aplicación)"
       },
       "archive_mode": {
         "label": "Archivar en",
@@ -1358,6 +1446,22 @@
       "return_to_list_after_action": {
         "label": "Volver a la lista tras eliminar o marcar como no leído",
         "description": "Después de eliminar o marcar como no leído el mensaje abierto, volver a la lista de mensajes en lugar de abrir el mensaje siguiente."
+      },
+      "swipe_right_action": {
+        "label": "Acción al deslizar a la derecha (móvil)",
+        "description": "En dispositivos táctiles, la acción que se realiza al deslizar un mensaje hacia la derecha en la lista."
+      },
+      "swipe_left_action": {
+        "label": "Acción al deslizar a la izquierda (móvil)",
+        "description": "En dispositivos táctiles, la acción que se realiza al deslizar un mensaje hacia la izquierda en la lista."
+      },
+      "swipe_actions": {
+        "none": "Ninguna",
+        "archive": "Archivar",
+        "delete": "Eliminar",
+        "mark_read": "Alternar leído",
+        "star": "Alternar destacado",
+        "spam": "Marcar como spam"
       },
       "rtl_editing": {
         "label": "Compatibilidad con edición de derecha a izquierda",
@@ -1661,6 +1765,7 @@
       "create_subfolder": "Crear subcarpeta",
       "reorder": "Arrastra para reordenar",
       "reorder_error": "No se pudieron reordenar las carpetas",
+      "move_error": "No se pudo mover la carpeta",
       "subfolder_of": "Dentro de {name}",
       "subfolder_name": "Nombre de la subcarpeta",
       "new_folder_name": "Nombre de la carpeta",
@@ -2922,7 +3027,12 @@
       "events_cleared": "{count} eventos borrados",
       "error_clear": "No se pudieron borrar los eventos del calendario",
       "share": "Compartir calendario",
-      "new_event_in_calendar": "Nuevo evento en este calendario"
+      "new_event_in_calendar": "Nuevo evento en este calendario",
+      "kind": "Contenido",
+      "kind_events": "Eventos",
+      "kind_tasks": "Tareas",
+      "kind_both": "Eventos y tareas",
+      "kind_hint": "Determina qué aplicaciones ven este calendario cuando se sincroniza por CalDAV. No se puede cambiar después."
     },
     "subscription": {
       "title": "Suscripción iCal",
@@ -3059,7 +3169,12 @@
     "search_hint": "Usa los filtros avanzados para una búsqueda precisa",
     "advanced_filters_tooltip": "Filtros de búsqueda avanzados",
     "results_found": "{count, plural, =0 {No se encontraron resultados} one {# resultado encontrado} other {# resultados encontrados}}",
-    "results_found_more": "{count}+ resultados encontrados"
+    "results_found_more": "{count}+ resultados encontrados",
+    "suggestions_recent": "Búsquedas recientes",
+    "suggestions_people": "Personas",
+    "suggestions_from": "Buscar correos de {address}",
+    "suggestions_to": "Buscar correos para {address}",
+    "suggestions_remove_recent": "Quitar de las búsquedas recientes"
   },
   "welcome": {
     "title": "Bienvenido a tu buzón",

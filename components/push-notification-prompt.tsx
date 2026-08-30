@@ -8,11 +8,12 @@ import { useAuthStore } from "@/stores/auth-store";
 import { usePolicyStore } from "@/stores/policy-store";
 import { useSettingsStore } from "@/stores/settings-store";
 import {
-  DEFAULT_RELAY_BASE_URL,
   enableWebPush,
   isWebPushEnabled,
   isWebPushSupported,
+  resyncWebPush,
 } from "@/lib/web-push";
+import { resolveActiveRelayUrl } from "@/lib/push-relays";
 import {
   isPWAInstallPromptVisible,
   PWA_INSTALL_PROMPT_VISIBILITY_EVENT,
@@ -62,9 +63,8 @@ export function PushNotificationPrompt() {
     (state) => state.emailNotificationsEnabled,
   );
   const policyLoaded = usePolicyStore((state) => state.loaded);
-  const adminPushRelayUrl = usePolicyStore(
-    (state) => state.policy.pushRelayUrl,
-  );
+  const policy = usePolicyStore((state) => state.policy);
+  const userPushRelayUrl = useSettingsStore((state) => state.pushRelayUrl);
 
   const [showPrompt, setShowPrompt] = useState(false);
   const [isEnabling, setIsEnabling] = useState(false);
@@ -79,8 +79,7 @@ export function PushNotificationPrompt() {
   );
 
   const accountId = client?.getAccountId() ?? null;
-  const relayBaseUrl = (adminPushRelayUrl ?? "").trim()
-    || DEFAULT_RELAY_BASE_URL;
+  const relayBaseUrl = resolveActiveRelayUrl(policy, userPushRelayUrl);
 
   const dismissForSession = useCallback((id: string) => {
     setSessionDismissedAccountIds((previous) => {
@@ -111,6 +110,22 @@ export function PushNotificationPrompt() {
       );
     };
   }, []);
+
+  // Accounts that already have push on get their registration touched up in
+  // the background once per page load: expiry refreshed and the server-side
+  // delivery filter installed or repaired (older registrations predate it and
+  // would keep waking the device for spam). Deliberately independent of the
+  // prompt gating below - dismissing the onboarding prompt must not leave a
+  // live registration stale.
+  useEffect(() => {
+    if (!policyLoaded || !isAuthenticated || !client || !accountId || isDemoMode) return;
+    void resyncWebPush({
+      client,
+      localAccountId: localAccountId ?? undefined,
+      relayBaseUrl,
+      accountLabel: username ?? undefined,
+    });
+  }, [accountId, client, isAuthenticated, isDemoMode, localAccountId, policyLoaded, relayBaseUrl, username]);
 
   useEffect(() => {
     let cancelled = false;

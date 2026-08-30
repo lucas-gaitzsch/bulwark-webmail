@@ -300,6 +300,10 @@
     "move": "移動",
     "print": "印刷",
     "view_source": "ソースを表示",
+
+    "fullscreen": "全画面表示",
+
+    "exit_fullscreen": "全画面表示を終了",
     "export_email": ".emlとしてエクスポート",
     "forward_as_attachment": "Forward as attachment",
     "import_email": ".eml または .zip をインポート",
@@ -574,6 +578,7 @@
     "read_receipt_on": "開封確認を要求中（クリックで無効化）",
     "read_receipt_off": "開封確認を要求する",
     "new_message": "新規メッセージ",
+    "signature_edit_hint": "ダブルクリックで署名を編集",
     "reply": "返信",
     "reply_all": "全員に返信",
     "forward": "転送",
@@ -748,7 +753,10 @@
     "rate_limited_title": "サーバー認証は一時的に制限されています。",
     "rate_limited_detail": "ロックアウトを避けるため、Bulwark はバックグラウンド要求を一時停止しました。{seconds} 秒後に再試行します。",
     "rate_limited_action_title": "ロックアウトを避けるため要求を一時停止しました。",
-    "rate_limited_action_detail": "Bulwark はサーバーのクールダウンが終わるまで、追加の認証付きリクエストを送信しません。{seconds} 秒後に再試行してください。"
+    "rate_limited_action_detail": "Bulwark はサーバーのクールダウンが終わるまで、追加の認証付きリクエストを送信しません。{seconds} 秒後に再試行してください。",
+    "pull_to_refresh": "引っ張って更新",
+    "release_to_refresh": "離して更新",
+    "refreshing": "更新中…"
   },
   "notifications": {
     "email_sent": "メールを送信しました",
@@ -855,7 +863,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "ペルシア語に切り替え"
+    "switch_to_farsi": "ペルシア語に切り替え",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "モンゴル語に切り替え"
   },
   "settings": {
     "title": "設定",
@@ -910,6 +921,56 @@
       "advanced": "詳細"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "メッセージ一覧の並び順",
+        "description": "一覧でメッセージをどう並べるか。並べ替えはサーバーが行うため、読み込み済みのメッセージだけでなくフォルダー全体に適用されます。",
+        "preset": {
+          "chronological": "時系列（新しい順）",
+          "unread_first": "未読を先に",
+          "starred_first": "スター付きを先に",
+          "tagged_first": "タグ付きを先に",
+          "custom": "カスタム"
+        },
+        "tag_label": "タグ",
+        "advanced_show": "詳細: 並べ替えレベルを編集",
+        "advanced_hide": "詳細を隠す",
+        "criterion_label": "レベル {n} の条件",
+        "direction_label": "レベル {n} の方向",
+        "criteria": {
+          "unread": "未読",
+          "starred": "スター付き",
+          "tag": "タグ",
+          "receivedAt": "受信日時",
+          "sentAt": "送信日時",
+          "from": "送信者",
+          "subject": "件名",
+          "size": "サイズ"
+        },
+        "direction": {
+          "unread_first": "未読を先に",
+          "read_first": "既読を先に",
+          "starred_first": "スター付きを先に",
+          "unstarred_first": "スターなしを先に",
+          "tagged_first": "タグ付きを先に",
+          "untagged_first": "タグなしを先に",
+          "newest_first": "新しい順",
+          "oldest_first": "古い順",
+          "a_to_z": "A → Z",
+          "z_to_a": "Z → A",
+          "largest_first": "大きい順",
+          "smallest_first": "小さい順"
+        },
+        "add_level": "レベルを追加",
+        "remove_level": "レベルを削除",
+        "move_up": "上へ移動",
+        "move_down": "下へ移動",
+        "tiebreak_note": "最大 3 レベル。後のレベルは同順位の場合に使われます。「新しい順」は常に最後に適用されます。",
+        "scope": {
+          "label": "すべてのフォルダーに適用",
+          "description": "オフの場合、並び順は受信トレイにのみ適用され、他のフォルダーは時系列のままです。"
+        },
+        "unsupported_note": "お使いのメールサーバーは既読状態・スター・タグによる並べ替えに対応していません。これらのレベルは無視され、一覧は時系列のままになります。"
+      },
       "title": "外観",
       "description": "ウェブメールの見た目をカスタマイズ",
       "theme": {
@@ -1104,12 +1165,27 @@
         "relay_label": "プッシュリレー",
         "relay_locked": "管理者が設定",
         "relay_locked_desc": "プッシュリレーの URL は管理者によって設定されており、変更できません。",
-        "relay_placeholder": "https://notifications.relay.example.com",
         "status_active": "このデバイスで有効",
         "status_busy": "処理中…",
         "status_inactive": "このデバイスでは有効になっていません",
         "status_unsupported": "このブラウザは Web Push をサポートしていません",
-        "title": "バックグラウンド通知"
+        "title": "バックグラウンド通知",
+        "devices_title": "登録済みのデバイス",
+        "devices_desc": "このアカウントのバックグラウンド通知を受け取るよう登録されているデバイスの一覧です。取り消すと、そのデバイスはすぐに受信を停止します。",
+        "devices_loading": "登録済みのデバイスを読み込んでいます…",
+        "devices_empty": "バックグラウンド通知に登録されたデバイスはありません。",
+        "devices_error": "登録済みのデバイスを読み込めませんでした。",
+        "devices_refresh": "更新",
+        "device_this": "このデバイス",
+        "device_other": "別のデバイス",
+        "device_status_active": "通知を配信中",
+        "device_status_inactive": "通知を配信したことがありません",
+        "device_status_unknown": "このリレーでは不明",
+        "device_expires": "有効期限 {date}",
+        "revoke": "取り消す",
+        "confirm_revoke_title": "このデバイスを取り消しますか？",
+        "confirm_revoke_message": "すぐにバックグラウンド通知の受信を停止します。そのデバイスでプッシュを再度有効にすると、あらためて登録されます。",
+        "confirm_revoke_message_this": "このデバイスはすぐにバックグラウンド通知の受信を停止します。"
       }
     },
     "language_region": {
@@ -1150,6 +1226,12 @@
         "description": "日曜日または月曜日から開始",
         "sunday": "日曜日",
         "monday": "月曜日"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1188,6 +1270,12 @@
         "auto": "自動（推奨）",
         "always": "常に余白を追加",
         "edge": "余白なし"
+      },
+      "plain_text_font": {
+        "label": "プレーンテキストのフォント",
+        "description": "プレーンテキストメールに使用するフォント",
+        "mono": "等幅",
+        "sans": "標準（アプリと同じ）"
       },
       "archive_mode": {
         "label": "アーカイブ先",
@@ -1358,6 +1446,22 @@
       "return_to_list_after_action": {
         "label": "削除または未読にした後に一覧へ戻る",
         "description": "開いているメッセージを削除または未読にした後、次のメッセージを開かずにメッセージ一覧へ戻ります。"
+      },
+      "swipe_right_action": {
+        "label": "右スワイプの操作（モバイル）",
+        "description": "タッチデバイスで、リスト内のメッセージを右にスワイプしたときに実行される操作です。"
+      },
+      "swipe_left_action": {
+        "label": "左スワイプの操作（モバイル）",
+        "description": "タッチデバイスで、リスト内のメッセージを左にスワイプしたときに実行される操作です。"
+      },
+      "swipe_actions": {
+        "none": "なし",
+        "archive": "アーカイブ",
+        "delete": "削除",
+        "mark_read": "既読／未読を切り替え",
+        "star": "スターを切り替え",
+        "spam": "迷惑メールに設定"
       },
       "rtl_editing": {
         "label": "右から左への編集サポート",
@@ -1661,6 +1765,7 @@
       "create_subfolder": "サブフォルダーを作成",
       "reorder": "ドラッグして並べ替え",
       "reorder_error": "フォルダーの並べ替えに失敗しました",
+      "move_error": "フォルダーの移動に失敗しました",
       "subfolder_of": "{name} の中",
       "subfolder_name": "サブフォルダー名",
       "new_folder_name": "フォルダー名",
@@ -2922,7 +3027,12 @@
       "events_cleared": "{count}件のイベントを削除しました",
       "error_clear": "カレンダーイベントの削除に失敗しました",
       "share": "カレンダーを共有",
-      "new_event_in_calendar": "このカレンダーに新規イベント"
+      "new_event_in_calendar": "このカレンダーに新規イベント",
+      "kind": "内容",
+      "kind_events": "イベント",
+      "kind_tasks": "タスク",
+      "kind_both": "イベントとタスク",
+      "kind_hint": "CalDAV で同期したときにこのカレンダーを表示できるアプリを決定します。後から変更することはできません。"
     },
     "subscription": {
       "title": "iCal購読",
@@ -3059,7 +3169,12 @@
     "search_hint": "詳細フィルターで正確に検索",
     "advanced_filters_tooltip": "詳細検索フィルター",
     "results_found": "{count, plural, =0 {結果が見つかりません} other {#件の結果}}",
-    "results_found_more": "{count}+件の結果"
+    "results_found_more": "{count}+件の結果",
+    "suggestions_recent": "最近の検索",
+    "suggestions_people": "連絡先",
+    "suggestions_from": "{address} からのメールを検索",
+    "suggestions_to": "{address} 宛のメールを検索",
+    "suggestions_remove_recent": "最近の検索から削除"
   },
   "welcome": {
     "title": "メールボックスへようこそ",

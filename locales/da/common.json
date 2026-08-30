@@ -300,6 +300,10 @@
     "move": "Flyt",
     "print": "Udskriv",
     "view_source": "Vis kilde",
+
+    "fullscreen": "Fuld skærm",
+
+    "exit_fullscreen": "Afslut fuld skærm",
     "export_email": "Eksportér som .eml",
     "forward_as_attachment": "Forward as attachment",
     "import_email": "Importér .eml eller .zip",
@@ -574,6 +578,7 @@
     "read_receipt_on": "Læsekvittering anmodet (klik for at deaktivere)",
     "read_receipt_off": "Anmod om læsekvittering",
     "new_message": "Ny besked",
+    "signature_edit_hint": "Dobbeltklik for at redigere signaturen",
     "reply": "Svar",
     "reply_all": "Svar alle",
     "forward": "Videresend",
@@ -748,7 +753,10 @@
     "rate_limited_title": "Server-godkendelse er midlertidigt hastighedsbegrænset.",
     "rate_limited_detail": "Bulwark har sat baggrundsanmodninger på pause for at undgå udelukkelse. Prøver igen om {seconds}s.",
     "rate_limited_action_title": "Anmodning sat på pause for at undgå udelukkelse.",
-    "rate_limited_action_detail": "Bulwark venter på, at serverens nedkølingsperiode slutter, før der sendes flere godkendte anmodninger. Prøv igen om {seconds}s."
+    "rate_limited_action_detail": "Bulwark venter på, at serverens nedkølingsperiode slutter, før der sendes flere godkendte anmodninger. Prøv igen om {seconds}s.",
+    "pull_to_refresh": "Træk for at opdatere",
+    "release_to_refresh": "Slip for at opdatere",
+    "refreshing": "Opdaterer…"
   },
   "notifications": {
     "email_sent": "E-mail sendt succesfuldt",
@@ -855,7 +863,10 @@
     "zh": "简体中文",
     "fa": "فارسی",
     "farsi": "فارسی",
-    "switch_to_farsi": "Skift til farsi"
+    "switch_to_farsi": "Skift til farsi",
+    "mn": "Монгол",
+    "mongolian": "Монгол",
+    "switch_to_mongolian": "Skift til mongolsk"
   },
   "settings": {
     "title": "Indstillinger",
@@ -913,6 +924,56 @@
       "advanced": "Avanceret"
     },
     "appearance": {
+      "message_list_order": {
+        "label": "Rækkefølge i beskedlisten",
+        "description": "Hvordan beskeder sorteres i listen. Serveren sorterer, så det gælder hele mappen og ikke kun de indlæste beskeder.",
+        "preset": {
+          "chronological": "Kronologisk (nyeste først)",
+          "unread_first": "Ulæste først",
+          "starred_first": "Stjernemarkerede først",
+          "tagged_first": "Med mærkat først",
+          "custom": "Tilpasset"
+        },
+        "tag_label": "Mærkat",
+        "advanced_show": "Avanceret: rediger sorteringsniveauer",
+        "advanced_hide": "Skjul avanceret",
+        "criterion_label": "Kriterium for niveau {n}",
+        "direction_label": "Retning for niveau {n}",
+        "criteria": {
+          "unread": "Ulæst",
+          "starred": "Stjernemarkeret",
+          "tag": "Mærkat",
+          "receivedAt": "Modtagelsesdato",
+          "sentAt": "Afsendelsesdato",
+          "from": "Afsender",
+          "subject": "Emne",
+          "size": "Størrelse"
+        },
+        "direction": {
+          "unread_first": "Ulæste først",
+          "read_first": "Læste først",
+          "starred_first": "Stjernemarkerede først",
+          "unstarred_first": "Uden stjerne først",
+          "tagged_first": "Med mærkat først",
+          "untagged_first": "Uden mærkat først",
+          "newest_first": "Nyeste først",
+          "oldest_first": "Ældste først",
+          "a_to_z": "A → Å",
+          "z_to_a": "Å → A",
+          "largest_first": "Største først",
+          "smallest_first": "Mindste først"
+        },
+        "add_level": "Tilføj niveau",
+        "remove_level": "Fjern niveau",
+        "move_up": "Flyt op",
+        "move_down": "Flyt ned",
+        "tiebreak_note": "Op til tre niveauer; senere niveauer afgør ved lighed. \"Nyeste først\" anvendes altid til sidst.",
+        "scope": {
+          "label": "Anvend på alle mapper",
+          "description": "Når den er slået fra, gælder rækkefølgen kun for Indbakken; andre mapper forbliver kronologiske."
+        },
+        "unsupported_note": "Din mailserver understøtter ikke sortering efter læsestatus, stjerner eller mærkater. Disse niveauer ignoreres, og listen forbliver kronologisk."
+      },
       "title": "Udseende",
       "description": "Tilpas udseendet af din webmail",
       "theme": {
@@ -1077,7 +1138,6 @@
         "relay_desc": "Som standard det hosted Bulwark-relæ. Ændr kun, hvis du selv-host'er.",
         "relay_locked": "Indstillet af administrator",
         "relay_locked_desc": "Push-relæ-URL'en er indstillet af din administrator og kan ikke ændres.",
-        "relay_placeholder": "https://notifikationer.relay.eksempel.dk",
         "status_active": "Aktiv på denne enhed",
         "status_inactive": "Ikke aktiveret på denne enhed",
         "status_unsupported": "Denne browser understøtter ikke Web Push",
@@ -1088,7 +1148,23 @@
         "confirm_disable_title": "Deaktivér baggrundsnotifikationer?",
         "confirm_disable_message": "Denne enhed stopper med at modtage alarmer, når sitet er lukket.",
         "dismiss_aria": "Afvis notifikationsprompt",
-        "ios_hint": "På iOS skal du installere sitet på din startskærm først - Safari leverer kun Web Push til installerede PWA'er."
+        "ios_hint": "På iOS skal du installere sitet på din startskærm først - Safari leverer kun Web Push til installerede PWA'er.",
+        "devices_title": "Registrerede enheder",
+        "devices_desc": "Alle enheder, der er registreret til at modtage baggrundsnotifikationer for denne konto. Tilbagekalder du en, stopper den med at modtage med det samme.",
+        "devices_loading": "Indlæser registrerede enheder…",
+        "devices_empty": "Ingen enheder er registreret til baggrundsnotifikationer.",
+        "devices_error": "Kunne ikke indlæse de registrerede enheder.",
+        "devices_refresh": "Opdater",
+        "device_this": "Denne enhed",
+        "device_other": "Anden enhed",
+        "device_status_active": "Leverer notifikationer",
+        "device_status_inactive": "Har aldrig leveret en notifikation",
+        "device_status_unknown": "Ukendt for dette relæ",
+        "device_expires": "Udløber {date}",
+        "revoke": "Tilbagekald",
+        "confirm_revoke_title": "Tilbagekald denne enhed?",
+        "confirm_revoke_message": "Den stopper med at modtage baggrundsnotifikationer med det samme. Slår du push til igen på enheden, registreres den på ny.",
+        "confirm_revoke_message_this": "Denne enhed stopper med at modtage baggrundsnotifikationer med det samme."
       },
       "sound_selection": {
         "title": "Notifikationslyd",
@@ -1153,6 +1229,12 @@
         "description": "Start ugen på søndag eller mandag",
         "sunday": "Søndag",
         "monday": "Mandag"
+      },
+      "time_zone": {
+        "label": "Time zone",
+        "description": "Show email and calendar times in this time zone instead of the one reported by your browser",
+        "auto": "Automatic ({zone})",
+        "preview_now": "Now:"
       }
     },
     "email_behavior": {
@@ -1191,6 +1273,12 @@
         "auto": "Automatisk (anbefalet)",
         "always": "Tilføj altid afstand",
         "edge": "Kant til kant"
+      },
+      "plain_text_font": {
+        "label": "Skrifttype til ren tekst",
+        "description": "Skrifttype til e-mails i ren tekst",
+        "mono": "Monospace",
+        "sans": "Normal (samme som appen)"
       },
       "archive_mode": {
         "label": "Arkivér i",
@@ -1361,6 +1449,22 @@
       "return_to_list_after_action": {
         "label": "Vend tilbage til listen efter sletning eller markering som ulæst",
         "description": "Efter sletning eller markering af den åbne besked som ulæst vendes der tilbage til beskedlisten i stedet for at åbne den næste besked."
+      },
+      "swipe_right_action": {
+        "label": "Handling ved strygning til højre (mobil)",
+        "description": "På touch-enheder den handling, der udføres, når du stryger en besked til højre i listen."
+      },
+      "swipe_left_action": {
+        "label": "Handling ved strygning til venstre (mobil)",
+        "description": "På touch-enheder den handling, der udføres, når du stryger en besked til venstre i listen."
+      },
+      "swipe_actions": {
+        "none": "Ingen",
+        "archive": "Arkivér",
+        "delete": "Slet",
+        "mark_read": "Skift læst/ulæst",
+        "star": "Skift stjerne",
+        "spam": "Markér som spam"
       },
       "rtl_editing": {
         "label": "Understøttelse af højre-mod-venstre-redigering",
@@ -1664,6 +1768,7 @@
       "create_subfolder": "Opret undermappe",
       "reorder": "Træk for at ændre rækkefølgen",
       "reorder_error": "Kunne ikke ændre rækkefølgen af mapper",
+      "move_error": "Kunne ikke flytte mappen",
       "subfolder_of": "Inde i {name}",
       "subfolder_name": "Undermappenavn",
       "new_folder_name": "Mappenavn",
@@ -2948,7 +3053,12 @@
       "copy_url": "Kopier CalDAV-URL",
       "url_copied": "CalDAV-URL kopieret til udklipsholder",
       "share": "Del kalender",
-      "new_event_in_calendar": "Ny begivenhed i denne kalender"
+      "new_event_in_calendar": "Ny begivenhed i denne kalender",
+      "kind": "Indhold",
+      "kind_events": "Begivenheder",
+      "kind_tasks": "Opgaver",
+      "kind_both": "Begivenheder og opgaver",
+      "kind_hint": "Bestemmer, hvilke apps der kan se denne kalender, når den synkroniseres via CalDAV. Det kan ikke ændres senere."
     },
     "subscription": {
       "title": "iCal-abonnement",
@@ -3082,7 +3192,12 @@
     "search_hint": "Brug avancerede filtre til præcis søgning",
     "advanced_filters_tooltip": "Avancerede søgefiltre",
     "results_found": "{count, plural, =0 {Ingen resultater fundet} one {# resultat fundet} other {# resultater fundet}}",
-    "results_found_more": "{count}+ resultater fundet"
+    "results_found_more": "{count}+ resultater fundet",
+    "suggestions_recent": "Seneste søgninger",
+    "suggestions_people": "Personer",
+    "suggestions_from": "Søg efter mails fra {address}",
+    "suggestions_to": "Søg efter mails til {address}",
+    "suggestions_remove_recent": "Fjern fra seneste søgninger"
   },
   "welcome": {
     "title": "Velkommen til din postkasse",

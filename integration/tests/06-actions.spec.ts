@@ -92,6 +92,9 @@ test.describe('Inbox message actions', () => {
     const junk = await jmap.mailboxByRole('junk');
     const found = await jmap.findEmailBySubject(s, junk!.id);
     expect(found, 'spammed message is in Junk on the server').toBeTruthy();
+    // Filed *and* flagged: other JMAP clients read the keyword, not the folder.
+    expect(found.keywords?.$junk, 'spammed message carries $junk').toBe(true);
+    expect(found.keywords?.$notjunk, 'spammed message has no $notjunk').toBeFalsy();
   });
 
   test('spam then not-spam round-trips the message back out of Junk', async ({ page }) => {
@@ -103,6 +106,13 @@ test.describe('Inbox message actions', () => {
     await emailContextAction(page, s, 'ctx-spam');
     await expectFolderCountsSynced(page, { role: 'junk' }, { total: 1 });
 
+    // Precondition for the keyword assertions below: the message is flagged
+    // $junk before "not spam" runs, so a stale flag would be observable.
+    const junk = await jmap.mailboxByRole('junk');
+    const inbox = await jmap.mailboxByRole('inbox');
+    const spammed = await jmap.findEmailBySubject(s, junk!.id);
+    expect(spammed?.keywords?.$junk, 'message flagged $junk before not-spam').toBe(true);
+
     // Open Junk, then mark not-spam.
     await openFolder(page, { role: 'junk' });
     await expectEmailVisible(page, s);
@@ -113,9 +123,13 @@ test.describe('Inbox message actions', () => {
     // authoritative server state rather than the Junk badge, whose reconcile
     // can stall under heavy concurrent load.)
     await expect(emailItem(page, s)).toHaveCount(0);
-    const junk = await jmap.mailboxByRole('junk');
-    const inbox = await jmap.mailboxByRole('inbox');
     expect(await jmap.findEmailBySubject(s, junk!.id), 'message no longer in Junk').toBeFalsy();
-    expect(await jmap.findEmailBySubject(s, inbox!.id), 'message back in Inbox').toBeTruthy();
+    const restored = await jmap.findEmailBySubject(s, inbox!.id);
+    expect(restored, 'message back in Inbox').toBeTruthy();
+
+    // The move alone is not enough: a message sitting in the Inbox with $junk
+    // still set is junk to every other JMAP client. (#850)
+    expect(restored.keywords?.$junk, 'restored message no longer carries $junk').toBeFalsy();
+    expect(restored.keywords?.$notjunk, 'restored message carries $notjunk').toBe(true);
   });
 });
