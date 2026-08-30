@@ -202,6 +202,9 @@
     "delete_confirm": "Er du sikker på, at du vil slette \\\"{name}\\\"?",
     "no_apps": "Ingen apps tilføjet endnu",
     "no_apps_hint": "Tilføj brugerdefinerede apps og links til dit sidepanel",
+    "managed_title": "Leveret af din administrator",
+    "managed_description": "Disse apps er sat op for alle og kan ikke ændres.",
+    "managed_badge": "Administreret",
     "search_icons": "Søg efter ikoner...",
     "show_popular": "Populære",
     "show_all": "Alle",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Læsekvittering anmodet (klik for at deaktivere)",
     "read_receipt_off": "Anmod om læsekvittering",
+    "dsn_on": "Leveringsbesked anmodet (klik for at slå fra)",
+    "dsn_off": "Anmod om leveringsbesked",
+    "require_tls_on": "Krypteret levering påkrævet (klik for at slå fra)",
+    "require_tls_off": "Kræv krypteret levering (TLS)",
     "new_message": "Ny besked",
     "signature_edit_hint": "Dobbeltklik for at redigere signaturen",
     "reply": "Svar",
@@ -1863,6 +1870,8 @@
       "description": "Administrér brugerdefinerede apps og links i dit sidepanel",
       "keep_loaded": "Hold apps indlæst",
       "keep_loaded_description": "Hold indlejrede apps kørende i baggrunden, når du skifter mellem dem, for at undgå genindlæsning",
+      "managed_title": "Leveret af din administrator",
+      "managed_description": "Disse apps er sat op for alle og kan ikke ændres.",
       "manage_title": "Brugerdefinerede apps",
       "manage_description": "Tilføj, redigér eller fjern brugerdefinerede apps fra dit sidepanel"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Ny undermappe...",
     "new_folder": "Ny mappe...",
     "rename": "Omdøb...",
+    "share": "Del...",
     "import_email": "Importér .eml eller .zip...",
     "empty_folder": "Tøm mappe",
     "empty_folder_generic": "Tøm mappe",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Kunne ikke omdøbe mappe",
     "toast_error_delete": "Kunne ikke slette mappe",
     "toast_error_delete_has_children": "Mappen har undermapper. Fjern dem først.",
-    "toast_error_delete_has_email": "Mappen er ikke tom. Tøm den først."
+    "toast_error_delete_has_email": "Mappen er ikke tom. Tøm den først.",
+    "delete_with_contents_title": "Mappen er ikke tom",
+    "delete_with_contents_message": "Mappen \"{name}\" indeholder stadig {count, plural, one {1 besked} other {# beskeder}}. Slet mappen og alle dens beskeder? Dette kan ikke fortrydes.",
+    "delete_with_contents_confirm": "Slet mappe og beskeder"
   },
   "shortcuts": {
     "title": "Tastaturgenveje",
@@ -2429,6 +2442,9 @@
       "renamed": "Adressebog omdøbt",
       "rename_failed": "Kunne ikke omdøbe adressebog",
       "default": "Standard",
+      "set_default": "Angiv som standard",
+      "default_updated": "Standardadressebog opdateret",
+      "set_default_failed": "Kunne ikke angive standardadressebog",
       "manage": "Administrér adressebøger",
       "share": "Del adressebog",
       "new_contact_in_book": "Ny kontakt i denne adressebog",
@@ -2785,6 +2801,14 @@
       "color": "Farve"
     },
     "participants": {
+      "availability": {
+        "title": "Tilgængelighed",
+        "free": "Ledig",
+        "busy": "Optaget",
+        "tentative": "Foreløbig",
+        "unknown": "Ikke en bruger på denne server",
+        "checking": "Kontrollerer…"
+      },
       "title": "Deltagere",
       "add": "Tilføj deltager",
       "organizer": "Arrangør",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1 sekunds forsinkelse",
       "hover_preview_delay_2s": "2 sekunders forsinkelse",
       "hover_preview_off": "Deaktiveret",
+      "organizer_identity": "Organisér invitationer som",
+      "organizer_identity_desc": "Kalenderadressen, der bruges som arrangør, når du inviterer folk til begivenheder.",
+      "organizer_identity_failed": "Kunne ikke ændre arrangøradressen",
       "show_birthday_calendar": "Kontaktfødselsdagskalender",
       "show_birthday_calendar_desc": "Vis en virtuel kalender med fødselsdage fra dine kontakter"
     },
@@ -3141,6 +3168,25 @@
     },
     "nav_open_menu": "Åbn menu"
   },
+  "calendar_event_notifications": {
+    "someone": "Nogen",
+    "invited": "{name} har inviteret dig til \"{title}\"",
+    "updated": "{name} har opdateret \"{title}\"",
+    "cancelled": "{name} har aflyst \"{title}\"",
+    "untitled": "Unavngivet begivenhed"
+  },
+  "share_notifications": {
+    "someone": "Nogen",
+    "shared": "{name} har delt {kind} \"{object}\" med dig",
+    "changed": "{name} har ændret din adgang til {kind} \"{object}\"",
+    "revoked": "{name} har fjernet din adgang til {kind} \"{object}\"",
+    "object": {
+      "folder": "mappen",
+      "calendar": "kalenderen",
+      "address_book": "adressebogen",
+      "files": "filmappen"
+    }
+  },
   "sharing": {
     "title": "Del \"{name}\"",
     "description": "Giv adgang til andre brugere eller grupper på denne server. Ændringer træder i kraft øjeblikkeligt.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Vedhæftninger",
     "date_after": "Efter",
     "date_before": "Før",
+    "size_min": "Større end (KB)",
+    "size_max": "Mindre end (KB)",
     "starred": "Stjernemarkerede",
     "unread": "Ulæst",
     "read": "Læst",

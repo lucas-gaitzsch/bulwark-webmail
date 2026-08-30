@@ -202,6 +202,9 @@
     "delete_confirm": "Czy na pewno chcesz usunąć \"{name}\"?",
     "no_apps": "Nie dodano jeszcze żadnych aplikacji",
     "no_apps_hint": "Dodaj własne aplikacje i linki do paska bocznego",
+    "managed_title": "Udostępnione przez administratora",
+    "managed_description": "Te aplikacje są skonfigurowane dla wszystkich i nie można ich zmienić.",
+    "managed_badge": "Zarządzana",
     "search_icons": "Szukaj ikon...",
     "show_popular": "Popularne",
     "show_all": "Wszystkie",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Zażądano potwierdzenia przeczytania (kliknij, aby wyłączyć)",
     "read_receipt_off": "Zażądaj potwierdzenia przeczytania",
+    "dsn_on": "Zażądano powiadomienia o dostarczeniu (kliknij, aby wyłączyć)",
+    "dsn_off": "Zażądaj powiadomienia o dostarczeniu",
+    "require_tls_on": "Wymagane szyfrowane dostarczenie (kliknij, aby wyłączyć)",
+    "require_tls_off": "Wymagaj szyfrowanego dostarczenia (TLS)",
     "new_message": "Nowa wiadomość",
     "signature_edit_hint": "Kliknij dwukrotnie, aby edytować podpis",
     "reply": "Odpowiedz",
@@ -1860,6 +1867,8 @@
       "description": "Zarządzaj niestandardowymi aplikacjami i linkami na pasku bocznym",
       "keep_loaded": "Pozostaw aplikacje załadowane",
       "keep_loaded_description": "Utrzymuj aplikacje wbudowane uruchomione w tle podczas przełączania się między nimi, aby uniknąć ponownego ładowania",
+      "managed_title": "Udostępnione przez administratora",
+      "managed_description": "Te aplikacje są skonfigurowane dla wszystkich i nie można ich zmienić.",
       "manage_title": "Niestandardowe aplikacje",
       "manage_description": "Dodawaj, edytuj lub usuwaj niestandardowe aplikacje z paska bocznego"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Nowy podfolder...",
     "new_folder": "Nowy folder...",
     "rename": "Zmień nazwę...",
+    "share": "Udostępnij...",
     "import_email": "Importuj .eml lub .zip...",
     "empty_folder": "Opróżnij folder",
     "empty_folder_generic": "Opróżnij folder",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "Nie udało się usunąć folderu",
     "toast_error_delete_has_children": "Folder zawiera podfoldery. Najpierw je usuń.",
     "toast_error_delete_has_email": "Folder nie jest pusty. Najpierw go opróżnij.",
+    "delete_with_contents_title": "Folder nie jest pusty",
+    "delete_with_contents_message": "Folder „{name}” nadal zawiera {count, plural, one {1 wiadomość} few {# wiadomości} other {# wiadomości}}. Usunąć folder wraz ze wszystkimi wiadomościami? Tej operacji nie można cofnąć.",
+    "delete_with_contents_confirm": "Usuń folder i wiadomości",
     "placeholder_folder_name": "Nazwa folderu",
     "create": "Utwórz",
     "rename_confirm": "Zmień nazwę"
@@ -2429,6 +2442,9 @@
       "renamed": "Zmieniono nazwę książki adresowej",
       "rename_failed": "Nie udało się zmienić nazwy książki adresowej",
       "default": "Domyślna",
+      "set_default": "Ustaw jako domyślną",
+      "default_updated": "Zaktualizowano domyślną książkę adresową",
+      "set_default_failed": "Nie udało się ustawić domyślnej książki adresowej",
       "manage": "Zarządzaj książkami adresowymi",
       "share": "Udostępnij książkę adresową",
       "new_contact_in_book": "Nowy kontakt w tej książce adresowej",
@@ -2785,6 +2801,14 @@
       "color": "Kolor"
     },
     "participants": {
+      "availability": {
+        "title": "Dostępność",
+        "free": "Dostępny",
+        "busy": "Zajęty",
+        "tentative": "Wstępnie",
+        "unknown": "Nie jest użytkownikiem tego serwera",
+        "checking": "Sprawdzanie…"
+      },
       "title": "Uczestnicy",
       "add": "Dodaj uczestnika",
       "organizer": "Organizator",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Opóźnienie 1 sekundy",
       "hover_preview_delay_2s": "Opóźnienie 2 sekund",
       "hover_preview_off": "Wyłączono",
+      "organizer_identity": "Organizuj zaproszenia jako",
+      "organizer_identity_desc": "Adres kalendarza używany jako organizator, gdy zapraszasz osoby na wydarzenia.",
+      "organizer_identity_failed": "Nie udało się zmienić adresu organizatora",
       "show_birthday_calendar": "Kalendarz urodzin kontaktów",
       "show_birthday_calendar_desc": "Pokaż wirtualny kalendarz z urodzinami z kontaktów"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Załączniki",
     "date_after": "Po",
     "date_before": "Przed",
+    "size_min": "Większe niż (KB)",
+    "size_max": "Mniejsze niż (KB)",
     "starred": "Z gwiazdką",
     "unread": "Nieprzeczytane",
     "read": "Przeczytane",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "Wyszukiwanie jest niedostępne w widoku ujednoliconym"
+  },
+  "calendar_event_notifications": {
+    "someone": "Ktoś",
+    "invited": "{name} zaprosił(a) Cię na „{title}”",
+    "updated": "{name} zaktualizował(a) „{title}”",
+    "cancelled": "{name} odwołał(a) „{title}”",
+    "untitled": "Wydarzenie bez tytułu"
+  },
+  "share_notifications": {
+    "someone": "Ktoś",
+    "shared": "{name} udostępnił(a) Ci {kind} „{object}”",
+    "changed": "{name} zmienił(a) Twój dostęp do {kind} „{object}”",
+    "revoked": "{name} odebrał(a) Ci dostęp do {kind} „{object}”",
+    "object": {
+      "folder": "folder",
+      "calendar": "kalendarz",
+      "address_book": "książkę adresową",
+      "files": "folder plików"
+    }
   },
   "sharing": {
     "title": "Udostępnij „{name}\"",

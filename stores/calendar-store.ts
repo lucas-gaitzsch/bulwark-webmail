@@ -1,13 +1,21 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { IJMAPClient } from '@/lib/jmap/client-interface';
-import type { Calendar, CalendarEvent, CalendarParticipant, CalendarRights, CreateCalendarOptions } from '@/lib/jmap/types';
+import type { Calendar, CalendarEvent, CalendarParticipant, CalendarParticipantIdentity, CalendarRights, CreateCalendarOptions } from '@/lib/jmap/types';
 import { debug } from '@/lib/debug';
 import { normalizeAllDayDuration } from '@/lib/calendar-utils';
 import { displayNow } from '@/lib/timezone';
 import { parseDuration } from '@/components/calendar/event-card';
 import { sanitizeOutgoingCalendarEventData } from '@/lib/calendar-event-normalization';
 import { expandRecurringEvents } from '@/lib/recurrence-expansion';
+import {
+  baseEventStoreId,
+  buildFallbackExcludePatch,
+  buildFallbackOverridePatch,
+  buildOccurrencePatch,
+  isServerRecurrenceInstance,
+  isSyntheticIdMutationUnsupported,
+} from '@/lib/recurrence-instances';
 import { parseISO } from 'date-fns';
 import { generateUUID } from '@/lib/utils';
 import { apiFetch } from '@/lib/browser-navigation';
@@ -47,6 +55,154 @@ function stripLocalAccountPrefix(id: string, localAccountId?: string): string {
 function rawIdentityOf(id: string): string {
   const idx = id.indexOf(CROSS_ACCOUNT_ID_DELIMITER);
   return idx >= 0 ? id.slice(idx + CROSS_ACCOUNT_ID_DELIMITER.length) : id;
+}
+
+/**
+ * Where a mutation addressed at store id `id` has to go.
+ *
+ * Occurrences handed out by server-side recurrence expansion carry a
+ * synthetic id (lib/recurrence-instances.ts). Addressed with scope
+ * 'occurrence' they are written through that id - the server turns the patch
+ * into a recurrence override - unless they are the single instance of a
+ * non-recurring event, where the base event is the same thing and works on
+ * every server version. Scope 'series' (an RSVP, a calendar move) always
+ * targets the base event. A base event that is not in the store itself but
+ * has an expanded occurrence in view (`baseEventStoreId`) borrows that
+ * occurrence's account routing.
+ */
+interface MutationTarget {
+  storeEvent?: CalendarEvent;
+  realId: string;
+  targetAccountId?: string;
+  localAccountId?: string;
+  /** True when `realId` is the synthetic id of one occurrence of a series. */
+  isOccurrence: boolean;
+}
+
+export function resolveMutationTarget(
+  events: CalendarEvent[],
+  id: string,
+  scope: 'occurrence' | 'series',
+): MutationTarget {
+  const storeEvent = events.find(e => e.id === id);
+  if (storeEvent) {
+    const rawId = storeEvent.originalId || stripLocalAccountPrefix(id, storeEvent.localAccountId);
+    const context = {
+      storeEvent,
+      targetAccountId: storeEvent.accountId,
+      localAccountId: storeEvent.localAccountId,
+    };
+    if (isServerRecurrenceInstance(storeEvent) && storeEvent.baseEventId) {
+      if (scope === 'series' || !storeEvent.recurrenceId) {
+        return { ...context, realId: storeEvent.baseEventId, isOccurrence: false };
+      }
+      return { ...context, realId: rawId, isOccurrence: true };
+    }
+    return { ...context, realId: rawId, isOccurrence: false };
+  }
+  const instance = events.find(e => baseEventStoreId(e) === id);
+  if (instance?.baseEventId) {
+    return {
+      realId: instance.baseEventId,
+      targetAccountId: instance.accountId,
+      localAccountId: instance.localAccountId,
+      isOccurrence: false,
+    };
+  }
+  return { realId: id, isOccurrence: false };
+}
+
+/** True when the store shows server-expanded occurrences of base event `baseId` on the given account. */
+function hasExpandedOccurrencesOf(events: CalendarEvent[], baseId: string, target: MutationTarget): boolean {
+  return events.some(e =>
+    isServerRecurrenceInstance(e)
+    && e.baseEventId === baseId
+    && e.accountId === target.targetAccountId
+    && e.localAccountId === target.localAccountId,
+  );
+}
+
+// Clients whose CalendarEvent/set rejected a synthetic id: skip the doomed
+// attempt and go straight to the base-event override for them.
+const syntheticIdRejected = new WeakSet<object>();
+
+/**
+ * Patch one expanded occurrence through its synthetic id. A server that
+ * predates synthetic-id writes rejects it; the same change is then written
+ * as a recurrence override on the base event instead (the way Bulwark did it
+ * before), and that client is remembered as needing the fallback.
+ */
+async function updateOccurrence(
+  client: IJMAPClient,
+  instance: CalendarEvent,
+  syntheticId: string,
+  updates: Partial<CalendarEvent>,
+  sendSchedulingMessages: boolean | undefined,
+  targetAccountId: string | undefined,
+): Promise<void> {
+  const patch = buildOccurrencePatch(updates);
+  if (!syntheticIdRejected.has(client)) {
+    try {
+      await client.updateCalendarEvent(syntheticId, patch, sendSchedulingMessages, targetAccountId);
+      return;
+    } catch (error) {
+      if (!isSyntheticIdMutationUnsupported(error)) throw error;
+      syntheticIdRejected.add(client);
+      debug.log('calendar', 'Server rejects synthetic ids; writing a recurrence override on the base event instead');
+    }
+  }
+  const fallback = buildFallbackOverridePatch(instance, patch);
+  if (!fallback || !instance.baseEventId) {
+    throw new Error('Cannot resolve the occurrence to override');
+  }
+  await client.updateCalendarEvent(instance.baseEventId, fallback, sendSchedulingMessages, targetAccountId);
+}
+
+/** Destroy one expanded occurrence; falls back to excluding it on the base event like `updateOccurrence`. */
+async function destroyOccurrence(
+  client: IJMAPClient,
+  instance: CalendarEvent,
+  syntheticId: string,
+  sendSchedulingMessages: boolean | undefined,
+  targetAccountId: string | undefined,
+): Promise<void> {
+  if (!syntheticIdRejected.has(client)) {
+    try {
+      await client.deleteCalendarEvent(syntheticId, sendSchedulingMessages, targetAccountId);
+      return;
+    } catch (error) {
+      if (!isSyntheticIdMutationUnsupported(error)) throw error;
+      syntheticIdRejected.add(client);
+      debug.log('calendar', 'Server rejects synthetic ids; excluding the occurrence on the base event instead');
+    }
+  }
+  const fallback = buildFallbackExcludePatch(instance);
+  if (!fallback || !instance.baseEventId) {
+    throw new Error('Cannot resolve the occurrence to exclude');
+  }
+  await client.updateCalendarEvent(instance.baseEventId, fallback, sendSchedulingMessages, targetAccountId);
+}
+
+// Re-runs the most recent range fetch. Synthetic occurrence ids are
+// positional and reshuffle whenever a series' overrides change, so after
+// mutating an occurrence (or a base event with occurrences in view) the
+// visible range is reloaded to pick up the new ids; the optimistic store
+// update stays in place until then. Concurrent callers share one fetch.
+let refetchVisibleRange: (() => Promise<void>) | null = null;
+let refetchVisibleRangeInFlight: Promise<void> | null = null;
+
+async function refetchAfterOccurrenceMutation(): Promise<void> {
+  if (!refetchVisibleRange) return;
+  if (!refetchVisibleRangeInFlight) {
+    refetchVisibleRangeInFlight = refetchVisibleRange()
+      .catch((error) => {
+        debug.error('Failed to refresh events after an occurrence change:', error);
+      })
+      .finally(() => {
+        refetchVisibleRangeInFlight = null;
+      });
+  }
+  await refetchVisibleRangeInFlight;
 }
 
 /**
@@ -254,6 +410,11 @@ export interface CalendarAccountClient {
   client: IJMAPClient;
 }
 
+export interface FetchEventsOptions {
+  /** Reload without flipping `isLoadingEvents` (background refresh after a mutation). */
+  silent?: boolean;
+}
+
 interface CalendarStore {
   calendars: Calendar[];
   events: CalendarEvent[];
@@ -266,12 +427,17 @@ interface CalendarStore {
   supportsCalendar: boolean;
   error: string | null;
   dateRange: { start: string; end: string } | null;
+  // The user's ParticipantIdentity list (calendar addresses to organise
+  // as); the default one is used as organizer of new invitations.
+  participantIdentities: CalendarParticipantIdentity[];
+  fetchParticipantIdentities: (client: IJMAPClient) => Promise<void>;
+  setDefaultParticipantIdentity: (client: IJMAPClient, id: string) => Promise<void>;
 
   setSupported: (supported: boolean) => void;
   fetchCalendars: (client: IJMAPClient) => Promise<void>;
-  fetchEvents: (client: IJMAPClient, start: string, end: string) => Promise<void>;
+  fetchEvents: (client: IJMAPClient, start: string, end: string, options?: FetchEventsOptions) => Promise<void>;
   fetchAllAccountsCalendars: (accounts: CalendarAccountClient[]) => Promise<void>;
-  fetchAllAccountsEvents: (accounts: CalendarAccountClient[], start: string, end: string) => Promise<void>;
+  fetchAllAccountsEvents: (accounts: CalendarAccountClient[], start: string, end: string, options?: FetchEventsOptions) => Promise<void>;
   createEvent: (client: IJMAPClient, event: Partial<CalendarEvent>, sendSchedulingMessages?: boolean) => Promise<CalendarEvent | null>;
   updateEvent: (client: IJMAPClient, id: string, updates: Partial<CalendarEvent>, sendSchedulingMessages?: boolean) => Promise<void>;
   deleteEvent: (client: IJMAPClient, id: string, sendSchedulingMessages?: boolean) => Promise<void>;
@@ -308,6 +474,7 @@ const initialState = {
   isLoading: false,
   isLoadingEvents: false,
   supportsCalendar: false,
+  participantIdentities: [],
   error: null as string | null,
   dateRange: null as { start: string; end: string } | null,
   icalSubscriptions: [] as ICalSubscription[],
@@ -325,8 +492,30 @@ export const useCalendarStore = create<CalendarStore>()(
 
       setSupported: (supported) => set({ supportsCalendar: supported }),
 
+      fetchParticipantIdentities: async (client) => {
+        if (!client.getParticipantIdentities) return;
+        try {
+          set({ participantIdentities: await client.getParticipantIdentities() });
+        } catch (error) {
+          // Servers without ParticipantIdentity (pre-draft) reject the method;
+          // the organizer then falls back to the login addresses.
+          debug.log('calendar', 'ParticipantIdentity/get unavailable:', error);
+        }
+      },
+
+      setDefaultParticipantIdentity: async (client, id) => {
+        if (!client.setDefaultParticipantIdentity) return;
+        await client.setDefaultParticipantIdentity(id);
+        set((state) => ({
+          participantIdentities: state.participantIdentities.map((i) => ({ ...i, isDefault: i.id === id })),
+        }));
+      },
+
       fetchCalendars: async (client) => {
         set({ isLoading: true, error: null });
+        // Identities are independent of the calendar list; load them
+        // alongside without blocking the grid.
+        void get().fetchParticipantIdentities(client);
         try {
           const calendars = await client.getAllCalendars();
           const { selectedCalendarIds } = get();
@@ -345,8 +534,9 @@ export const useCalendarStore = create<CalendarStore>()(
         }
       },
 
-      fetchEvents: async (client, start, end) => {
-        set({ isLoadingEvents: true, error: null });
+      fetchEvents: async (client, start, end, options) => {
+        refetchVisibleRange = () => get().fetchEvents(client, start, end, { silent: true });
+        set(options?.silent ? { error: null } : { isLoadingEvents: true, error: null });
         try {
           const rawEvents = await client.queryAllCalendarEvents({
             after: start,
@@ -359,8 +549,10 @@ export const useCalendarStore = create<CalendarStore>()(
             typeof e.start === 'string' && e.start && !isNaN(parseISO(e.start).getTime())
           );
           const droppedEvents = rawEvents.length - validEvents.length;
-          // Expand recurring events client-side (Stalwart doesn't support
-          // mutations on synthetic IDs from server-side expandRecurrences)
+          // Expand recurring series that came back unexpanded - from a server
+          // without synthetic-id support (lib/recurrence-instances.ts) or one
+          // that ignores expandRecurrences. Occurrences the server already
+          // expanded pass through untouched.
           const events = expandRecurringEvents(validEvents, start, end);
           debug.log('calendar', 'Calendar fetchEvents completed', {
             start,
@@ -408,8 +600,9 @@ export const useCalendarStore = create<CalendarStore>()(
         }
       },
 
-      fetchAllAccountsEvents: async (accounts, start, end) => {
-        set({ isLoadingEvents: true, error: null });
+      fetchAllAccountsEvents: async (accounts, start, end, options) => {
+        refetchVisibleRange = () => get().fetchAllAccountsEvents(accounts, start, end, { silent: true });
+        set(options?.silent ? { error: null } : { isLoadingEvents: true, error: null });
         try {
           const results = await Promise.all(
             accounts.map(async ({ client, localAccountId }) => {
@@ -526,13 +719,13 @@ export const useCalendarStore = create<CalendarStore>()(
         set({ error: null });
         try {
           // Resolve shared event IDs and client-side expanded occurrence IDs
-          const storeEvent = get().events.find(e => e.id === id);
-          const realId = storeEvent?.originalId || stripLocalAccountPrefix(id, storeEvent?.localAccountId);
-          const targetAccountId = storeEvent?.accountId;
-          client = resolveAccountClient(client, storeEvent?.localAccountId);
+          const target = resolveMutationTarget(get().events, id, 'occurrence');
+          const { storeEvent, realId, targetAccountId } = target;
+          client = resolveAccountClient(client, target.localAccountId);
           debug.log('calendar', 'Calendar updateEvent', {
             storeId: id,
             realId,
+            isOccurrence: target.isOccurrence,
             uid: storeEvent?.uid,
             recurrenceId: storeEvent?.recurrenceId,
             targetAccountId,
@@ -548,7 +741,11 @@ export const useCalendarStore = create<CalendarStore>()(
             }
             cleanUpdates.calendarIds = remapped;
           }
-          await client.updateCalendarEvent(realId, cleanUpdates, sendSchedulingMessages, targetAccountId);
+          if (target.isOccurrence && storeEvent) {
+            await updateOccurrence(client, storeEvent, realId, cleanUpdates, sendSchedulingMessages, targetAccountId);
+          } else {
+            await client.updateCalendarEvent(realId, cleanUpdates, sendSchedulingMessages, targetAccountId);
+          }
           set((state) => ({
             events: state.events.map(e => {
               if (e.id !== id) return e;
@@ -577,6 +774,9 @@ export const useCalendarStore = create<CalendarStore>()(
               return merged;
             }),
           }));
+          if (target.isOccurrence || hasExpandedOccurrencesOf(get().events, realId, target)) {
+            await refetchAfterOccurrenceMutation();
+          }
           // Update emails (iTIP REQUEST/REPLY) are sent by the server via the
           // `sendSchedulingMessages` argument already passed above - a manual
           // iMIP send here produced duplicate emails.
@@ -598,10 +798,11 @@ export const useCalendarStore = create<CalendarStore>()(
         }
         try {
           // Resolve shared event IDs and client-side expanded occurrence IDs
-          const storeEvent = get().events.find(e => e.id === eventId);
-          const realId = storeEvent?.originalId || stripLocalAccountPrefix(eventId, storeEvent?.localAccountId);
-          const targetAccountId = storeEvent?.accountId;
-          client = resolveAccountClient(client, storeEvent?.localAccountId);
+          // An RSVP answers for the whole series, so an expanded occurrence
+          // is resolved to its base event here.
+          const { storeEvent, realId, targetAccountId, localAccountId } =
+            resolveMutationTarget(get().events, eventId, 'series');
+          client = resolveAccountClient(client, localAccountId);
           // Escape per RFC 6901 (JSON Pointer): ~ → ~0, / → ~1
           const escapedId = participantId.replace(/~/g, '~0').replace(/\//g, '~1');
           const patchKey = `participants/${escapedId}/participationStatus`;
@@ -816,10 +1017,9 @@ export const useCalendarStore = create<CalendarStore>()(
         set({ error: null });
         try {
           // Resolve shared event IDs and client-side expanded occurrence IDs
-          const storeEvent = get().events.find(e => e.id === id);
-          const realId = storeEvent?.originalId || stripLocalAccountPrefix(id, storeEvent?.localAccountId);
-          const targetAccountId = storeEvent?.accountId;
-          client = resolveAccountClient(client, storeEvent?.localAccountId);
+          const target = resolveMutationTarget(get().events, id, 'occurrence');
+          const { storeEvent, realId, targetAccountId } = target;
+          client = resolveAccountClient(client, target.localAccountId);
           // Cancellation emails (iTIP CANCEL) are sent by the server via the
           // `sendSchedulingMessages` argument on the destroy below - a manual
           // iMIP send here produced duplicate emails.
@@ -830,11 +1030,19 @@ export const useCalendarStore = create<CalendarStore>()(
             recurrenceId: storeEvent?.recurrenceId,
             targetAccountId,
           });
-          await client.deleteCalendarEvent(realId, sendSchedulingMessages, targetAccountId);
+          if (target.isOccurrence && storeEvent) {
+            await destroyOccurrence(client, storeEvent, realId, sendSchedulingMessages, targetAccountId);
+          } else {
+            await client.deleteCalendarEvent(realId, sendSchedulingMessages, targetAccountId);
+          }
+          const hadOccurrences = hasExpandedOccurrencesOf(get().events, realId, target);
           set((state) => ({
             events: state.events.filter(e => e.id !== id),
             selectedEventId: state.selectedEventId === id ? null : state.selectedEventId,
           }));
+          if (target.isOccurrence || hadOccurrences) {
+            await refetchAfterOccurrenceMutation();
+          }
         } catch (error) {
           debug.error('Failed to delete event:', error);
           set({ error: 'Failed to delete event' });
@@ -1305,6 +1513,7 @@ export const useCalendarStore = create<CalendarStore>()(
       },
 
       clearState: () => {
+        refetchVisibleRange = null;
         // Preserve iCal subscriptions across the account-switch teardown.
         // They're now scoped per-account via sub.accountId - wiping them
         // here would lose them from localStorage on every switch.

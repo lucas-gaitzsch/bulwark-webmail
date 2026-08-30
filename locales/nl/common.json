@@ -202,6 +202,9 @@
     "delete_confirm": "Weet je zeker dat je \"{name}\" wilt verwijderen?",
     "no_apps": "Nog geen apps toegevoegd",
     "no_apps_hint": "Voeg aangepaste apps en links toe aan je zijbalk",
+    "managed_title": "Aangeboden door uw beheerder",
+    "managed_description": "Deze apps zijn voor iedereen ingesteld en kunnen niet worden gewijzigd.",
+    "managed_badge": "Beheerd",
     "search_icons": "Pictogrammen zoeken...",
     "show_popular": "Populair",
     "show_all": "Alle",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Leesbevestiging aangevraagd (klik om uit te schakelen)",
     "read_receipt_off": "Leesbevestiging aanvragen",
+    "dsn_on": "Bezorgmelding aangevraagd (klik om uit te schakelen)",
+    "dsn_off": "Bezorgmelding aanvragen",
+    "require_tls_on": "Versleutelde bezorging vereist (klik om uit te schakelen)",
+    "require_tls_off": "Versleutelde bezorging vereisen (TLS)",
     "new_message": "Nieuw bericht",
     "signature_edit_hint": "Dubbelklik om de handtekening te bewerken",
     "reply": "Beantwoorden",
@@ -1860,6 +1867,8 @@
       "description": "Aangepaste apps en links in de zijbalk beheren",
       "keep_loaded": "Apps geladen houden",
       "keep_loaded_description": "Inline-apps op de achtergrond laten draaien bij het wisselen om herladen te voorkomen",
+      "managed_title": "Aangeboden door uw beheerder",
+      "managed_description": "Deze apps zijn voor iedereen ingesteld en kunnen niet worden gewijzigd.",
       "manage_title": "Aangepaste apps",
       "manage_description": "Aangepaste apps toevoegen, bewerken of verwijderen uit de zijbalk"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Nieuwe submap...",
     "new_folder": "Nieuwe map...",
     "rename": "Hernoemen...",
+    "share": "Delen...",
     "import_email": ".eml of .zip importeren...",
     "empty_folder": "Map leegmaken",
     "empty_folder_generic": "Map leegmaken",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "Map verwijderen mislukt",
     "toast_error_delete_has_children": "Map bevat submappen. Verwijder deze eerst.",
     "toast_error_delete_has_email": "Map is niet leeg. Maak deze eerst leeg.",
+    "delete_with_contents_title": "Map is niet leeg",
+    "delete_with_contents_message": "De map \"{name}\" bevat nog {count, plural, one {1 bericht} other {# berichten}}. De map en al haar berichten verwijderen? Dit kan niet ongedaan worden gemaakt.",
+    "delete_with_contents_confirm": "Map en berichten verwijderen",
     "placeholder_folder_name": "Mapnaam",
     "create": "Aanmaken",
     "rename_confirm": "Hernoemen"
@@ -2429,6 +2442,9 @@
       "renamed": "Adresboek hernoemd",
       "rename_failed": "Adresboek hernoemen mislukt",
       "default": "Standaard",
+      "set_default": "Als standaard instellen",
+      "default_updated": "Standaardadresboek bijgewerkt",
+      "set_default_failed": "Standaardadresboek instellen mislukt",
       "manage": "Adresboeken beheren",
       "share": "Adresboek delen",
       "new_contact_in_book": "Nieuw contact in dit adresboek",
@@ -2785,6 +2801,14 @@
       "color": "Kleur"
     },
     "participants": {
+      "availability": {
+        "title": "Beschikbaarheid",
+        "free": "Beschikbaar",
+        "busy": "Bezet",
+        "tentative": "Voorlopig",
+        "unknown": "Geen gebruiker op deze server",
+        "checking": "Controleren…"
+      },
       "title": "Deelnemers",
       "add": "Deelnemer toevoegen",
       "organizer": "Organisator",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1 seconde vertraging",
       "hover_preview_delay_2s": "2 seconden vertraging",
       "hover_preview_off": "Uitgeschakeld",
+      "organizer_identity": "Uitnodigingen organiseren als",
+      "organizer_identity_desc": "Het agenda-adres dat als organisator wordt gebruikt wanneer je mensen uitnodigt voor afspraken.",
+      "organizer_identity_failed": "Kon het organisatoradres niet wijzigen",
       "show_birthday_calendar": "Verjaardagskalender",
       "show_birthday_calendar_desc": "Toon een virtuele kalender met verjaardagen van je contacten"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Bijlagen",
     "date_after": "Na",
     "date_before": "Voor",
+    "size_min": "Groter dan (KB)",
+    "size_max": "Kleiner dan (KB)",
     "starred": "Met ster",
     "unread": "Ongelezen",
     "read": "Gelezen",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "Zoeken is niet beschikbaar in de gecombineerde weergave"
+  },
+  "calendar_event_notifications": {
+    "someone": "Iemand",
+    "invited": "{name} heeft je uitgenodigd voor \"{title}\"",
+    "updated": "{name} heeft \"{title}\" bijgewerkt",
+    "cancelled": "{name} heeft \"{title}\" geannuleerd",
+    "untitled": "Afspraak zonder titel"
+  },
+  "share_notifications": {
+    "someone": "Iemand",
+    "shared": "{name} heeft {kind} \"{object}\" met je gedeeld",
+    "changed": "{name} heeft je toegang tot {kind} \"{object}\" gewijzigd",
+    "revoked": "{name} heeft je toegang tot {kind} \"{object}\" ingetrokken",
+    "object": {
+      "folder": "de map",
+      "calendar": "de agenda",
+      "address_book": "het adresboek",
+      "files": "de bestandsmap"
+    }
   },
   "sharing": {
     "title": "\"{name}\" delen",

@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useContactStore, getContactPhotoUri, normalizeContactPhotoUri, TRUSTED_SENDERS_BOOK_NAME } from '../contact-store';
 import type { ContactCard } from '@/lib/jmap/types';
+import type { IJMAPClient } from '@/lib/jmap/client-interface';
 
 vi.stubGlobal('crypto', { randomUUID: () => '00000000-0000-0000-0000-000000000000' });
 
@@ -158,6 +159,78 @@ describe('contact-store', () => {
       expect(state.error).toBeNull();
       expect(state.selectedContactIds.size).toBe(0);
       expect(state.activeTab).toBe('all');
+    });
+  });
+
+  describe('setDefaultAddressBook', () => {
+    const makeClient = () => ({
+      setDefaultAddressBook: vi.fn().mockResolvedValue(undefined),
+    });
+
+    it('should move the default flag to the chosen book', async () => {
+      const books = [
+        { id: 'ab-1', name: 'Personal', isDefault: true },
+        { id: 'ab-2', name: 'Work', isDefault: false },
+      ];
+      useContactStore.setState({ addressBooks: books });
+      const client = makeClient();
+
+      await useContactStore.getState().setDefaultAddressBook(
+        client as unknown as IJMAPClient,
+        books[1],
+      );
+
+      expect(client.setDefaultAddressBook).toHaveBeenCalledWith('ab-2', undefined);
+      expect(useContactStore.getState().addressBooks.map((b) => b.isDefault)).toEqual([false, true]);
+    });
+
+    it('should send the un-namespaced id and leave other accounts alone', async () => {
+      const book = {
+        id: 'local-2::ab-9',
+        originalId: 'ab-9',
+        localAccountId: 'local-2',
+        name: 'Work',
+      };
+      useContactStore.setState({
+        addressBooks: [
+          { id: 'local-1::ab-1', originalId: 'ab-1', localAccountId: 'local-1', name: 'Personal', isDefault: true },
+          book,
+        ],
+      });
+      const client = makeClient();
+
+      await useContactStore.getState().setDefaultAddressBook(client as unknown as IJMAPClient, book);
+
+      expect(client.setDefaultAddressBook).toHaveBeenCalledWith('ab-9', undefined);
+      // The other account keeps its own default.
+      expect(useContactStore.getState().addressBooks.map((b) => b.isDefault)).toEqual([true, true]);
+    });
+
+    it('should target the owning account for a shared book', async () => {
+      const book = { id: 'ab-3', name: 'Team', isShared: true, accountId: 'account-2' };
+      useContactStore.setState({ addressBooks: [book] });
+      const client = makeClient();
+
+      await useContactStore.getState().setDefaultAddressBook(client as unknown as IJMAPClient, book);
+
+      expect(client.setDefaultAddressBook).toHaveBeenCalledWith('ab-3', 'account-2');
+    });
+
+    it('should surface the error and keep the previous default on failure', async () => {
+      const books = [
+        { id: 'ab-1', name: 'Personal', isDefault: true },
+        { id: 'ab-2', name: 'Work', isDefault: false },
+      ];
+      useContactStore.setState({ addressBooks: books });
+      const client = {
+        setDefaultAddressBook: vi.fn().mockRejectedValue(new Error('Not allowed')),
+      };
+
+      await expect(
+        useContactStore.getState().setDefaultAddressBook(client as unknown as IJMAPClient, books[1]),
+      ).rejects.toThrow('Not allowed');
+      expect(useContactStore.getState().error).toBe('Not allowed');
+      expect(useContactStore.getState().addressBooks.map((b) => b.isDefault)).toEqual([true, false]);
     });
   });
 

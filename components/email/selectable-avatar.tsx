@@ -1,6 +1,6 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import type { ComponentProps, MouseEvent } from "react";
 import { Check } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -8,8 +8,11 @@ import { cn } from "@/lib/utils";
 type SelectableAvatarProps = ComponentProps<typeof Avatar> & {
   /** Whether the underlying message/thread is currently selected. */
   checked: boolean;
-  /** Toggle selection. The wrapper stops propagation so the row is not opened. */
-  onToggle: () => void;
+  /**
+   * Toggle selection. The wrapper stops propagation so the row is not opened.
+   * Receives the click event so callers can honour shift-click range selection.
+   */
+  onToggle: (e: MouseEvent<HTMLButtonElement>) => void;
   /** Accessible label for the selection control. */
   selectLabel?: string;
 };
@@ -35,7 +38,7 @@ export function SelectableAvatar({
       aria-label={selectLabel}
       onClick={(e) => {
         e.stopPropagation();
-        onToggle();
+        onToggle(e);
       }}
       className={cn(
         "group/select relative shrink-0 rounded-full outline-none",

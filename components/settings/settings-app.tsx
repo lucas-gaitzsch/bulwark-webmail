@@ -84,6 +84,7 @@ import { NavigationRail } from '@/components/layout/navigation-rail';
 import { SidebarAppsModal } from '@/components/layout/sidebar-apps-modal';
 import { InlineAppView } from '@/components/layout/inline-app-view';
 import { useSidebarApps } from '@/hooks/use-sidebar-apps';
+import { useResolvedSidebarApps } from '@/hooks/use-resolved-sidebar-apps';
 import { useIsEmbedded } from '@/hooks/use-is-embedded';
 import { useIsFocusedProTab } from '@/hooks/use-pane-context';
 import { ResizeHandle } from '@/components/layout/resize-handle';
@@ -453,7 +454,8 @@ export function SettingsApp({ linkSegments }: SettingsAppProps = {}) {
   const messages = useMessages() as Record<string, unknown>;
   const installedPlugins = usePluginStore((s) => s.plugins);
   const installedThemes = useThemeStore((s) => s.installedThemes);
-  const sidebarAppsList = useSettingsStore((s) => s.sidebarApps);
+  // Admin-pinned apps are searchable too - users can't add them, but they're listed.
+  const sidebarAppsList = useResolvedSidebarApps();
   const proInterface = useSettingsStore((s) => s.proInterface);
 
   // When set, the settings panel is scoped to a shared/group account: a reduced

@@ -2,13 +2,14 @@
 
 import { useState, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Pencil, Trash2, ExternalLink, PanelRight, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, PanelRight, GripVertical, Lock } from "lucide-react";
 import { icons as lucideIcons, type LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SettingsSection, SettingItem, ToggleSwitch } from "./settings-section";
 import { IconPicker } from "@/components/layout/icon-picker";
 import { useSettingsStore, type SidebarApp } from "@/stores/settings-store";
+import { useManagedSidebarApps } from "@/hooks/use-resolved-sidebar-apps";
 import { useConfirmDialog } from "@/hooks/use-confirm-dialog";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cn, generateUUID } from "@/lib/utils";
@@ -180,6 +181,52 @@ function AppForm({
   );
 }
 
+/**
+ * Apps the administrator pinned for everyone (#931). Listed so users can see
+ * where the extra rail entries come from, but with no edit or delete controls -
+ * they live in the admin policy, not in the user's settings.
+ */
+function ManagedAppsSection() {
+  const t = useTranslations("settings.sidebar_apps");
+  const tApps = useTranslations("sidebar_apps");
+  const managedApps = useManagedSidebarApps();
+
+  if (managedApps.length === 0) return null;
+
+  return (
+    <SettingsSection title={t("managed_title")} description={t("managed_description")}>
+      <div className="space-y-3">
+        {managedApps.map((app) => {
+          const AppIcon = lucideIcons[app.icon as keyof typeof lucideIcons] as LucideIcon | undefined;
+          return (
+            <div key={app.id} className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center flex-shrink-0">
+                {AppIcon ? <AppIcon className="w-4 h-4" /> : null}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{app.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{app.url}</div>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0 bg-muted text-muted-foreground inline-flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
+                {tApps("managed_badge")}
+              </span>
+              <span className={cn(
+                "text-[10px] px-1.5 py-0.5 rounded-full flex-shrink-0",
+                app.openMode === "inline"
+                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+                  : "bg-muted text-muted-foreground"
+              )}>
+                {app.openMode === "inline" ? tApps("inline_badge") : tApps("tab_badge")}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </SettingsSection>
+  );
+}
+
 export function SidebarAppsSettings() {
   const t = useTranslations("settings.sidebar_apps");
   const tApps = useTranslations("sidebar_apps");
@@ -250,6 +297,8 @@ export function SidebarAppsSettings() {
           />
         </SettingItem>
       </SettingsSection>
+
+      <ManagedAppsSection />
 
       <SettingsSection title={t("manage_title")} description={t("manage_description")}>
         <div className="space-y-3">

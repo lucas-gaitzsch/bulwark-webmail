@@ -779,6 +779,12 @@ export class DemoJMAPClient implements IJMAPClient {
     if (book) Object.assign(book, updates);
   }
 
+  async setDefaultAddressBook(addressBookId: string): Promise<void> {
+    for (const book of this.data.addressBooks) {
+      book.isDefault = book.id === addressBookId;
+    }
+  }
+
   async deleteAddressBook(addressBookId: string): Promise<void> {
     this.data.addressBooks = this.data.addressBooks.filter(b => b.id !== addressBookId);
     this.data.contacts = this.data.contacts.filter(c => !c.addressBookIds?.[addressBookId]);

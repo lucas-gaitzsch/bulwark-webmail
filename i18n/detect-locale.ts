@@ -1,4 +1,5 @@
 import { routing } from './routing';
+import { matchSupportedLocale } from './locale-matcher';
 import { useLocaleStore } from '@/stores/locale-store';
 
 /**
@@ -11,13 +12,12 @@ import { useLocaleStore } from '@/stores/locale-store';
  */
 export function detectBrowserLocale(fallback: string): string {
   if (typeof navigator === 'undefined') return fallback;
-  const supported = new Set<string>(routing.locales as readonly string[]);
   const prefs = navigator.languages?.length ? navigator.languages : [navigator.language];
   for (const tag of prefs) {
     if (!tag) continue;
-    const base = tag.toLowerCase().split('-')[0];
-    if (base === 'en') return fallback;    // English is the top preference -> keep default
-    if (supported.has(base)) return base;  // first supported non-English preference wins
+    const locale = matchSupportedLocale(tag, routing.locales);
+    if (locale === 'en') return fallback; // English is the top preference -> keep default
+    if (locale) return locale;             // first supported non-English preference wins
   }
   return fallback;
 }

@@ -202,6 +202,9 @@
     "delete_confirm": "Biztosan törölni szeretnéd a \"{name}\" alkalmazást?",
     "no_apps": "Még nincsenek alkalmazások",
     "no_apps_hint": "Egyedi alkalmazások és hivatkozások hozzáadása az oldalsávhoz",
+    "managed_title": "A rendszergazda biztosítja",
+    "managed_description": "Ezeket az alkalmazásokat mindenki számára beállították, és nem módosíthatók.",
+    "managed_badge": "Felügyelt",
     "search_icons": "Ikonok keresése...",
     "show_popular": "Népszerű",
     "show_all": "Összes",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Olvasási visszaigazolás kérve (kattints a letiltáshoz)",
     "read_receipt_off": "Olvasási visszaigazolás kérése",
+    "dsn_on": "Kézbesítési értesítés kérve (kattints a kikapcsoláshoz)",
+    "dsn_off": "Kézbesítési értesítés kérése",
+    "require_tls_on": "Titkosított kézbesítés kötelező (kattints a kikapcsoláshoz)",
+    "require_tls_off": "Titkosított kézbesítés megkövetelése (TLS)",
     "new_message": "Új üzenet",
     "signature_edit_hint": "Kattintson duplán az aláírás szerkesztéséhez",
     "reply": "Válasz",
@@ -1863,6 +1870,8 @@
       "description": "Egyedi alkalmazások és hivatkozások kezelése az oldalsávon",
       "keep_loaded": "Alkalmazások betöltve tartása",
       "keep_loaded_description": "Beágyazott alkalmazások futtatása a háttérben váltáskor az újratöltés elkerülése érdekében",
+      "managed_title": "A rendszergazda biztosítja",
+      "managed_description": "Ezeket az alkalmazásokat mindenki számára beállították, és nem módosíthatók.",
       "manage_title": "Egyedi alkalmazások",
       "manage_description": "Egyedi alkalmazások hozzáadása, szerkesztése vagy eltávolítása az oldalsávról"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Új almappa...",
     "new_folder": "Új mappa...",
     "rename": "Átnevezés...",
+    "share": "Megosztás...",
     "import_email": "Importálás .eml vagy .zip fájlból...",
     "empty_folder": "Mappa ürítése",
     "empty_folder_generic": "Mappa ürítése",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Nem sikerült átnevezni a mappát",
     "toast_error_delete": "Nem sikerült törölni a mappát",
     "toast_error_delete_has_children": "A mappának almappái vannak. Távolítsd el azokat először.",
-    "toast_error_delete_has_email": "A mappa nem üres. Ürítsd ki először."
+    "toast_error_delete_has_email": "A mappa nem üres. Ürítsd ki először.",
+    "delete_with_contents_title": "A mappa nem üres",
+    "delete_with_contents_message": "A(z) „{name}” mappa még {count, plural, one {1 üzenetet} other {# üzenetet}} tartalmaz. Törlöd a mappát az összes üzenetével együtt? Ez nem vonható vissza.",
+    "delete_with_contents_confirm": "Mappa és üzenetek törlése"
   },
   "shortcuts": {
     "title": "Billentyűparancsok",
@@ -2430,6 +2443,9 @@
       "renamed": "Címjegyzék átnevezve",
       "rename_failed": "Nem sikerült átnevezni a címjegyzéket",
       "default": "Alapértelmezett",
+      "set_default": "Beállítás alapértelmezettként",
+      "default_updated": "Alapértelmezett címjegyzék frissítve",
+      "set_default_failed": "Nem sikerült beállítani az alapértelmezett címjegyzéket",
       "manage": "Címjegyzékek kezelése",
       "share": "Címjegyzék megosztása",
       "new_contact_in_book": "Új névjegy ebben a címjegyzékben",
@@ -2785,6 +2801,14 @@
       "color": "Szín"
     },
     "participants": {
+      "availability": {
+        "title": "Elérhetőség",
+        "free": "Szabad",
+        "busy": "Foglalt",
+        "tentative": "Feltételes",
+        "unknown": "Nem felhasználó ezen a kiszolgálón",
+        "checking": "Ellenőrzés…"
+      },
       "title": "Résztvevők",
       "add": "Résztvevő hozzáadása",
       "organizer": "Szervező",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1 másodperc késleltetés",
       "hover_preview_delay_2s": "2 másodperc késleltetés",
       "hover_preview_off": "Letiltva",
+      "organizer_identity": "Meghívók szervezése mint",
+      "organizer_identity_desc": "A szervezőként használt naptárcím, amikor embereket hívsz meg eseményekre.",
+      "organizer_identity_failed": "Nem sikerült módosítani a szervező címét",
       "show_birthday_calendar": "Névjegy születésnap naptár",
       "show_birthday_calendar_desc": "Virtuális naptár mutatása a névjegyeid születésnapjaival"
     },
@@ -3141,6 +3168,25 @@
       "overdue": "Lejárt"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "Valaki",
+    "invited": "{name} meghívott a(z) „{title}” eseményre",
+    "updated": "{name} frissítette a(z) „{title}” eseményt",
+    "cancelled": "{name} lemondta a(z) „{title}” eseményt",
+    "untitled": "Névtelen esemény"
+  },
+  "share_notifications": {
+    "someone": "Valaki",
+    "shared": "{name} megosztotta veled a(z) {kind} „{object}” elemet",
+    "changed": "{name} módosította a hozzáférésedet a(z) {kind} „{object}” elemhez",
+    "revoked": "{name} visszavonta a hozzáférésedet a(z) {kind} „{object}” elemhez",
+    "object": {
+      "folder": "mappa",
+      "calendar": "naptár",
+      "address_book": "címjegyzék",
+      "files": "fájlmappa"
+    }
+  },
   "sharing": {
     "title": "\"{name}\" megosztása",
     "description": "Hozzáférés biztosítása más felhasználók vagy csoportok számára ezen a szerveren. A módosítások azonnal életbe lépnek.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Csatolmányok",
     "date_after": "Ettől",
     "date_before": "Eddig",
+    "size_min": "Nagyobb mint (KB)",
+    "size_max": "Kisebb mint (KB)",
     "starred": "Csillagozott",
     "unread": "Olvasatlan",
     "read": "Olvasott",

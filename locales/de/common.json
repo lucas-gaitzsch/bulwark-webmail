@@ -202,6 +202,9 @@
     "delete_confirm": "Möchten Sie \"{name}\" wirklich löschen?",
     "no_apps": "Noch keine Apps hinzugefügt",
     "no_apps_hint": "Fügen Sie benutzerdefinierte Apps und Links zur Seitenleiste hinzu",
+    "managed_title": "Von Ihrer Administration bereitgestellt",
+    "managed_description": "Diese Apps sind für alle eingerichtet und können nicht geändert werden.",
+    "managed_badge": "Verwaltet",
     "search_icons": "Symbole suchen...",
     "show_popular": "Beliebt",
     "show_all": "Alle",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Lesebestätigung angefordert (klicken zum Deaktivieren)",
     "read_receipt_off": "Lesebestätigung anfordern",
+    "dsn_on": "Zustellbenachrichtigung angefordert (zum Deaktivieren klicken)",
+    "dsn_off": "Zustellbenachrichtigung anfordern",
+    "require_tls_on": "Verschlüsselte Zustellung erforderlich (zum Deaktivieren klicken)",
+    "require_tls_off": "Verschlüsselte Zustellung verlangen (TLS)",
     "new_message": "Neue Nachricht",
     "signature_edit_hint": "Doppelklick, um die Signatur zu bearbeiten",
     "reply": "Antworten",
@@ -1860,6 +1867,8 @@
       "description": "Benutzerdefinierte Apps und Links in der Seitenleiste verwalten",
       "keep_loaded": "Apps geladen halten",
       "keep_loaded_description": "Inline-Apps beim Wechsel im Hintergrund laufen lassen, um Neuladen zu vermeiden",
+      "managed_title": "Von Ihrer Administration bereitgestellt",
+      "managed_description": "Diese Apps sind für alle eingerichtet und können nicht geändert werden.",
       "manage_title": "Benutzerdefinierte Apps",
       "manage_description": "Apps in der Seitenleiste hinzufügen, bearbeiten oder entfernen"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Neuer Unterordner...",
     "new_folder": "Neuer Ordner...",
     "rename": "Umbenennen...",
+    "share": "Freigeben...",
     "import_email": ".eml oder .zip importieren...",
     "empty_folder": "Ordner leeren",
     "empty_folder_generic": "Ordner leeren",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Ordner konnte nicht umbenannt werden",
     "toast_error_delete": "Ordner konnte nicht gelöscht werden",
     "toast_error_delete_has_children": "Ordner enthält Unterordner. Entferne diese zuerst.",
-    "toast_error_delete_has_email": "Ordner ist nicht leer. Leere ihn zuerst."
+    "toast_error_delete_has_email": "Ordner ist nicht leer. Leere ihn zuerst.",
+    "delete_with_contents_title": "Ordner ist nicht leer",
+    "delete_with_contents_message": "Der Ordner „{name}“ enthält noch {count, plural, one {1 Nachricht} other {# Nachrichten}}. Ordner samt allen Nachrichten löschen? Das kann nicht rückgängig gemacht werden.",
+    "delete_with_contents_confirm": "Ordner und Nachrichten löschen"
   },
   "shortcuts": {
     "title": "Tastaturkürzel",
@@ -2429,6 +2442,9 @@
       "renamed": "Adressbuch umbenannt",
       "rename_failed": "Adressbuch konnte nicht umbenannt werden",
       "default": "Standard",
+      "set_default": "Als Standard festlegen",
+      "default_updated": "Standardadressbuch aktualisiert",
+      "set_default_failed": "Standardadressbuch konnte nicht festgelegt werden",
       "manage": "Adressbücher verwalten",
       "share": "Adressbuch freigeben",
       "new_contact_in_book": "Neuer Kontakt in diesem Adressbuch",
@@ -2785,6 +2801,14 @@
       "color": "Farbe"
     },
     "participants": {
+      "availability": {
+        "title": "Verfügbarkeit",
+        "free": "Verfügbar",
+        "busy": "Beschäftigt",
+        "tentative": "Vorläufig",
+        "unknown": "Kein Benutzer auf diesem Server",
+        "checking": "Wird geprüft…"
+      },
       "title": "Teilnehmer",
       "add": "Teilnehmer hinzufügen",
       "organizer": "Organisator",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1 Sekunde Verzögerung",
       "hover_preview_delay_2s": "2 Sekunden Verzögerung",
       "hover_preview_off": "Deaktiviert",
+      "organizer_identity": "Einladungen organisieren als",
+      "organizer_identity_desc": "Die Kalenderadresse, die als Organisator verwendet wird, wenn du Personen zu Terminen einlädst.",
+      "organizer_identity_failed": "Organisatoradresse konnte nicht geändert werden",
       "show_birthday_calendar": "Geburtstags-Kalender",
       "show_birthday_calendar_desc": "Zeigt einen virtuellen Kalender mit Geburtstagen aus deinen Kontakten"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Anhänge",
     "date_after": "Nach dem",
     "date_before": "Vor dem",
+    "size_min": "Größer als (KB)",
+    "size_max": "Kleiner als (KB)",
     "starred": "Markiert",
     "unread": "Ungelesen",
     "read": "Gelesen",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "Die Suche ist in der vereinheitlichten Ansicht nicht verfügbar"
+  },
+  "calendar_event_notifications": {
+    "someone": "Jemand",
+    "invited": "{name} hat dich zu „{title}“ eingeladen",
+    "updated": "{name} hat „{title}“ aktualisiert",
+    "cancelled": "{name} hat „{title}“ abgesagt",
+    "untitled": "Unbenannter Termin"
+  },
+  "share_notifications": {
+    "someone": "Jemand",
+    "shared": "{name} hat {kind} „{object}“ mit dir geteilt",
+    "changed": "{name} hat deinen Zugriff auf {kind} „{object}“ geändert",
+    "revoked": "{name} hat deinen Zugriff auf {kind} „{object}“ entfernt",
+    "object": {
+      "folder": "den Ordner",
+      "calendar": "den Kalender",
+      "address_book": "das Adressbuch",
+      "files": "den Dateiordner"
+    }
   },
   "sharing": {
     "title": "„{name}\" freigeben",

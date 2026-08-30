@@ -161,6 +161,69 @@ describe('JMAPClient contact methods', () => {
     });
   });
 
+  describe('setDefaultAddressBook', () => {
+    it('should send onSuccessSetIsDefault rather than an isDefault update', async () => {
+      const client = createClient();
+      const spy = mockFetch({
+        methodResponses: [['AddressBook/set', { updated: null }, '0']],
+      });
+
+      await client.setDefaultAddressBook('ab-2');
+
+      const body = JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string);
+      expect(body.methodCalls[0][0]).toBe('AddressBook/set');
+      expect(body.methodCalls[0][1]).toMatchObject({
+        accountId: 'account-1',
+        onSuccessSetIsDefault: 'ab-2',
+      });
+      expect(body.methodCalls[0][1].update).toBeUndefined();
+    });
+
+    it('should target a shared account when one is given', async () => {
+      const client = createClient();
+      const spy = mockFetch({
+        methodResponses: [['AddressBook/set', { updated: null }, '0']],
+      });
+
+      await client.setDefaultAddressBook('ab-2', 'account-2');
+
+      const body = JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string);
+      expect(body.methodCalls[0][1].accountId).toBe('account-2');
+    });
+
+    it('should throw on a JMAP method error', async () => {
+      const client = createClient();
+      mockFetch({
+        methodResponses: [['error', { type: 'forbidden', description: 'Not allowed' }, '0']],
+      });
+
+      await expect(client.setDefaultAddressBook('ab-2')).rejects.toThrow('Not allowed');
+    });
+
+    it('should throw for an unexpected response method', async () => {
+      const client = createClient();
+      mockFetch({
+        methodResponses: [['SomethingElse', {}, '0']],
+      });
+
+      await expect(client.setDefaultAddressBook('ab-2')).rejects.toThrow('Failed to set default address book');
+    });
+  });
+
+  describe('updateAddressBook', () => {
+    it('should drop isDefault, which AddressBook/set rejects as read-only', async () => {
+      const client = createClient();
+      const spy = mockFetch({
+        methodResponses: [['AddressBook/set', { updated: { 'ab-1': null } }, '0']],
+      });
+
+      await client.updateAddressBook('ab-1', { name: 'Work', isDefault: true });
+
+      const body = JSON.parse((spy.mock.calls[0][1] as RequestInit).body as string);
+      expect(body.methodCalls[0][1].update['ab-1']).toEqual({ name: 'Work' });
+    });
+  });
+
   describe('getContacts', () => {
     it('should return contacts from server', async () => {
       const client = createClient();

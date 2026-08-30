@@ -16,26 +16,6 @@ A self-hosted webmail client for [Stalwart Mail Server](https://stalw.art/), bui
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fbulwarkmail%2Fwebmail-blue?logo=docker&logoColor=white)](https://ghcr.io/bulwarkmail/webmail)
 </div>
 
----
-
-## Installer
-
-Since **1.6.4**, a web-based setup wizard runs on first launch – no `.env.local` editing, no shelling into the container.
-
-Point a browser at the running container and the wizard guides you through:
-
-- **Server** – probe one or more JMAP endpoints, optional auto-pick by email domain, Stalwart feature toggle
-- **Auth** – OAuth2 / OIDC discovery and validation, or basic-auth fallback
-- **Security** – generate or paste a `SESSION_SECRET`, opt into settings sync
-- **Logging** – text or JSON, level
-- **Branding** – upload favicon, app logos, login logos, and company / legal URLs
-- **Review** – grouped summary with an advanced toggle for the full config
-- **Admin** – set the initial admin password and optionally drop a `.config-locked` marker so the config volume can be remounted read-only
-
-The wizard writes to `ADMIN_CONFIG_DIR` (`./data/admin` by default). Setting `JMAP_SERVER_URL` in the environment skips the wizard and uses env-managed configuration instead.
-
----
-
 ## Screenshots
 
 <picture>
@@ -79,7 +59,7 @@ Bulwark is a full webmail suite. It bundles the four apps most self-hosters end 
 - **Contacts** – multiple address books, groups, vCard import/export
 - **Files** – Stalwart's JMAP FileNode storage with previews and folder upload
 
-They share one login, one settings store, and one admin dashboard. SSO, 2FA, multi-account, 24 languages, PWA install, themes, and plugins apply across all four.
+They share one login, one settings store, and one admin dashboard. SSO, 2FA, multi-account, 27 languages, PWA install, themes, and plugins apply across all four.
 
 Full feature list: **[FEATURES.md](FEATURES.md)**.
 

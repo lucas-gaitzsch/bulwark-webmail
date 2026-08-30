@@ -1,5 +1,7 @@
 import { logger } from '@/lib/logger';
-import { disabledByEnv, effectiveEndpoint, loadState, saveState } from './state';
+import {
+  disabledByEnv, effectiveEndpoint, getCurrentVersion, isStatusStale, loadState, saveState,
+} from './state';
 import { fetchStatus } from './fetcher';
 import type { UpdateStatus } from './types';
 
@@ -13,10 +15,6 @@ let currentTimer: NodeJS.Timeout | null = null;
 function jitteredDelay(base: number): number {
   const j = (Math.random() * 2 - 1) * JITTER_MS;
   return Math.max(60_000, base + j);
-}
-
-function getCurrentVersion(): string {
-  return (process.env.NEXT_PUBLIC_APP_VERSION || '').trim();
 }
 
 export async function checkOnce(opts?: { reason?: string }): Promise<{
@@ -82,11 +80,26 @@ export async function startScheduler(): Promise<void> {
     logger.info('version-check: scheduler not started (no endpoint)');
     return;
   }
+  // State carried over from a previous build: the cached status is about a
+  // version we no longer run, and its schedule would keep that stale answer
+  // (e.g. "update available" for the version we just upgraded from) on screen
+  // for up to an hour. Drop it and check promptly instead (#913).
+  const stale = isStatusStale(state.status);
+  if (stale) {
+    logger.info('version-check: discarding status from a previous version', {
+      cached: state.status?.current ?? null,
+      running: getCurrentVersion(),
+    });
+    state.status = null;
+    state.nextScheduledAt = null;
+    await saveState(state);
+  }
+
   // If a previous schedule was still in the future, honor it (don't blast on
   // every restart). Cap at one hour so a wildly-in-the-future timestamp can't
   // permanently silence the check.
   let delay = FIRST_DELAY_MS;
-  if (state.nextScheduledAt) {
+  if (!stale && state.nextScheduledAt) {
     const remaining = new Date(state.nextScheduledAt).getTime() - Date.now();
     if (remaining > 0) delay = Math.min(remaining, HOUR_MS + JITTER_MS);
   }

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { fireEvent } from '@testing-library/dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ContactsSidebar } from '../contacts-sidebar';
-import type { ContactCard } from '@/lib/jmap/types';
+import type { AddressBook, ContactCard } from '@/lib/jmap/types';
 
 // next-intl + next/navigation are mocked globally in vitest.setup (t returns the key).
 vi.mock('@/stores/account-store', () => {
@@ -61,5 +61,53 @@ describe('ContactsSidebar — compose to group', () => {
 
     fireEvent.click(screen.getByText('groups.send_email_cc'));
     expect(onComposeGroup).toHaveBeenCalledWith('g1', 'cc');
+  });
+});
+
+const books: AddressBook[] = [
+  { id: 'ab-1', name: 'Personal', isDefault: true },
+  { id: 'ab-2', name: 'Work' },
+  { id: 'ab-3', name: 'Team', isShared: true, accountId: 'account-2', accountName: 'Team account' },
+];
+
+function renderBooksSidebar(onSetDefaultAddressBook = vi.fn()) {
+  render(
+    <ContactsSidebar
+      groups={[]}
+      individuals={[]}
+      addressBooks={books}
+      activeCategory="all"
+      onSelectCategory={vi.fn()}
+      onCreateGroup={vi.fn()}
+      onCreateContact={vi.fn()}
+      onSetDefaultAddressBook={onSetDefaultAddressBook}
+    />,
+  );
+  return onSetDefaultAddressBook;
+}
+
+describe('ContactsSidebar - set default address book', () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it('offers "Set as default" for an owned, non-default book', () => {
+    const onSetDefaultAddressBook = renderBooksSidebar();
+    fireEvent.contextMenu(screen.getByText('Work'));
+
+    fireEvent.click(screen.getByText('address_books.set_default'));
+    expect(onSetDefaultAddressBook).toHaveBeenCalledWith(expect.objectContaining({ id: 'ab-2' }));
+  });
+
+  it('hides it for the book that is already the default', () => {
+    renderBooksSidebar();
+    fireEvent.contextMenu(screen.getByText('Personal'));
+
+    expect(screen.queryByText('address_books.set_default')).not.toBeInTheDocument();
+  });
+
+  it('hides it for a book shared from another account', () => {
+    renderBooksSidebar();
+    fireEvent.contextMenu(screen.getByText('Team'));
+
+    expect(screen.queryByText('address_books.set_default')).not.toBeInTheDocument();
   });
 });

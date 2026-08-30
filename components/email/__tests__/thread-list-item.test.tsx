@@ -210,7 +210,7 @@ describe('ThreadListItem row content', () => {
   });
 });
 
-describe('ThreadListItem shift-range checkbox', () => {
+describe('ThreadListItem shift-range avatar selection', () => {
   beforeEach(() => {
     useSettingsStore.setState({
       emailKeywords: [...DEFAULT_KEYWORDS],
@@ -219,11 +219,11 @@ describe('ThreadListItem shift-range checkbox', () => {
     });
   });
 
-  it('shift-clicking the checkbox extends the selection from the anchor', () => {
+  it('shift-clicking the avatar extends the selection from the anchor', () => {
     const e1 = makeEmail({ id: 'e1', threadId: 't1' });
     const e2 = makeEmail({ id: 'e2', threadId: 't2' });
     const e3 = makeEmail({ id: 'e3', threadId: 't3' });
-    // Selection mode active so the checkbox renders, with the anchor on e1.
+    // Selection mode active, with the anchor on e1.
     useEmailStore.setState({
       emails: [e1, e2, e3],
       selectedEmailIds: new Set(['e1']),
@@ -232,9 +232,9 @@ describe('ThreadListItem shift-range checkbox', () => {
     });
 
     renderRow(e3);
-    const checkbox = screen.getAllByRole('button')[0];
+    const avatar = screen.getByRole('checkbox');
     act(() => {
-      checkbox.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
+      avatar.dispatchEvent(new MouseEvent('click', { bubbles: true, shiftKey: true }));
     });
 
     const selected = useEmailStore.getState().selectedEmailIds;

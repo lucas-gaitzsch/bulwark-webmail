@@ -32,6 +32,9 @@ import type { UnifiedAccountClient } from "@/lib/unified-mailbox";
 import { KeyboardShortcutsModal } from "@/components/keyboard-shortcuts-modal";
 import { useEmailStore, buildUnifiedAccountClients } from "@/stores/email-store";
 import { toast } from "@/stores/toast-store";
+import { MailboxShareDialog } from "@/components/layout/mailbox-share-dialog";
+import { ShareNotificationToaster } from "@/components/layout/share-notification-toaster";
+import { CalendarEventNotificationToaster } from "@/components/layout/calendar-event-notification-toaster";
 import { useAuthStore, redirectToLogin, saveRedirectAfterLogin } from '@/stores/auth-store';
 import { useSettingsStore } from "@/stores/settings-store";
 import { useContactStore } from "@/stores/contact-store";
@@ -1612,6 +1615,8 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
     references?: string[];
     delayedUntil?: string;
     requestReadReceipt?: boolean;
+    requestDsn?: boolean;
+    requireTls?: boolean;
   }) => {
     if (!client) return;
 
@@ -1634,7 +1639,7 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
       const effectiveMode = pendingDraft?.mode ?? composerMode;
       const originalEmailId = selectedEmail?.id;
 
-      const result = await sendEmail(sendClient, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references, data.delayedUntil, data.envelopeMailFrom, { requestReadReceipt: data.requestReadReceipt, localAccountId: data.localAccountId });
+      const result = await sendEmail(sendClient, data.to, data.subject, data.body, data.cc, data.bcc, data.identityId, data.fromEmail, data.draftId, data.fromName, data.htmlBody, data.attachments, data.inReplyTo, data.references, data.delayedUntil, data.envelopeMailFrom, { requestReadReceipt: data.requestReadReceipt, requestDsn: data.requestDsn, requireTls: data.requireTls, localAccountId: data.localAccountId });
       submitted = true;
       setShowComposer(false);
       // Sending an edited draft destroys it server-side - and every autosave
@@ -2719,6 +2724,16 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
     }
   };
 
+  // Folder sharing (mail:share): the dialog loads the folder's shareWith on
+  // open, so only the id needs to be remembered here.
+  const [sharingMailboxId, setSharingMailboxId] = useState<string | null>(null);
+  const sharingMailbox = sharingMailboxId ? mailboxes.find(mb => mb.id === sharingMailboxId) ?? null : null;
+  const supportsMailboxSharing = !!client?.supportsMailboxSharing?.();
+  const handleShareFolderFromContextMenu = (mailboxId: string) => {
+    if (!client) return;
+    setSharingMailboxId(mailboxId);
+  };
+
   const handleDeleteFolderFromContextMenu = async (mailboxId: string) => {
     if (!client) return;
     const mailbox = mailboxes.find(mb => mb.id === mailboxId);
@@ -2740,7 +2755,22 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
       if (jmapType === 'mailboxHasChild') {
         toast.error(tCtxMenu('mailbox_context_menu.toast_error_delete_has_children'));
       } else if (jmapType === 'mailboxHasEmail') {
-        toast.error(tCtxMenu('mailbox_context_menu.toast_error_delete_has_email'));
+        // The server refuses to drop a folder that still holds mail. Offer to
+        // take the messages with it (onDestroyRemoveEmails) after a second,
+        // explicit confirmation that names the count.
+        const withContents = await confirmDialog({
+          title: tCtxMenu('mailbox_context_menu.delete_with_contents_title'),
+          message: tCtxMenu('mailbox_context_menu.delete_with_contents_message', { name: mailbox.name, count: mailbox.totalEmails }),
+          confirmText: tCtxMenu('mailbox_context_menu.delete_with_contents_confirm'),
+          variant: "destructive",
+        });
+        if (!withContents) return;
+        try {
+          await deleteMailbox(client, mailboxId, { removeEmails: true });
+          toast.success(tCtxMenu('mailbox_context_menu.toast_folder_deleted'));
+        } catch {
+          toast.error(tCtxMenu('mailbox_context_menu.toast_error_delete'));
+        }
       } else {
         toast.error(tCtxMenu('mailbox_context_menu.toast_error_delete'));
       }
@@ -3444,6 +3474,7 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
               onCreateFolder={handleCreateFolderFromContextMenu}
               onRenameFolder={handleRenameFolderFromContextMenu}
               onDeleteFolder={handleDeleteFolderFromContextMenu}
+              onShareFolder={supportsMailboxSharing ? handleShareFolderFromContextMenu : undefined}
               onImportEmail={handleImportEmailFromContextMenu}
               onRefreshMailboxes={handleRefreshMailboxes}
               onCompose={() => {
@@ -3730,6 +3761,34 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
                             value={searchFilters.dateBefore}
                             onChange={(e) => { setSearchFilters({ dateBefore: e.target.value }); handleAdvancedSearch(); }}
                             className="h-8 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Message size (Email/query minSize / maxSize, RFC 8621 §4.4.1) */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">{t("advanced_search.size_min")}</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            value={searchFilters.minSizeKb}
+                            onChange={(e) => { setSearchFilters({ minSizeKb: e.target.value }); handleAdvancedSearch(); }}
+                            className="h-8 text-sm"
+                            data-testid="advanced-search-min-size"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-muted-foreground mb-1 block">{t("advanced_search.size_max")}</label>
+                          <Input
+                            type="number"
+                            min={1}
+                            inputMode="numeric"
+                            value={searchFilters.maxSizeKb}
+                            onChange={(e) => { setSearchFilters({ maxSizeKb: e.target.value }); handleAdvancedSearch(); }}
+                            className="h-8 text-sm"
+                            data-testid="advanced-search-max-size"
                           />
                         </div>
                       </div>
@@ -4182,6 +4241,15 @@ export function MailApp({ linkSegments }: MailAppProps = {}) {
         )}
         <ConfirmDialog {...confirmDialogProps} />
         <PromptDialog {...promptDialogProps} />
+        {client && sharingMailbox && (
+          <MailboxShareDialog
+            client={client}
+            mailbox={sharingMailbox}
+            onClose={() => setSharingMailboxId(null)}
+          />
+        )}
+        <ShareNotificationToaster client={client} />
+        <CalendarEventNotificationToaster client={client} />
         <TotpReauthDialog />
       </div>
     </DragDropProvider>

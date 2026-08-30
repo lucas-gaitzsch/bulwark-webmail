@@ -826,6 +826,12 @@ export function EmailViewer({
   };
   const [showSourceModal, setShowSourceModal] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  // The mobile More panel sits off-canvas with a slide transition. Until
+  // the user opens it once, that transition must stay off: on the first
+  // paint after the viewer mounts WebKit transitions `translate` from its
+  // registered initial value (0) to 100%, so the panel flashed on screen
+  // and slid out every time a message was opened on a phone.
+  const [moreMenuSlideEnabled, setMoreMenuSlideEnabled] = useState(false);
   const [moreMenuSub, setMoreMenuSub] = useState<MoreMenuSub | null>(null);
   const [tagMenuOpen, setTagMenuOpen] = useState(false);
   const [moveMenuOpen, setMoveMenuOpen] = useState(false);
@@ -3239,7 +3245,7 @@ export function EmailViewer({
             aria-haspopup="menu"
             aria-expanded={moreMenuOpen}
             aria-controls={moreMenuOpen ? moreMenuId : undefined}
-            onClick={() => { setMoreMenuOpen(!moreMenuOpen); setMoreMenuSub(null); setTagMenuOpen(false); setMoveMenuOpen(false); }}
+            onClick={() => { setMoreMenuOpen(!moreMenuOpen); setMoreMenuSlideEnabled(true); setMoreMenuSub(null); setTagMenuOpen(false); setMoveMenuOpen(false); }}
           >
             <MoreVertical className="w-4 h-4 text-muted-foreground" />
             <span className="text-[10px] leading-tight sm:hidden">{t('more_actions')}</span>
@@ -3543,7 +3549,8 @@ export function EmailViewer({
         className={cn(
         "bg-background border-s border-border z-[70]",
         isPaneScoped ? "absolute inset-y-0 right-0 w-72" : "fixed inset-y-0 right-0 w-72 sm:hidden",
-        "transform transition-transform duration-300 ease-in-out",
+        "transform",
+        moreMenuSlideEnabled && "transition-transform duration-300 ease-in-out",
         "flex flex-col",
         moreMenuOpen ? "translate-x-0" : "translate-x-full"
       )}>

@@ -79,6 +79,15 @@ interface EmailStore {
   listOrder: SortLevel[];
   isPushConnected: boolean; // Track if push notifications are connected
   lastPushUpdate: number | null; // Timestamp of last push update
+  // Delta sync (RFC 8620 §5.2). The Email collection state the plain
+  // single-folder list (`emails`) was last synced at, with the folder it was
+  // loaded for; null whenever the list holds anything else (search, tag,
+  // category tab, unified/cross view). A push is then resolved with
+  // Email/changes against this state instead of re-querying the first page.
+  emailListSync: EmailListSync | null;
+  // Mailbox collection state per JMAP account the sidebar list was last
+  // synced at, so a Mailbox push can be resolved with Mailbox/changes.
+  mailboxSyncStates: Record<string, string>;
   newEmailNotification: Email | null; // New email notification for toast
 
   // Thread expansion state
@@ -192,7 +201,7 @@ interface EmailStore {
   loadMoreEmails: (client: IJMAPClient) => Promise<void>;
   fetchEmailContent: (client: IJMAPClient, emailId: string) => Promise<Email | null>;
   fetchQuota: (client: IJMAPClient) => Promise<void>;
-  sendEmail: (client: IJMAPClient, to: string[], subject: string, body: string, cc?: string[], bcc?: string[], identityId?: string, fromEmail?: string, draftId?: string, fromName?: string, htmlBody?: string, attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>, inReplyTo?: string[], references?: string[], delayedUntil?: string, envelopeMailFrom?: string, options?: { requestReadReceipt?: boolean; localAccountId?: string }) => Promise<SendEmailResult>;
+  sendEmail: (client: IJMAPClient, to: string[], subject: string, body: string, cc?: string[], bcc?: string[], identityId?: string, fromEmail?: string, draftId?: string, fromName?: string, htmlBody?: string, attachments?: Array<{ blobId: string; name: string; type: string; size: number; disposition?: 'attachment' | 'inline'; cid?: string }>, inReplyTo?: string[], references?: string[], delayedUntil?: string, envelopeMailFrom?: string, options?: { requestReadReceipt?: boolean; requestDsn?: boolean; requireTls?: boolean; localAccountId?: string }) => Promise<SendEmailResult>;
   sendRawEmail: (client: IJMAPClient, rawMimeBlob: Blob, identityId: string, delayedUntil?: string, envelopeRecipients?: string[]) => Promise<SendEmailResult>;
   deleteEmail: (client: IJMAPClient, emailId: string, forceDelete?: boolean) => Promise<void>;
   markAsRead: (client: IJMAPClient, emailId: string, read: boolean) => Promise<void>;
@@ -261,6 +270,20 @@ interface EmailStore {
   // Push notification handlers
   setPushConnected: (connected: boolean) => void;
   handleStateChange: (change: StateChange, client: IJMAPClient) => Promise<void>;
+  /**
+   * Resolve an Email push for the current list with Email/changes: drop
+   * destroyed rows, re-fetch and patch updated ones in place, and only fall
+   * back to a full first-page refresh (returns false) when mail entered the
+   * view, the delta is too large, or the view is not a plain folder list.
+   */
+  applyEmailDelta: (client: IJMAPClient, newState: string) => Promise<boolean>;
+  /**
+   * Resolve a Mailbox push with Mailbox/changes: re-fetch only the folders
+   * reported as updated (typically just their counters) and patch them into
+   * the sidebar list. Returns false when a full refetch is needed (folders
+   * created/destroyed, unknown sync state, delta unavailable).
+   */
+  applyMailboxDelta: (client: IJMAPClient, changed: StateChange['changed']) => Promise<boolean>;
   refreshCurrentMailbox: (client: IJMAPClient) => Promise<void>;
   handleNewEmailNotification: (email: Email) => void;
   clearNewEmailNotification: () => void;
@@ -276,7 +299,7 @@ interface EmailStore {
   // Mailbox management
   createMailbox: (client: IJMAPClient, name: string, parentId?: string, accountId?: string) => Promise<void>;
   renameMailbox: (client: IJMAPClient, mailboxId: string, name: string) => Promise<void>;
-  deleteMailbox: (client: IJMAPClient, mailboxId: string) => Promise<void>;
+  deleteMailbox: (client: IJMAPClient, mailboxId: string, options?: { removeEmails?: boolean }) => Promise<void>;
   setMailboxRole: (client: IJMAPClient, mailboxId: string, role: string | null) => Promise<void>;
   reorderMailboxes: (client: IJMAPClient, orderedIds: string[]) => Promise<void>;
   moveMailbox: (client: IJMAPClient, mailboxId: string, newParentId: string | null, orderedSiblingIds?: string[]) => Promise<void>;
@@ -423,6 +446,117 @@ function coalesceRefresh(client: IJMAPClient, key: string, run: () => Promise<vo
   })();
   registry.set(key, entry);
   return entry.promise;
+}
+
+/** Delta-sync baseline of the plain folder list (see EmailStore.emailListSync). */
+export interface EmailListSync {
+  /** Email collection state the list was last synced at. */
+  state: string;
+  /** JMAP account the folder belongs to (owner account for a shared folder). */
+  accountId: string;
+  /** Store id of the folder the list shows (namespaced for shared folders). */
+  mailboxId: string;
+}
+
+// Upper bound on the ids one Email/changes delta may report before the list
+// is re-queried instead: past this a first-page fetch is cheaper than
+// resolving every id. Also passed as `maxChanges`, so the server signals
+// `hasMoreChanges` rather than returning a huge delta.
+const EMAIL_DELTA_MAX_CHANGES = 200;
+// Ids outside the loaded list (created, or updated elsewhere) that are
+// resolved to see whether they entered the folder; more than this and the
+// refresh path is used directly.
+const EMAIL_DELTA_MAX_CANDIDATES = 50;
+
+let emailDeltaQueue: Promise<void> = Promise.resolve();
+
+type StoreGet = () => EmailStore;
+type StoreSet = (partial: Partial<EmailStore> | ((state: EmailStore) => Partial<EmailStore>)) => void;
+
+async function applyEmailDeltaNow(client: IJMAPClient, newState: string, get: StoreGet, set: StoreSet): Promise<boolean> {
+  const s = get();
+  const sync = s.emailListSync;
+  if (!sync) return false;
+  // Anything but the plain folder list the baseline was taken for is
+  // refreshed the old way: a server-side filter (search, tag, category tab)
+  // cannot be re-evaluated from a list of changed ids, and the unified /
+  // cross-account views fan out over several accounts.
+  if (
+    s.isUnifiedView ||
+    s.isScheduledView ||
+    s.selectedKeyword ||
+    s.searchQuery ||
+    !isFilterEmpty(s.searchFilters) ||
+    s.selectedMailbox !== sync.mailboxId
+  ) {
+    return false;
+  }
+  const mailboxes = resolveActionMailboxes();
+  const mailbox = mailboxes.find((mb) => mb.id === sync.mailboxId);
+  if (useMessageListTabsStore.getState().getCategoryFilter(mailbox?.role)) return false;
+  const effectiveClient = resolveActionClient(client);
+  if (!effectiveClient.getEmailChanges) return false;
+  // The push carries the state we already hold (our own Email/set raised it,
+  // or a duplicate notification): nothing to do, and no request either.
+  if (sync.state === newState) return true;
+
+  const accountArg = mailbox?.isShared ? mailbox.accountId : undefined;
+  const delta = await effectiveClient.getEmailChanges(sync.state, accountArg, EMAIL_DELTA_MAX_CHANGES);
+  if (!delta || delta.hasMoreChanges) return false;
+
+  const listIds = new Set(s.emails.map((e) => e.id));
+  const destroyedInList = delta.destroyed.filter((id) => listIds.has(id));
+  const updatedInList = delta.updated.filter((id) => listIds.has(id));
+  // Ids we don't show may have entered the folder (new mail, a move into it,
+  // an undelete). Resolve them; if any lands here, the first page must be
+  // re-queried so it is inserted at its sorted position and the new-mail
+  // notification fires as before.
+  const candidates = [...delta.created, ...delta.updated.filter((id) => !listIds.has(id))];
+  if (candidates.length > EMAIL_DELTA_MAX_CANDIDATES) return false;
+  if (candidates.length > 0) {
+    const arrived = await effectiveClient.getSomeEmails(candidates, accountArg);
+    if (arrived.some((e) => e.mailboxIds?.[sync.mailboxId])) return false;
+  }
+
+  const removed = new Set(destroyedInList);
+  const updatedEmails = updatedInList.length > 0 ? await effectiveClient.getSomeEmails(updatedInList, accountArg) : [];
+  const updatedById = new Map(updatedEmails.map((e) => [e.id, e]));
+  for (const id of updatedInList) {
+    const fresh = updatedById.get(id);
+    // Gone from the folder (moved/deleted) or gone entirely since the delta.
+    if (!fresh || !fresh.mailboxIds?.[sync.mailboxId]) removed.add(id);
+  }
+  const replacements = await emailHooks.onEmailsFetched.transform(
+    [...updatedById.values()].filter((e) => !removed.has(e.id)),
+  );
+  const replacementById = new Map(
+    annotateScheduledEmails(replacements, get().scheduledSubmissionByEmailId).map((e) => [e.id, e]),
+  );
+
+  // Re-read the list: the requests above may have overlapped a user action.
+  const current = get().emails;
+  const next = current
+    .filter((e) => !removed.has(e.id))
+    .map((e) => replacementById.get(e.id) ?? e);
+  const changedThreadIds = new Set<string>();
+  for (const e of current) {
+    if (removed.has(e.id) || replacementById.has(e.id)) changedThreadIds.add(e.threadId);
+  }
+  for (const e of replacementById.values()) changedThreadIds.add(e.threadId);
+
+  set((state) => {
+    const threadEmailsCache = new Map(state.threadEmailsCache);
+    for (const tid of changedThreadIds) threadEmailsCache.delete(tid);
+    const totalEmails = Math.max(state.totalEmails - (current.length - next.length), next.length);
+    return {
+      emails: next,
+      totalEmails,
+      hasMoreEmails: state.hasMoreEmails && next.length < totalEmails,
+      threadEmailsCache,
+      emailListSync: state.emailListSync?.mailboxId === sync.mailboxId ? { ...sync, state: delta.newState } : state.emailListSync,
+    };
+  });
+  return true;
 }
 
 function resolveActionClient(passedClient: IJMAPClient): IJMAPClient {
@@ -1085,6 +1219,8 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
   listOrder: [],
   isPushConnected: false,
   lastPushUpdate: null,
+  emailListSync: null,
+  mailboxSyncStates: {},
   newEmailNotification: null,
 
   // Thread expansion state
@@ -1265,7 +1401,12 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     const isInitialLoad = get().mailboxes.length === 0;
     if (isInitialLoad) set({ isLoading: true, error: null });
     try {
-      const mailboxes = await client.getAllMailboxes();
+      // Prefer the state-reporting variant so a later Mailbox push can be
+      // resolved as a delta (applyMailboxDelta) instead of this full refetch.
+      const fetched = client.getAllMailboxesWithState
+        ? await client.getAllMailboxesWithState()
+        : { mailboxes: await client.getAllMailboxes(), states: {} };
+      const mailboxes = fetched.mailboxes;
 
       // Guard against a transient fetch returning an empty list (e.g. a server
       // concurrent-request limit hit during a burst of deletes). Replacing a
@@ -1291,7 +1432,9 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         || isUnifiedMailboxId(currentSelectedMailbox)
         || isCrossViewId(currentSelectedMailbox)
         || (currentSelectedMailbox && mailboxes.some(m => m.id === currentSelectedMailbox));
-      const loadingPatch = isInitialLoad ? { isLoading: false } : {};
+      const loadingPatch = isInitialLoad
+        ? { isLoading: false, mailboxSyncStates: fetched.states }
+        : { mailboxSyncStates: fetched.states };
       if (!selectionValid) {
         // Find inbox from PRIMARY account (not shared accounts)
         const inboxMailbox = mailboxes.find(m => m.role === 'inbox' && !m.isShared);
@@ -1390,6 +1533,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
           hasMoreEmails: result.hasMore,
           totalEmails: result.total,
           listOrder: crossView || hasFilters || searchQuery ? [] : getMessageListOrderFor(unifiedRole),
+          emailListSync: null,
           threadEmailsCache: new Map(),
           expandedThreadIds: new Set(),
           isLoadingThread: null,
@@ -1439,11 +1583,23 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
         order,
       );
       const enrichedEmails = await emailHooks.onEmailsFetched.transform(result.emails);
+      // Only a plain folder list can be delta-synced; tag and category views
+      // filter server-side, and a delta cannot tell which changed rows would
+      // match that filter.
+      const emailListSync: EmailListSync | null =
+        result.state && !selectedKeyword && !categoryFilter
+          ? {
+              state: result.state,
+              accountId: accountId ?? effectiveClient.getAccountId(),
+              mailboxId: targetMailboxId,
+            }
+          : null;
       set({
         emails: annotateScheduledEmails(enrichedEmails, get().scheduledSubmissionByEmailId),
         hasMoreEmails: result.hasMore,
         totalEmails: result.total,
         listOrder: order,
+        emailListSync,
         // Clear thread caches since the email list was fully replaced
         threadEmailsCache: new Map(),
         expandedThreadIds: new Set(),
@@ -3239,6 +3395,63 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     set({ isPushConnected: connected });
   },
 
+  applyEmailDelta: (client, newState) => {
+    // Serialise deltas: two pushes in quick succession must apply in order,
+    // each against the sync state the previous one advanced to.
+    const run = emailDeltaQueue.then(() => applyEmailDeltaNow(client, newState, get, set), () => applyEmailDeltaNow(client, newState, get, set));
+    emailDeltaQueue = run.then(() => undefined, () => undefined);
+    return run;
+  },
+
+  applyMailboxDelta: async (client, changed) => {
+    if (!client.getMailboxChanges || !client.getMailboxesByIds) return false;
+    const states = { ...get().mailboxSyncStates };
+    let mailboxes = get().mailboxes;
+    if (mailboxes.length === 0) return false;
+    let patched = false;
+
+    for (const [acct, types] of Object.entries(changed)) {
+      const pushedState = types?.Mailbox;
+      if (!pushedState) continue;
+      const since = states[acct];
+      // Unknown baseline for this account (e.g. it appeared after the last
+      // full fetch) - the delta cannot be trusted, refetch everything.
+      if (!since) return false;
+      if (since === pushedState) continue;
+
+      const delta = await client.getMailboxChanges(since, acct);
+      // Folders created or destroyed change the tree shape (parents,
+      // selection validity, auto-created role folders) - let fetchMailboxes
+      // handle that path as before.
+      if (!delta || delta.hasMoreChanges || delta.created.length > 0 || delta.destroyed.length > 0) {
+        return false;
+      }
+      if (delta.updated.length > 0) {
+        const fresh = await client.getMailboxesByIds(delta.updated, acct);
+        const freshById = new Map(fresh.map((mb) => [mb.originalId ?? mb.id, mb]));
+        // An updated folder we don't have (or that vanished between the two
+        // calls) means the local list is out of step - fall back.
+        for (const id of delta.updated) {
+          const known = mailboxes.some((mb) => mb.accountId === acct && (mb.originalId ?? mb.id) === id);
+          if (!known || !freshById.has(id)) return false;
+        }
+        mailboxes = mailboxes.map((mb) =>
+          mb.accountId === acct ? (freshById.get(mb.originalId ?? mb.id) ?? mb) : mb,
+        );
+        patched = true;
+      }
+      states[acct] = delta.newState;
+    }
+
+    set({ mailboxes, mailboxSyncStates: states });
+    if (patched) {
+      // Same extension hook a full refresh publishes, so plugins that mirror
+      // folder counters see delta updates too.
+      await emailHooks.onMailboxesRefresh.emit(mailboxes);
+    }
+    return true;
+  },
+
   handleStateChange: async (change, client) => {
     try {
       // Update last push update timestamp
@@ -3256,10 +3469,22 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       const accountChanges = change.changed[accountId];
       const anyMailboxChanged = Object.values(change.changed).some((c) => c?.Mailbox);
 
-      // Handle Email state changes - refresh current mailbox
-      if (accountChanges?.Email) {
-        await get().refreshCurrentMailbox(client);
-        get().fetchTagCounts(client);
+      // Handle Email state changes. A plain folder list is first resolved as
+      // an Email/changes delta (RFC 8620 §5.2) against the state it was
+      // loaded at - which also covers a shared folder whose owner account
+      // changed - and only re-queried when the delta cannot be applied.
+      const sync = get().emailListSync;
+      const syncedAccountEmailState = sync ? change.changed[sync.accountId]?.Email : undefined;
+      if (accountChanges?.Email || syncedAccountEmailState) {
+        const applied = syncedAccountEmailState
+          ? await get().applyEmailDelta(client, syncedAccountEmailState)
+          : false;
+        if (!applied) {
+          await get().refreshCurrentMailbox(client);
+        }
+        if (accountChanges?.Email) {
+          get().fetchTagCounts(client);
+        }
       }
 
       if (accountChanges?.EmailSubmission) {
@@ -3273,7 +3498,10 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       // shared folders), so both the active account's and its shared folders'
       // counters follow background activity.
       if (anyMailboxChanged) {
-        await get().fetchMailboxes(client);
+        const applied = await get().applyMailboxDelta(client, change.changed);
+        if (!applied) {
+          await get().fetchMailboxes(client);
+        }
       }
 
       // Handle Calendar/CalendarEvent state changes - refresh calendar data
@@ -3292,6 +3520,21 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
             taskStore.fetchTasks(client);
           }
         }
+      }
+
+      // Someone changed this user's access to one of their collections
+      // (RFC 9670 ShareNotification): pull the notifications, the toaster
+      // shows them and refreshes the affected list.
+      if (Object.values(change.changed).some((c) => c?.ShareNotification)) {
+        const { useShareNotificationStore } = await import('./share-notification-store');
+        void useShareNotificationStore.getState().fetch(client);
+      }
+
+      // Another participant invited this user to, changed or cancelled an
+      // event (CalendarEventNotification): same pull-and-toast flow.
+      if (Object.values(change.changed).some((c) => c?.CalendarEventNotification)) {
+        const { useCalendarEventNotificationStore } = await import('./calendar-event-notification-store');
+        void useCalendarEventNotificationStore.getState().fetch(client);
       }
 
       // Handle SieveScript state changes - refresh filter rules
@@ -3344,6 +3587,7 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
       let result;
       let mailbox;
       let unifiedErrors: Map<string, string> | undefined;
+      let syncAfterRefresh: EmailListSync | null = null;
       if (isUnifiedView && crossView) {
         const includeGroup = useSettingsStore.getState().includeGroupInUnified;
         const built = await buildUnifiedAccountClients({ includeGroup });
@@ -3380,8 +3624,14 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
           result = await effectiveClient.advancedSearchEmails(filter, scopeAccountId, emailsPerPage, 0);
         } else {
           result = await effectiveClient.getEmails(jmapMailboxId, accountId, emailsPerPage, 0, undefined, true, undefined, getMessageListOrderFor(mailbox?.role));
+          // This page is the new delta-sync baseline for the folder; the
+          // search / unified paths above cannot be delta-synced.
+          syncAfterRefresh = result.state
+            ? { state: result.state, accountId: accountId ?? effectiveClient.getAccountId(), mailboxId: selectedMailbox }
+            : null;
         }
       }
+      set({ emailListSync: syncAfterRefresh });
 
       const currentEmails = get().emails;
       const previousTotal = get().totalEmails;
@@ -3797,10 +4047,16 @@ export const useEmailStore = create<EmailStore>((set, get) => ({
     }
   },
 
-  deleteMailbox: async (client, mailboxId) => {
+  deleteMailbox: async (client, mailboxId, options) => {
     try {
       const target = resolveMailboxMutationContext(client, mailboxId);
-      await target.client.deleteMailbox(target.mailboxId, target.accountId);
+      // Only pass the options when set: the plain call keeps the two-argument
+      // shape other client implementations (demo, plugins) expect.
+      if (options?.removeEmails) {
+        await target.client.deleteMailbox(target.mailboxId, target.accountId, options);
+      } else {
+        await target.client.deleteMailbox(target.mailboxId, target.accountId);
+      }
       const { selectedMailbox, viewingAccountId: viewingId } = get();
       if (viewingId) {
         const updatedList = (get().accountMailboxes[viewingId] ?? []).filter(mb => mb.id !== mailboxId);

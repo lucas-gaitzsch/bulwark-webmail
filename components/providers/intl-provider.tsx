@@ -35,6 +35,7 @@ export const LOCALE_LOADERS: Record<string, () => Promise<Messages>> = {
   ko: () => import('@/locales/ko/common.json').then((m) => m.default),
   lv: () => import('@/locales/lv/common.json').then((m) => m.default),
   mn: () => import('@/locales/mn/common.json').then((m) => m.default),
+  nb: () => import('@/locales/nb/common.json').then((m) => m.default),
   nl: () => import('@/locales/nl/common.json').then((m) => m.default),
   pl: () => import('@/locales/pl/common.json').then((m) => m.default),
   pt: () => import('@/locales/pt/common.json').then((m) => m.default),
@@ -44,6 +45,7 @@ export const LOCALE_LOADERS: Record<string, () => Promise<Messages>> = {
   tr: () => import('@/locales/tr/common.json').then((m) => m.default),
   uk: () => import('@/locales/uk/common.json').then((m) => m.default),
   zh: () => import('@/locales/zh/common.json').then((m) => m.default),
+  'zh-TW': () => import('@/locales/zh-TW/common.json').then((m) => m.default),
 };
 
 interface IntlProviderProps {

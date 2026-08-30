@@ -202,6 +202,9 @@
     "delete_confirm": "\"{name}\" uygulamasını silmek istediğinizden emin misiniz?",
     "no_apps": "Henüz uygulama eklenmedi",
     "no_apps_hint": "Kenar çubuğunuza özel uygulamalar ve bağlantılar ekleyin",
+    "managed_title": "Yöneticiniz tarafından sağlandı",
+    "managed_description": "Bu uygulamalar herkes için ayarlanmıştır ve değiştirilemez.",
+    "managed_badge": "Yönetilen",
     "search_icons": "Simge ara...",
     "show_popular": "Popüler",
     "show_all": "Tümü",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Okundu bilgisi istendi (devre dışı bırakmak için tıklayın)",
     "read_receipt_off": "Okundu bilgisi iste",
+    "dsn_on": "Teslimat bildirimi istendi (kapatmak için tıklayın)",
+    "dsn_off": "Teslimat bildirimi iste",
+    "require_tls_on": "Şifreli teslimat zorunlu (kapatmak için tıklayın)",
+    "require_tls_off": "Şifreli teslimat zorunlu kıl (TLS)",
     "new_message": "Yeni İleti",
     "signature_edit_hint": "İmzayı düzenlemek için çift tıklayın",
     "reply": "Yanıtla",
@@ -1860,6 +1867,8 @@
       "description": "Kenar çubuğunuzdaki özel uygulamaları ve bağlantıları yönetin",
       "keep_loaded": "Uygulamaları Yüklü Tut",
       "keep_loaded_description": "Yeniden yüklemeyi önlemek için aralarında geçiş yaparken satır içi uygulamaları arka planda çalışır halde tutun",
+      "managed_title": "Yöneticiniz tarafından sağlandı",
+      "managed_description": "Bu uygulamalar herkes için ayarlanmıştır ve değiştirilemez.",
       "manage_title": "Özel Uygulamalar",
       "manage_description": "Kenar çubuğunuzdan özel uygulamalar ekleyin, düzenleyin veya kaldırın"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Yeni alt klasör...",
     "new_folder": "Yeni klasör...",
     "rename": "Yeniden adlandır...",
+    "share": "Paylaş...",
     "import_email": ".eml veya .zip içe aktar...",
     "empty_folder": "Klasörü boşalt",
     "empty_folder_generic": "Klasörü boşalt",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Klasör yeniden adlandırılamadı",
     "toast_error_delete": "Klasör silinemedi",
     "toast_error_delete_has_children": "Klasörde alt klasörler var. Önce onları kaldırın.",
-    "toast_error_delete_has_email": "Klasör boş değil. Önce boşaltın."
+    "toast_error_delete_has_email": "Klasör boş değil. Önce boşaltın.",
+    "delete_with_contents_title": "Klasör boş değil",
+    "delete_with_contents_message": "\"{name}\" klasöründe hâlâ {count} ileti var. Klasör ve tüm iletileri silinsin mi? Bu işlem geri alınamaz.",
+    "delete_with_contents_confirm": "Klasörü ve iletileri sil"
   },
   "shortcuts": {
     "title": "Klavye Kısayolları",
@@ -2429,6 +2442,9 @@
       "renamed": "Adres defteri yeniden adlandırıldı",
       "rename_failed": "Adres defteri yeniden adlandırılamadı",
       "default": "Varsayılan",
+      "set_default": "Varsayılan olarak ayarla",
+      "default_updated": "Varsayılan adres defteri güncellendi",
+      "set_default_failed": "Varsayılan adres defteri ayarlanamadı",
       "manage": "Adres defterlerini yönet",
       "share": "Adres defterini paylaş",
       "new_contact_in_book": "Bu adres defterinde yeni kişi",
@@ -2785,6 +2801,14 @@
       "color": "Renk"
     },
     "participants": {
+      "availability": {
+        "title": "Uygunluk",
+        "free": "Uygun",
+        "busy": "Meşgul",
+        "tentative": "Geçici",
+        "unknown": "Bu sunucuda kullanıcı değil",
+        "checking": "Kontrol ediliyor…"
+      },
       "title": "Katılımcılar",
       "add": "Katılımcı ekle",
       "organizer": "Organizatör",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1 saniyelik gecikme",
       "hover_preview_delay_2s": "2 saniyelik gecikme",
       "hover_preview_off": "Devre dışı",
+      "organizer_identity": "Davetleri şu kimlikle düzenle",
+      "organizer_identity_desc": "Kişileri etkinliklere davet ederken düzenleyici olarak kullanılan takvim adresi.",
+      "organizer_identity_failed": "Düzenleyici adresi değiştirilemedi",
       "show_birthday_calendar": "Kişi doğum günü takvimi",
       "show_birthday_calendar_desc": "Kişilerinizdeki doğum günlerini gösteren sanal takvim göster"
     },
@@ -3141,6 +3168,25 @@
     },
     "nav_open_menu": "Menüyü aç"
   },
+  "calendar_event_notifications": {
+    "someone": "Birisi",
+    "invited": "{name} sizi \"{title}\" etkinliğine davet etti",
+    "updated": "{name} \"{title}\" etkinliğini güncelledi",
+    "cancelled": "{name} \"{title}\" etkinliğini iptal etti",
+    "untitled": "Başlıksız etkinlik"
+  },
+  "share_notifications": {
+    "someone": "Birisi",
+    "shared": "{name}, \"{object}\" {kind} sizinle paylaştı",
+    "changed": "{name}, \"{object}\" {kind} erişiminizi değiştirdi",
+    "revoked": "{name}, \"{object}\" {kind} erişiminizi kaldırdı",
+    "object": {
+      "folder": "klasörünü",
+      "calendar": "takvimini",
+      "address_book": "adres defterini",
+      "files": "dosya klasörünü"
+    }
+  },
   "sharing": {
     "title": "\"{name}\" paylaş",
     "description": "Bu sunucudaki diğer kullanıcılara veya gruplara erişim verin. Değişiklikler hemen geçerli olur.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Ekler",
     "date_after": "Sonra",
     "date_before": "Önce",
+    "size_min": "Şundan büyük (KB)",
+    "size_max": "Şundan küçük (KB)",
     "starred": "Yıldızlı",
     "unread": "Okunmamış",
     "read": "Okunmuş",

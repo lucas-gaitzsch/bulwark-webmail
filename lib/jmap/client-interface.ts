@@ -1,4 +1,4 @@
-import type { Email, Mailbox, StateChange, AccountStates, Thread, Identity, EmailAddress, ContactCard, AddressBook, AddressBookRights, VacationResponse, Calendar, CreateCalendarOptions, CalendarRights, CalendarEvent, CalendarEventFilter, CalendarTask, FileNode, FileNodeRights, Principal, PushSubscription, EmailPushConfig, ScheduledEmail, SendEmailResult, SharedAccount } from "./types";
+import type { Email, Mailbox, MailboxRights, StateChange, AccountStates, CollectionChanges, ShareNotification, BusyPeriod, CalendarParticipantIdentity, CalendarEventNotification, Thread, Identity, EmailAddress, ContactCard, AddressBook, AddressBookRights, VacationResponse, Calendar, CreateCalendarOptions, CalendarRights, CalendarEvent, CalendarEventFilter, CalendarTask, FileNode, FileNodeRights, Principal, PushSubscription, EmailPushConfig, ScheduledEmail, SendEmailResult, SharedAccount } from "./types";
 import type { SieveScript, SieveCapabilities } from "./sieve-types";
 import type { SortLevel } from "@/lib/message-list-order";
 
@@ -110,9 +110,45 @@ export interface IJMAPClient {
   // ── Mailboxes ─────────────────────────────────────────────────
   getMailboxes(accountId?: string): Promise<Mailbox[]>;
   getAllMailboxes(): Promise<Mailbox[]>;
+  /**
+   * getAllMailboxes plus the Mailbox collection state per account, so the
+   * store can resolve a later push with Mailbox/changes (RFC 8620 §5.2)
+   * instead of re-fetching every folder tree. Optional: clients without it
+   * (demo) always take the full-refresh path.
+   */
+  getAllMailboxesWithState?(): Promise<{ mailboxes: Mailbox[]; states: Record<string, string> }>;
+  /** Mailbox/get restricted to `ids`, mapped like getAllMailboxes (delta patching). */
+  getMailboxesByIds?(ids: string[], accountId?: string): Promise<Mailbox[]>;
+  /** Mailbox/changes since `sinceState`; null when the server cannot compute the delta. */
+  getMailboxChanges?(sinceState: string, accountId?: string, maxChanges?: number): Promise<CollectionChanges | null>;
+  /** Email/changes since `sinceState`; null when the server cannot compute the delta. */
+  getEmailChanges?(sinceState: string, accountId?: string, maxChanges?: number): Promise<CollectionChanges | null>;
   createMailbox(name: string, parentId?: string, accountId?: string): Promise<Mailbox>;
   updateMailbox(mailboxId: string, changes: { name?: string; parentId?: string | null; role?: string | null; sortOrder?: number }, accountId?: string): Promise<void>;
-  deleteMailbox(mailboxId: string, accountId?: string): Promise<void>;
+  // `removeEmails` destroys the folder's messages too (onDestroyRemoveEmails,
+  // RFC 8621 §2.5) instead of failing with mailboxHasEmail.
+  deleteMailbox(mailboxId: string, accountId?: string, options?: { removeEmails?: boolean }): Promise<void>;
+  // CalendarEventNotification (draft-ietf-jmap-calendars §7): invitations,
+  // updates and cancellations made by other participants. Optional.
+  getCalendarEventNotifications?(): Promise<CalendarEventNotification[]>;
+  destroyCalendarEventNotifications?(ids: string[]): Promise<void>;
+  // ParticipantIdentity (draft-ietf-jmap-calendars §6): the addresses the
+  // user organises events as. Optional.
+  getParticipantIdentities?(): Promise<CalendarParticipantIdentity[]>;
+  setDefaultParticipantIdentity?(id: string): Promise<void>;
+  // Free/busy (Principal/getAvailability, principals:availability). Optional.
+  supportsAvailability?(): boolean;
+  getPrincipalAvailability?(principalId: string, utcStart: Date, utcEnd: Date): Promise<BusyPeriod[]>;
+  // ShareNotification (RFC 9670 §3): who shared what with this user. Optional
+  // (demo client).
+  supportsShareNotifications?(): boolean;
+  getShareNotifications?(): Promise<ShareNotification[]>;
+  destroyShareNotifications?(ids: string[]): Promise<void>;
+  // Mailbox sharing (urn:ietf:params:jmap:mail:share). Optional: the demo
+  // client has no principals to share with.
+  supportsMailboxSharing?(accountId?: string): boolean;
+  getMailboxShareWith?(mailboxId: string, accountId?: string): Promise<Record<string, MailboxRights> | null>;
+  setMailboxShare?(mailboxId: string, principalId: string, rights: MailboxRights | null, accountId?: string): Promise<void>;
 
   // ── Emails ────────────────────────────────────────────────────
   // `pinnedFirst` sorts emails carrying the $pinned keyword to the top
@@ -121,7 +157,9 @@ export interface IJMAPClient {
   // into the view - used by the message-list category tabs (search-based).
   // `order` is the user's configured message-list order (#718), applied
   // server-side after pinned-first; see lib/message-list-order.ts.
-  getEmails(mailboxId?: string, accountId?: string, limit?: number, position?: number, hasKeyword?: string, pinnedFirst?: boolean, extraFilter?: Record<string, unknown>, order?: SortLevel[]): Promise<{ emails: Email[]; hasMore: boolean; total: number }>;
+  // `state` is the Email collection state the page was read at (RFC 8620
+  // §5.1), when the client reports it; the store uses it for Email/changes.
+  getEmails(mailboxId?: string, accountId?: string, limit?: number, position?: number, hasKeyword?: string, pinnedFirst?: boolean, extraFilter?: Record<string, unknown>, order?: SortLevel[]): Promise<{ emails: Email[]; hasMore: boolean; total: number; state?: string }>;
   /**
    * Sort properties the account's server advertises for Email/query
    * (`emailQuerySortOptions` in the mail capability, RFC 8621 §1.3), or null
@@ -241,8 +279,13 @@ export interface IJMAPClient {
     references?: string[],
     delayedUntil?: string,
     envelopeMailFrom?: string,
-    options?: { requestReadReceipt?: boolean },
+    // requestDsn / requireTls map to RFC 3461 / RFC 8689 envelope parameters
+    // and need the matching `submissionExtensions` entry (see
+    // supportsSubmissionExtension).
+    options?: { requestReadReceipt?: boolean; requestDsn?: boolean; requireTls?: boolean },
   ): Promise<SendEmailResult>;
+  /** Whether the submission account advertises an SMTP extension ("DSN", "REQUIRETLS", …). */
+  supportsSubmissionExtension?(extension: string, accountId?: string): boolean;
 
   importEmail(
     blobId: string,
@@ -341,6 +384,7 @@ export interface IJMAPClient {
   getAllAddressBooks(): Promise<AddressBook[]>;
   createAddressBook(name: string): Promise<AddressBook>;
   updateAddressBook(addressBookId: string, updates: Partial<AddressBook>, targetAccountId?: string): Promise<void>;
+  setDefaultAddressBook(addressBookId: string, targetAccountId?: string): Promise<void>;
   deleteAddressBook(addressBookId: string, targetAccountId?: string): Promise<void>;
   getContacts(addressBookId?: string, options?: { throwOnError?: boolean }): Promise<ContactCard[]>;
   getAllContacts(): Promise<ContactCard[]>;

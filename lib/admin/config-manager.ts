@@ -4,6 +4,7 @@ import { readFileEnv } from '@/lib/read-file-env';
 import { CONFIG_ENV_MAP, DEFAULT_FEATURE_GATES, DEFAULT_POLICY, DEFAULT_THEME_POLICY, type SettingsPolicy } from './types';
 import { ensureConfigDir, getConfigPath, assertWritable } from './paths';
 import { isValidRelayUrl, normalizeRelayUrl } from '@/lib/push-relays';
+import { sanitizeDefaultSidebarApps } from '@/lib/sidebar-apps';
 
 function parseEnvValue(value: string, type: string): unknown {
   switch (type) {
@@ -196,6 +197,9 @@ class ConfigManager {
       .filter(relay => isValidRelayUrl(relay.url));
     const defaultRelay = normalizeRelayUrl(policy.pushRelayUrl);
     policy.pushRelayUrl = isValidRelayUrl(defaultRelay) ? defaultRelay : '';
+    // Operator-pinned sidebar apps reach every user's rail, and policy.json can
+    // be hand-edited, so the list is validated here rather than at render time.
+    policy.defaultSidebarApps = sanitizeDefaultSidebarApps(policy.defaultSidebarApps);
     return policy;
   }
 

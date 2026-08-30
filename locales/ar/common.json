@@ -202,6 +202,9 @@
     "delete_confirm": "هل أنت متأكد أنك تريد حذف \"{name}\"؟",
     "no_apps": "لم تتم إضافة أي تطبيقات بعد",
     "no_apps_hint": "أضف تطبيقات وروابط مخصصة إلى الشريط الجانبي",
+    "managed_title": "مقدَّمة من المسؤول",
+    "managed_description": "تم إعداد هذه التطبيقات للجميع ولا يمكن تغييرها.",
+    "managed_badge": "مُدارة",
     "search_icons": "بحث عن أيقونات...",
     "show_popular": "الأكثر شيوعًا",
     "show_all": "الكل",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "إيصال القراءة مطلوب (انقر للتعطيل)",
     "read_receipt_off": "طلب إيصال قراءة",
+    "dsn_on": "تم طلب إشعار التسليم (انقر للتعطيل)",
+    "dsn_off": "طلب إشعار بالتسليم",
+    "require_tls_on": "التسليم المشفّر مطلوب (انقر للتعطيل)",
+    "require_tls_off": "اشتراط التسليم المشفّر (TLS)",
     "new_message": "رسالة جديدة",
     "signature_edit_hint": "انقر نقرًا مزدوجًا لتحرير التوقيع",
     "reply": "رد",
@@ -1867,6 +1874,8 @@
       "description": "إدارة التطبيقات والروابط المخصصة في الشريط الجانبي",
       "keep_loaded": "إبقاء التطبيقات محمّلة",
       "keep_loaded_description": "إبقاء التطبيقات الداخلية تعمل في الخلفية عند التبديل بينها لتجنب إعادة التحميل",
+      "managed_title": "مقدَّمة من المسؤول",
+      "managed_description": "تم إعداد هذه التطبيقات للجميع ولا يمكن تغييرها.",
       "manage_title": "التطبيقات المخصصة",
       "manage_description": "إضافة أو تعديل أو إزالة التطبيقات المخصصة من الشريط الجانبي"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "مجلد فرعي جديد...",
     "new_folder": "مجلد جديد...",
     "rename": "إعادة تسمية...",
+    "share": "مشاركة...",
     "import_email": "استيراد ملف ‎.eml أو ‎.zip...",
     "empty_folder": "إفراغ المجلد",
     "empty_folder_generic": "إفراغ المجلد",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "فشلت إعادة تسمية المجلد",
     "toast_error_delete": "فشل حذف المجلد",
     "toast_error_delete_has_children": "المجلد يحتوي على مجلدات فرعية. أزلها أولًا.",
-    "toast_error_delete_has_email": "المجلد ليس فارغًا. أفرغه أولًا."
+    "toast_error_delete_has_email": "المجلد ليس فارغًا. أفرغه أولًا.",
+    "delete_with_contents_title": "المجلد ليس فارغًا",
+    "delete_with_contents_message": "لا يزال المجلد \"{name}\" يحتوي على {count, plural, one {رسالة واحدة} other {# رسائل}}. هل تريد حذف المجلد وكل رسائله؟ لا يمكن التراجع عن هذا.",
+    "delete_with_contents_confirm": "حذف المجلد والرسائل"
   },
   "shortcuts": {
     "title": "اختصارات لوحة المفاتيح",
@@ -2430,6 +2443,9 @@
       "renamed": "تمت إعادة تسمية دفتر العناوين",
       "rename_failed": "فشلت إعادة تسمية دفتر العناوين",
       "default": "افتراضي",
+      "set_default": "تعيين كافتراضي",
+      "default_updated": "تم تحديث دفتر العناوين الافتراضي",
+      "set_default_failed": "فشل تعيين دفتر العناوين الافتراضي",
       "manage": "إدارة دفاتر العناوين",
       "share": "مشاركة دفتر العناوين",
       "new_contact_in_book": "جهة اتصال جديدة في دفتر العناوين هذا",
@@ -2785,6 +2801,14 @@
       "color": "اللون"
     },
     "participants": {
+      "availability": {
+        "title": "التوفر",
+        "free": "متاح",
+        "busy": "مشغول",
+        "tentative": "مبدئي",
+        "unknown": "ليس مستخدمًا على هذا الخادم",
+        "checking": "جارٍ التحقق…"
+      },
       "title": "المشاركون",
       "add": "إضافة مشارك",
       "organizer": "المنظّم",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "تأخير ثانية واحدة",
       "hover_preview_delay_2s": "تأخير ثانيتين",
       "hover_preview_off": "معطّل",
+      "organizer_identity": "تنظيم الدعوات باسم",
+      "organizer_identity_desc": "عنوان التقويم المستخدم كمنظّم عند دعوة الآخرين إلى الأحداث.",
+      "organizer_identity_failed": "فشل تغيير عنوان المنظّم",
       "show_birthday_calendar": "تقويم أعياد ميلاد جهات الاتصال",
       "show_birthday_calendar_desc": "إظهار تقويم افتراضي بأعياد ميلاد جهات اتصالك"
     },
@@ -3141,6 +3168,25 @@
       "overdue": "متأخرة"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "شخص ما",
+    "invited": "دعاك {name} إلى \"{title}\"",
+    "updated": "حدّث {name} \"{title}\"",
+    "cancelled": "ألغى {name} \"{title}\"",
+    "untitled": "حدث بدون عنوان"
+  },
+  "share_notifications": {
+    "someone": "شخص ما",
+    "shared": "شارك {name} معك {kind} \"{object}\"",
+    "changed": "غيّر {name} صلاحيتك على {kind} \"{object}\"",
+    "revoked": "أزال {name} صلاحيتك على {kind} \"{object}\"",
+    "object": {
+      "folder": "المجلد",
+      "calendar": "التقويم",
+      "address_book": "دفتر العناوين",
+      "files": "مجلد الملفات"
+    }
+  },
   "sharing": {
     "title": "مشاركة \"{name}\"",
     "description": "امنح الوصول لمستخدمين أو مجموعات أخرى على هذا الخادم. تُطبَّق التغييرات فورًا.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "المرفقات",
     "date_after": "بعد",
     "date_before": "قبل",
+    "size_min": "أكبر من (كيلوبايت)",
+    "size_max": "أصغر من (كيلوبايت)",
     "starred": "مميز بنجمة",
     "unread": "غير مقروءة",
     "read": "مقروءة",

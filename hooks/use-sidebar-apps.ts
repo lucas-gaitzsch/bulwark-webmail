@@ -1,5 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSettingsStore } from '@/stores/settings-store';
+import { useManagedSidebarApps } from '@/hooks/use-resolved-sidebar-apps';
 import { appUrlToFrameOrigin, inlineAppFrameOrigins } from '@/lib/security/app-frame-origins';
 import { readAppFrameOrigins, writeAppFrameOrigins } from '@/lib/security/app-frame-origins-client';
 
@@ -35,11 +36,17 @@ export function useSidebarApps() {
   const [loadedApps, setLoadedApps] = useState<InlineAppState[]>([]);
   const keepAppsLoaded = useSettingsStore((s) => s.keepAppsLoaded);
   const sidebarApps = useSettingsStore((s) => s.sidebarApps);
+  const managedApps = useManagedSidebarApps();
 
   // The `frame-src` origins this document's CSP was built from. The header is
   // fixed for the life of the document, so this snapshot - taken before we
   // write any update - is what the browser will actually allow to be framed.
   const appliedOriginsRef = useRef<string[] | null>(null);
+
+  // Admin-pinned apps are in `frame-src` already - the proxy reads them from
+  // the policy on every document request - so they never need the cookie, and
+  // opening one must not trigger the reload below.
+  const managedOrigins = useMemo(() => inlineAppFrameOrigins(managedApps), [managedApps]);
 
   const openInlineApp = useCallback((app: InlineAppState) => {
     setInlineApp(app);
@@ -70,7 +77,7 @@ export function useSidebarApps() {
   const handleInlineApp = useCallback((appId: string, url: string, name: string) => {
     const app = { id: appId, url, name };
     const origin = appUrlToFrameOrigin(url);
-    const applied = appliedOriginsRef.current ?? readAppFrameOrigins();
+    const applied = [...(appliedOriginsRef.current ?? readAppFrameOrigins()), ...managedOrigins];
 
     // Newly added app (or one added in another tab): its origin isn't in this
     // document's frame-src, so the iframe would be blocked. Publish it and
@@ -91,7 +98,7 @@ export function useSidebarApps() {
     }
 
     openInlineApp(app);
-  }, [sidebarApps, openInlineApp]);
+  }, [sidebarApps, managedOrigins, openInlineApp]);
 
   const closeInlineApp = useCallback(() => {
     if (!keepAppsLoaded) {

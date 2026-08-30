@@ -1,13 +1,15 @@
 import { generateUUID } from '@/lib/utils';
-import type { Email, Mailbox, StateChange, AccountStates, Thread, Identity, EmailAddress, ContactCard, AddressBook, AddressBookRights, VacationResponse, Calendar, CalendarComponentType, CalendarRights, CalendarEvent, CalendarEventFilter, CalendarTask, CreateCalendarOptions, FileNode, FileNodeFilter, FileNodeRights, Principal, PushSubscription, EmailPushConfig, EmailSubmission, ScheduledEmail, SendEmailResult, SharedAccount } from "./types";
+import type { Email, Mailbox, MailboxRights, StateChange, AccountStates, CollectionChanges, ShareNotification, BusyPeriod, CalendarParticipantIdentity, CalendarEventNotification, Thread, Identity, EmailAddress, ContactCard, AddressBook, AddressBookRights, VacationResponse, Calendar, CalendarComponentType, CalendarRights, CalendarEvent, CalendarEventFilter, CalendarTask, CreateCalendarOptions, FileNode, FileNodeFilter, FileNodeRights, Principal, PushSubscription, EmailPushConfig, EmailSubmission, ScheduledEmail, SendEmailResult, SharedAccount } from "./types";
 import type { SieveScript, SieveCapabilities } from "./sieve-types";
 import type { IJMAPClient, KeywordDiscoveryResult, KeywordInfo, KeywordMigration } from "./client-interface";
 import { toWildcardQuery } from "./search-utils";
+import { attachSearchSnippets, filterHasSnippetTerms, snippetFilterFor, type SearchSnippetResult } from "@/lib/search-snippet";
 import { batched, itemsPerRequest } from "./request-limits";
 import { keywordPointer } from "./patch-pointer";
 import { FirstTouchGate } from "./first-touch-gate";
 import { debug } from "@/lib/debug";
 import { normalizeCalendarEventLike } from "@/lib/calendar-event-normalization";
+import { SYNTHETIC_ID_PROBE, RECURRENCE_BASE_PROPERTIES, hydrateRecurrenceInstances, isServerRecurrenceInstance } from "@/lib/recurrence-instances";
 import { findTasksOnlyCalendarIds, isTaskLikeObject, type ScannedCalendarObject } from "@/lib/calendar-component-detection";
 import { DEFAULT_CALENDAR_COMPONENTS, mkCalendarCollection, newCalendarCollectionName } from "@/lib/webdav/calendar-collection";
 import { sanitizeDisplayName, splitMailbox } from "@/lib/rfc5322-mailbox";
@@ -320,6 +322,7 @@ const CALENDAR_EVENT_PROPERTIES = [
   'relatedTo',
   'isDraft',
   'isOrigin',
+  'baseEventId',
 ] as const;
 
 // Task-specific properties for CalendarEvent/get when fetching Task objects
@@ -597,15 +600,46 @@ function normalizeEnvelopeRecipients(recipients?: Array<string | EmailAddress>):
     .map((email) => ({ email }));
 }
 
-function createDelayedSubmissionEnvelope(fromEmail: string, holdForSeconds?: number, recipients?: Array<string | EmailAddress>): Record<string, unknown> | undefined {
-  if (!holdForSeconds) return undefined;
-  const rcptTo = normalizeEnvelopeRecipients(recipients);
+/**
+ * Per-message SMTP submission options (RFC 8621 §7.1 envelope parameters).
+ * `requestDsn` asks the next hops for delivery status notifications (RFC
+ * 3461 NOTIFY / RET); `requireTls` refuses relaying over an unencrypted hop
+ * (RFC 8689 REQUIRETLS). Both need the matching entry in the account's
+ * `submissionExtensions`; see JMAPClient.supportsSubmissionExtension.
+ */
+export interface SubmissionSendOptions {
+  requestReadReceipt?: boolean;
+  requestDsn?: boolean;
+  requireTls?: boolean;
+}
+
+/** The MAIL FROM / RCPT TO parameters the options translate to. */
+export function submissionEnvelopeParameters(options: SubmissionSendOptions | undefined, holdForSeconds?: number): {
+  mailFrom: Record<string, string | null>;
+  rcptTo: Record<string, string | null>;
+} {
+  const mailFrom: Record<string, string | null> = {};
+  const rcptTo: Record<string, string | null> = {};
+  if (holdForSeconds) mailFrom.HOLDFOR = String(holdForSeconds);
+  if (options?.requireTls) mailFrom.REQUIRETLS = null;
+  if (options?.requestDsn) {
+    // Return the headers only (not the full message) with the notification.
+    mailFrom.RET = 'HDRS';
+    rcptTo.NOTIFY = 'SUCCESS,FAILURE,DELAY';
+  }
+  return { mailFrom, rcptTo };
+}
+
+function createDelayedSubmissionEnvelope(fromEmail: string, holdForSeconds?: number, recipients?: Array<string | EmailAddress>, options?: SubmissionSendOptions): Record<string, unknown> | undefined {
+  const parameters = submissionEnvelopeParameters(options, holdForSeconds);
+  if (Object.keys(parameters.mailFrom).length === 0 && Object.keys(parameters.rcptTo).length === 0) return undefined;
+  const rcptTo = normalizeEnvelopeRecipients(recipients).map((r) =>
+    Object.keys(parameters.rcptTo).length > 0 ? { ...r, parameters: parameters.rcptTo } : r,
+  );
   return {
     mailFrom: {
       email: fromEmail,
-      parameters: {
-        HOLDFOR: String(holdForSeconds),
-      },
+      ...(Object.keys(parameters.mailFrom).length > 0 ? { parameters: parameters.mailFrom } : {}),
     },
     rcptTo,
   };
@@ -1259,12 +1293,23 @@ export class JMAPClient implements IJMAPClient {
   }
 
   async getAllMailboxes(): Promise<Mailbox[]> {
+    return (await this.getAllMailboxesWithState()).mailboxes;
+  }
+
+  /**
+   * Like getAllMailboxes, but also returns the Mailbox collection `state`
+   * (RFC 8620 §5.1) of every account fetched, keyed by accountId. The store
+   * remembers those states so a later push can be resolved with
+   * Mailbox/changes (delta) instead of re-fetching every folder tree.
+   */
+  async getAllMailboxesWithState(): Promise<{ mailboxes: Mailbox[]; states: Record<string, string> }> {
     try {
       const allMailboxes: Mailbox[] = [];
+      const states: Record<string, string> = {};
       const accountIds = Object.keys(this.accounts);
 
       if (accountIds.length === 0) {
-        return this.getMailboxes();
+        return { mailboxes: await this.getMailboxes(), states };
       }
 
       let fetchFailed = false;
@@ -1282,6 +1327,10 @@ export class JMAPClient implements IJMAPClient {
 
           if (response.methodResponses?.[0]?.[0] === "Mailbox/get") {
             const rawMailboxes = (response.methodResponses[0][1].list || []) as JMAPMailbox[];
+            const mailboxState = (response.methodResponses[0][1] as { state?: unknown }).state;
+            if (typeof mailboxState === 'string') {
+              states[accountId] = mailboxState;
+            }
 
             debug.log('jmap', `[JMAP Mailbox] getAllMailboxes: account ${accountId} returned ${rawMailboxes.length} mailboxes (isPrimary: ${isPrimary})`);
 
@@ -1329,13 +1378,119 @@ export class JMAPClient implements IJMAPClient {
         throw new Error('Failed to fetch mailboxes for all accounts');
       }
 
-      return allMailboxes;
+      return { mailboxes: allMailboxes, states };
     } catch (error) {
       // No placeholder fallback (see getMailboxes): the caller keeps its
       // current list rather than showing a folder tree the server never sent.
       console.error("Failed to fetch all mailboxes:", error);
       throw error instanceof Error ? error : new Error('Failed to fetch mailboxes');
     }
+  }
+
+  /**
+   * Maps a raw JMAP Mailbox into the store's shape. Folders of a delegated
+   * (non-primary) account get namespaced ids (`accountId:id`) exactly like
+   * getAllMailboxes produces them, so a delta-patched folder matches the row
+   * it replaces.
+   */
+  private mapRawMailbox(mb: JMAPMailbox, accountId: string): Mailbox {
+    const isPrimary = accountId === this.accountId;
+    const account = this.accounts[accountId];
+    return {
+      id: isPrimary ? mb.id : `${accountId}:${mb.id}`,
+      originalId: mb.id,
+      name: mb.name,
+      parentId: mb.parentId ? (isPrimary ? mb.parentId : `${accountId}:${mb.parentId}`) : undefined,
+      role: mb.role || undefined,
+      sortOrder: mb.sortOrder ?? 0,
+      totalEmails: mb.totalEmails ?? 0,
+      unreadEmails: mb.unreadEmails ?? 0,
+      totalThreads: mb.totalThreads ?? 0,
+      unreadThreads: mb.unreadThreads ?? 0,
+      myRights: mb.myRights || DEFAULT_MAILBOX_RIGHTS,
+      isSubscribed: mb.isSubscribed ?? true,
+      accountId,
+      accountName: account?.name || (isPrimary ? this.username : accountId),
+      isShared: !isPrimary,
+    } as Mailbox;
+  }
+
+  /**
+   * Fetches only the given mailboxes (Mailbox/get with `ids`), mapped like
+   * getAllMailboxes. Used to patch the folders a Mailbox/changes response
+   * reported as updated without re-fetching the whole tree.
+   */
+  async getMailboxesByIds(ids: string[], accountId?: string): Promise<Mailbox[]> {
+    const acctId = accountId || this.accountId;
+    if (ids.length === 0) return [];
+    const mailboxes: Mailbox[] = [];
+    for (const batchIds of batched(ids, this.getMaxObjectsInGet())) {
+      const response = await this.request([
+        ["Mailbox/get", { accountId: acctId, ids: batchIds }, "0"],
+      ]);
+      if (response.methodResponses?.[0]?.[0] !== "Mailbox/get") {
+        throw new Error('Unexpected response format');
+      }
+      const rawMailboxes = (response.methodResponses[0][1].list || []) as JMAPMailbox[];
+      mailboxes.push(...rawMailboxes.map((mb) => this.mapRawMailbox(mb, acctId)));
+    }
+    return mailboxes;
+  }
+
+  /**
+   * Generic `Foo/changes` (RFC 8620 §5.2). Returns null when the server can
+   * no longer compute a delta from `sinceState` (`cannotCalculateChanges`,
+   * a too-old state, or any other error) - the caller then falls back to a
+   * full re-fetch. `hasMoreChanges` is surfaced rather than paged through:
+   * a delta that large is cheaper to resolve with a fresh query.
+   */
+  private async getCollectionChanges(type: 'Email' | 'Mailbox', sinceState: string, accountId?: string, maxChanges?: number): Promise<CollectionChanges | null> {
+    const targetAccountId = accountId || this.accountId;
+    try {
+      const response = await this.request([
+        [`${type}/changes`, {
+          accountId: targetAccountId,
+          sinceState,
+          ...(maxChanges ? { maxChanges } : {}),
+        }, "0"],
+      ]);
+      const [method, result] = response.methodResponses?.[0] ?? [];
+      if (method !== `${type}/changes` || !result) {
+        return null;
+      }
+      const r = result as {
+        oldState?: string;
+        newState?: string;
+        hasMoreChanges?: boolean;
+        created?: string[];
+        updated?: string[];
+        destroyed?: string[];
+        updatedProperties?: string[] | null;
+      };
+      if (typeof r.newState !== 'string') return null;
+      return {
+        oldState: r.oldState ?? sinceState,
+        newState: r.newState,
+        hasMoreChanges: r.hasMoreChanges === true,
+        created: r.created ?? [],
+        updated: r.updated ?? [],
+        destroyed: r.destroyed ?? [],
+        updatedProperties: Array.isArray(r.updatedProperties) ? r.updatedProperties : null,
+      };
+    } catch (error) {
+      debug.log('jmap', `[JMAP] ${type}/changes since ${sinceState} unavailable, falling back to a full fetch`, error);
+      return null;
+    }
+  }
+
+  /** Email/changes since `sinceState` for the account (see getCollectionChanges). */
+  getEmailChanges(sinceState: string, accountId?: string, maxChanges?: number): Promise<CollectionChanges | null> {
+    return this.getCollectionChanges('Email', sinceState, accountId, maxChanges);
+  }
+
+  /** Mailbox/changes since `sinceState` for the account (see getCollectionChanges). */
+  getMailboxChanges(sinceState: string, accountId?: string, maxChanges?: number): Promise<CollectionChanges | null> {
+    return this.getCollectionChanges('Mailbox', sinceState, accountId, maxChanges);
   }
 
   /**
@@ -1439,7 +1594,7 @@ export class JMAPClient implements IJMAPClient {
     return { sort: buildEmailSort(order, { pinnedFirst, polarity }), keywordSortSupported: true };
   }
 
-  async getEmails(mailboxId?: string, accountId?: string, limit: number = 50, position: number = 0, hasKeyword?: string, pinnedFirst?: boolean, extraFilter?: Record<string, unknown>, order: SortLevel[] = []): Promise<{ emails: Email[], hasMore: boolean, total: number }> {
+  async getEmails(mailboxId?: string, accountId?: string, limit: number = 50, position: number = 0, hasKeyword?: string, pinnedFirst?: boolean, extraFilter?: Record<string, unknown>, order: SortLevel[] = []): Promise<{ emails: Email[], hasMore: boolean, total: number, state?: string }> {
     try {
       const targetAccountId = accountId || this.accountId;
       const simple: { inMailbox?: string; hasKeyword?: string } = {};
@@ -1510,7 +1665,10 @@ export class JMAPClient implements IJMAPClient {
           namespaceMailboxIds(emails, accountId);
         }
 
-        return { emails, hasMore, total };
+        // The Email collection state this page was read at; the store keeps
+        // it so a later push can be applied with Email/changes.
+        const state = typeof getResponse.state === 'string' ? getResponse.state : undefined;
+        return { emails, hasMore, total, state };
       }
 
       return { emails: [], hasMore: false, total: 0 };
@@ -2535,12 +2693,18 @@ export class JMAPClient implements IJMAPClient {
     }
   }
 
-  async deleteMailbox(mailboxId: string, accountId?: string): Promise<void> {
+  /**
+   * Destroys a folder. By default the server refuses a non-empty folder
+   * (`mailboxHasEmail`); with `removeEmails` the messages that are only in
+   * this folder go with it (`onDestroyRemoveEmails`, RFC 8621 §2.5).
+   */
+  async deleteMailbox(mailboxId: string, accountId?: string, options?: { removeEmails?: boolean }): Promise<void> {
     const targetAccountId = accountId || this.accountId;
     const response = await this.request([
       ["Mailbox/set", {
         accountId: targetAccountId,
         destroy: [mailboxId],
+        ...(options?.removeEmails ? { onDestroyRemoveEmails: true } : {}),
       }, "0"],
     ]);
 
@@ -2590,6 +2754,7 @@ export class JMAPClient implements IJMAPClient {
           "#ids": { resultOf: "0", name: "Email/query", path: "/ids" },
           properties: [...EMAIL_LIST_PROPERTIES],
         }, "1"],
+        this.searchSnippetCall(targetAccountId, filter),
       ]);
 
       const queryResponse = response.methodResponses?.[0]?.[1];
@@ -2599,6 +2764,7 @@ export class JMAPClient implements IJMAPClient {
       );
       const total = queryResponse?.total || 0;
       const hasMore = computeHasMore(position, emails.length, total, limit);
+      attachSearchSnippets(emails, this.searchSnippetsFrom(response));
 
       // Mirror getEmails: emails fetched from a delegated/shared account carry
       // bare owner mailbox ids; namespace them to `${ownerId}:${id}` so they line
@@ -2612,6 +2778,34 @@ export class JMAPClient implements IJMAPClient {
       console.error('Search failed:', error);
       return { emails: [], hasMore: false, total: 0 };
     }
+  }
+
+  /**
+   * The SearchSnippet/get call (RFC 8621 §5) chained onto a search request,
+   * or a Core/echo no-op when the filter has no term the server could
+   * highlight (a purely structural filter yields empty snippets). Reads the
+   * ids straight from the Email/query result, so it costs no extra round
+   * trip; a failure of this call alone leaves the results without snippets.
+   */
+  private searchSnippetCall(accountId: string, filter: Record<string, unknown> | undefined): JMAPMethodCall {
+    if (!filter || !filterHasSnippetTerms(filter)) {
+      return ["Core/echo", {}, "snippets"];
+    }
+    return ["SearchSnippet/get", {
+      accountId,
+      filter: snippetFilterFor(filter),
+      "#emailIds": { resultOf: "0", name: "Email/query", path: "/ids" },
+    }, "snippets"];
+  }
+
+  /** The SearchSnippet list of a search response, if the call succeeded. */
+  private searchSnippetsFrom(response: JMAPResponse): SearchSnippetResult[] | undefined {
+    for (const [method, result, callId] of response.methodResponses ?? []) {
+      if (callId === "snippets" && method === "SearchSnippet/get") {
+        return ((result as { list?: SearchSnippetResult[] })?.list) ?? undefined;
+      }
+    }
+    return undefined;
   }
 
   async advancedSearchEmails(
@@ -2641,6 +2835,7 @@ export class JMAPClient implements IJMAPClient {
           "#ids": { resultOf: "0", name: "Email/query", path: "/ids" },
           properties: [...EMAIL_LIST_PROPERTIES],
         }, "1"],
+        this.searchSnippetCall(targetAccountId, hasFilter ? filter : undefined),
       ]);
 
       const queryResponse = response.methodResponses?.[0]?.[1];
@@ -2650,6 +2845,7 @@ export class JMAPClient implements IJMAPClient {
       );
       const total = queryResponse?.total || 0;
       const hasMore = computeHasMore(position, emails.length, total, limit);
+      attachSearchSnippets(emails, this.searchSnippetsFrom(response));
 
       // Namespace shared/delegated-account mailbox ids (see searchEmails). The
       // cross-account views (All mail / Unread / Starred) browse via this method,
@@ -3123,7 +3319,7 @@ export class JMAPClient implements IJMAPClient {
     references?: string[],
     delayedUntil?: string,
     envelopeMailFrom?: string,
-    options?: { requestReadReceipt?: boolean }
+    options?: SubmissionSendOptions
   ): Promise<SendEmailResult> {
     const holdForSeconds = delayedUntil ? this.validateDelayedUntil(delayedUntil) : undefined;
     const emailId = `send-${Date.now()}`;
@@ -3242,14 +3438,19 @@ export class JMAPClient implements IJMAPClient {
     // is omitted the server derives mailFrom from the Identity.
     const buildSubmissionCreate = (submissionId: string): Record<string, unknown> => {
       const create: Record<string, unknown> = { emailId: `#${emailId}`, identityId: finalIdentityId };
-      if (holdForSeconds || envelopeMailFrom) {
+      const parameters = submissionEnvelopeParameters(options, holdForSeconds);
+      const hasMailFromParams = Object.keys(parameters.mailFrom).length > 0;
+      const hasRcptToParams = Object.keys(parameters.rcptTo).length > 0;
+      if (hasMailFromParams || hasRcptToParams || envelopeMailFrom) {
         const envelopeRecipients = normalizeEnvelopeRecipients([...to, ...(cc || []), ...(bcc || [])]);
         create.envelope = {
           mailFrom: {
             email: parseRecipientString(envelopeMailFrom || fromEmail || this.username).email,
-            ...(holdForSeconds ? { parameters: { HOLDFOR: String(holdForSeconds) } } : {}),
+            ...(hasMailFromParams ? { parameters: parameters.mailFrom } : {}),
           },
-          rcptTo: envelopeRecipients,
+          rcptTo: hasRcptToParams
+            ? envelopeRecipients.map((r) => ({ ...r, parameters: parameters.rcptTo }))
+            : envelopeRecipients,
         };
       }
       return { [submissionId]: create };
@@ -4316,6 +4517,14 @@ export class JMAPClient implements IJMAPClient {
     return this.session?.accounts?.[submissionAccountId]?.accountCapabilities?.['urn:ietf:params:jmap:submission'] as SubmissionCapability | undefined;
   }
 
+  /**
+   * Whether the submission account advertises an SMTP extension (RFC 8621
+   * §1.3 `submissionExtensions`), e.g. "DSN" or "REQUIRETLS".
+   */
+  supportsSubmissionExtension(extension: string, accountId?: string): boolean {
+    return this.hasSubmissionExtension(this.getSubmissionCapability(accountId)?.submissionExtensions, extension);
+  }
+
   private hasSubmissionExtension(submissionExtensions: unknown, extension: string): boolean {
     const target = extension.toUpperCase();
     if (Array.isArray(submissionExtensions)) {
@@ -4813,13 +5022,14 @@ export class JMAPClient implements IJMAPClient {
 
   async updateAddressBook(addressBookId: string, updates: Partial<AddressBook>, targetAccountId?: string): Promise<void> {
     const accountId = targetAccountId || this.getContactsAccountId();
-    // Only forward server-settable properties
-    const { name, description, sortOrder, isDefault, color } = updates as Record<string, unknown>;
+    // Only forward server-settable properties. `isDefault` is deliberately not
+    // among them: it is read-only in AddressBook/set and including it fails the
+    // whole update with invalidProperties - use setDefaultAddressBook instead.
+    const { name, description, sortOrder, color } = updates as Record<string, unknown>;
     const patch: Record<string, unknown> = {};
     if (name !== undefined) patch.name = name;
     if (description !== undefined) patch.description = description;
     if (sortOrder !== undefined) patch.sortOrder = sortOrder;
-    if (isDefault !== undefined) patch.isDefault = isDefault;
     if (color !== undefined) patch.color = color;
 
     const response = await this.request([
@@ -4838,6 +5048,31 @@ export class JMAPClient implements IJMAPClient {
       return;
     }
     throw new Error("Failed to update address book");
+  }
+
+  /**
+   * Mark an address book as the account default. `isDefault` is read-only in
+   * AddressBook/set - the default is changed via the `onSuccessSetIsDefault`
+   * request argument instead (same shape as Calendar/set).
+   */
+  async setDefaultAddressBook(addressBookId: string, targetAccountId?: string): Promise<void> {
+    const accountId = targetAccountId || this.getContactsAccountId();
+
+    const response = await this.request([
+      ["AddressBook/set", {
+        accountId,
+        onSuccessSetIsDefault: addressBookId,
+      }, "0"]
+    ], this.contactUsing());
+
+    const methodName = response.methodResponses?.[0]?.[0];
+    if (methodName === "error") {
+      const error = response.methodResponses?.[0]?.[1];
+      throw new Error(error?.description || error?.type || "Failed to set default address book");
+    }
+    if (methodName !== "AddressBook/set") {
+      throw new Error("Failed to set default address book");
+    }
   }
 
   async deleteAddressBook(addressBookId: string, targetAccountId?: string): Promise<void> {
@@ -4883,6 +5118,158 @@ export class JMAPClient implements IJMAPClient {
     } catch (error) {
       console.error("Failed to fetch principals:", error);
       return [];
+    }
+  }
+
+  // ── CalendarEventNotification (draft-ietf-jmap-calendars §7) ───
+
+  /**
+   * Pending event notifications (invitations, updates, cancellations made by
+   * other participants), oldest first. `event` is requested for the title
+   * only; the default property set omits it.
+   */
+  async getCalendarEventNotifications(): Promise<CalendarEventNotification[]> {
+    if (!this.supportsCalendars()) return [];
+    const accountId = this.getCalendarsAccountId();
+    const response = await this.request([
+      ["CalendarEventNotification/query", {
+        accountId,
+        sort: [{ property: "created", isAscending: true }],
+      }, "0"],
+      ["CalendarEventNotification/get", {
+        accountId,
+        "#ids": { resultOf: "0", name: "CalendarEventNotification/query", path: "/ids" },
+        properties: ["id", "created", "changedBy", "comment", "type", "calendarEventId", "isDraft", "event"],
+      }, "1"],
+    ], this.calendarUsing());
+    const getResp = response.methodResponses?.find((r) => r[0] === "CalendarEventNotification/get");
+    if (!getResp) {
+      const error = response.methodResponses?.find((r) => r[0] === "error")?.[1] as { description?: string } | undefined;
+      throw new Error(error?.description || "Failed to load calendar event notifications");
+    }
+    return ((getResp[1] as { list?: CalendarEventNotification[] }).list ?? []);
+  }
+
+  /** Acknowledges (destroys) event notifications that have been shown. */
+  async destroyCalendarEventNotifications(ids: string[]): Promise<void> {
+    if (ids.length === 0 || !this.supportsCalendars()) return;
+    const accountId = this.getCalendarsAccountId();
+    for (const batch of batched(ids, this.getMaxObjectsInSet())) {
+      await this.request([
+        ["CalendarEventNotification/set", { accountId, destroy: batch }, "0"],
+      ], this.calendarUsing());
+    }
+  }
+
+  // ── ParticipantIdentity (draft-ietf-jmap-calendars §6) ─────────
+
+  /**
+   * The calendar addresses this user can organise events as, with the
+   * server's default flagged. Empty when the server has no calendars.
+   */
+  async getParticipantIdentities(): Promise<CalendarParticipantIdentity[]> {
+    if (!this.supportsCalendars()) return [];
+    const accountId = this.getCalendarsAccountId();
+    const response = await this.request([
+      ["ParticipantIdentity/get", { accountId }, "0"],
+    ], this.calendarUsing());
+    const [method, result] = response.methodResponses?.[0] ?? [];
+    if (method !== "ParticipantIdentity/get") {
+      throw new Error((result as { description?: string })?.description || "Failed to load participant identities");
+    }
+    return ((result as { list?: Array<Partial<CalendarParticipantIdentity> & { id: string }> }).list ?? []).map((i) => ({
+      id: i.id,
+      name: i.name ?? "",
+      calendarAddress: i.calendarAddress ?? "",
+      isDefault: i.isDefault === true,
+    }));
+  }
+
+  /** Makes `id` the default identity (ParticipantIdentity/set onSuccessSetIsDefault). */
+  async setDefaultParticipantIdentity(id: string): Promise<void> {
+    const accountId = this.getCalendarsAccountId();
+    const response = await this.request([
+      ["ParticipantIdentity/set", { accountId, onSuccessSetIsDefault: id }, "0"],
+    ], this.calendarUsing());
+    const [method, result] = response.methodResponses?.[0] ?? [];
+    if (method !== "ParticipantIdentity/set") {
+      throw new Error((result as { description?: string })?.description || "Failed to set the default participant identity");
+    }
+  }
+
+  // ── Principal/getAvailability (free/busy) ──────────────────────
+
+  static readonly PRINCIPALS_AVAILABILITY_CAPABILITY = 'urn:ietf:params:jmap:principals:availability';
+
+  /** Whether the server can answer free/busy queries for its principals. */
+  supportsAvailability(): boolean {
+    return this.supportsPrincipals() && this.hasCapability(JMAPClient.PRINCIPALS_AVAILABILITY_CAPABILITY);
+  }
+
+  /**
+   * The busy periods of a principal between `utcStart` and `utcEnd`
+   * (Principal/getAvailability). Event details are never requested: this
+   * only tells whether an attendee is free, not what they are doing.
+   */
+  async getPrincipalAvailability(principalId: string, utcStart: Date, utcEnd: Date): Promise<BusyPeriod[]> {
+    if (!this.supportsAvailability()) return [];
+    const response = await this.request([
+      ["Principal/getAvailability", {
+        accountId: this.accountId,
+        id: principalId,
+        utcStart: utcStart.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        utcEnd: utcEnd.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        showDetails: false,
+      }, "0"],
+    ], [...this.principalsUsing(), JMAPClient.PRINCIPALS_AVAILABILITY_CAPABILITY]);
+    const [method, result] = response.methodResponses?.[0] ?? [];
+    if (method !== "Principal/getAvailability") {
+      throw new Error((result as { description?: string })?.description || "Failed to query availability");
+    }
+    return ((result as { list?: Array<{ utcStart: string; utcEnd: string; busyStatus?: BusyPeriod['busyStatus'] }> }).list ?? [])
+      .map((p) => ({ utcStart: p.utcStart, utcEnd: p.utcEnd, busyStatus: p.busyStatus ?? null }));
+  }
+
+  // ── ShareNotification (RFC 9670 §3) ────────────────────────────
+
+  /** Whether the server can report who shared what with this user. */
+  supportsShareNotifications(): boolean {
+    return this.supportsPrincipals();
+  }
+
+  /**
+   * Every pending share notification of the user's own account, oldest
+   * first. The list is small by construction: notifications are destroyed
+   * once they have been shown (see destroyShareNotifications).
+   */
+  async getShareNotifications(): Promise<ShareNotification[]> {
+    if (!this.supportsShareNotifications()) return [];
+    const accountId = this.accountId;
+    const response = await this.request([
+      ["ShareNotification/query", {
+        accountId,
+        sort: [{ property: "created", isAscending: true }],
+      }, "0"],
+      ["ShareNotification/get", {
+        accountId,
+        "#ids": { resultOf: "0", name: "ShareNotification/query", path: "/ids" },
+      }, "1"],
+    ], this.principalsUsing());
+    const getResp = response.methodResponses?.find((r) => r[0] === "ShareNotification/get");
+    if (!getResp) {
+      const error = response.methodResponses?.find((r) => r[0] === "error")?.[1] as { description?: string } | undefined;
+      throw new Error(error?.description || "Failed to load share notifications");
+    }
+    return ((getResp[1] as { list?: ShareNotification[] }).list ?? []);
+  }
+
+  /** Acknowledges (destroys) share notifications that have been shown. */
+  async destroyShareNotifications(ids: string[]): Promise<void> {
+    if (ids.length === 0 || !this.supportsShareNotifications()) return;
+    for (const batch of batched(ids, this.getMaxObjectsInSet())) {
+      await this.request([
+        ["ShareNotification/set", { accountId: this.accountId, destroy: batch }, "0"],
+      ], this.principalsUsing());
     }
   }
 
@@ -4938,6 +5325,73 @@ export class JMAPClient implements IJMAPClient {
       throw new Error(err.description || "Failed to update address book share");
     }
     if (!result?.updated || !(addressBookId in result.updated)) {
+      throw new Error("Server did not confirm the share update");
+    }
+  }
+
+  // ── Mailbox sharing (urn:ietf:params:jmap:mail:share) ─────────────
+
+  static readonly MAIL_SHARE_CAPABILITY = 'urn:ietf:params:jmap:mail:share';
+
+  /** Whether the account's server accepts `shareWith` on Mailbox objects. */
+  supportsMailboxSharing(accountId?: string): boolean {
+    return this.hasAccountCapability(JMAPClient.MAIL_SHARE_CAPABILITY, accountId || this.accountId);
+  }
+
+  /**
+   * The current `shareWith` map of one folder. Fetched on demand (the share
+   * dialog) rather than with every folder list: Stalwart omits shareWith from
+   * Mailbox/get unless it is requested, and it is only needed here.
+   */
+  async getMailboxShareWith(mailboxId: string, accountId?: string): Promise<Record<string, MailboxRights> | null> {
+    const targetAccountId = accountId || this.accountId;
+    const response = await this.request([
+      ["Mailbox/get", {
+        accountId: targetAccountId,
+        ids: [mailboxId],
+        properties: ["id", "shareWith"],
+      }, "0"],
+    ], ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", JMAPClient.MAIL_SHARE_CAPABILITY]);
+    const [method, result] = response.methodResponses?.[0] ?? [];
+    if (method !== "Mailbox/get") {
+      throw new Error((result as { description?: string })?.description || "Failed to load folder sharing");
+    }
+    const mailbox = ((result as { list?: Array<{ id: string; shareWith?: Record<string, MailboxRights> | null }> }).list ?? [])
+      .find((mb) => mb.id === mailboxId);
+    if (!mailbox) {
+      throw new Error("Folder not found");
+    }
+    return mailbox.shareWith ?? null;
+  }
+
+  /**
+   * Grants (`rights`) or revokes (`null`) a principal's access to a folder
+   * via a `shareWith/{principalId}` patch, like the calendar / address book
+   * variants.
+   */
+  async setMailboxShare(
+    mailboxId: string,
+    principalId: string,
+    rights: MailboxRights | null,
+    accountId?: string,
+  ): Promise<void> {
+    const targetAccountId = accountId || this.accountId;
+    const response = await this.request([
+      ["Mailbox/set", {
+        accountId: targetAccountId,
+        update: { [mailboxId]: { [`shareWith/${principalId}`]: rights } },
+      }, "0"],
+    ], ["urn:ietf:params:jmap:core", "urn:ietf:params:jmap:mail", JMAPClient.MAIL_SHARE_CAPABILITY]);
+
+    const [method, result] = response.methodResponses?.[0] ?? [];
+    if (method !== "Mailbox/set") {
+      throw new Error((result as { description?: string })?.description || "Failed to update folder share");
+    }
+    const setResult = result as { updated?: Record<string, unknown>; notUpdated?: Record<string, { description?: string }> };
+    if (setResult.notUpdated?.[mailboxId]) {
+      throw new Error(setResult.notUpdated[mailboxId].description || "Failed to update folder share");
+    }
+    if (!setResult.updated || !(mailboxId in setResult.updated)) {
       throw new Error("Server did not confirm the share update");
     }
   }
@@ -5206,12 +5660,27 @@ export class JMAPClient implements IJMAPClient {
     }
   }
 
+  /**
+   * Calendar/get for one account. The session's first one on the primary
+   * calendar account also carries the synthetic-id probe (see
+   * supportsSyntheticCalendarIds), so the range query that follows needs no
+   * round trip of its own for it.
+   */
+  private requestCalendars(accountId: string): Promise<JMAPResponse> {
+    const methodCalls: JMAPMethodCall[] = [
+      ["Calendar/get", { accountId, properties: CALENDAR_PROPERTIES }, "0"],
+    ];
+    const carriesProbe = !this.syntheticCalendarIdSupport && accountId === this.getCalendarsAccountId();
+    if (carriesProbe) methodCalls.push(this.syntheticIdProbeCall(accountId));
+    const pending = this.request(methodCalls, this.calendarUsing());
+    if (carriesProbe) this.rememberSyntheticIdProbe(pending);
+    return pending;
+  }
+
   async getCalendars(): Promise<Calendar[]> {
     try {
       const accountId = this.getCalendarsAccountId();
-      const response = await this.request([
-        ["Calendar/get", { accountId, properties: CALENDAR_PROPERTIES }, "0"]
-      ], this.calendarUsing());
+      const response = await this.requestCalendars(accountId);
 
       if (response.methodResponses?.[0]?.[0] === "Calendar/get") {
         const calendars = (response.methodResponses[0][1].list || []) as Calendar[];
@@ -5292,9 +5761,7 @@ export class JMAPClient implements IJMAPClient {
         const account = this.accounts[accountId];
 
         try {
-          const response = await this.request([
-            ["Calendar/get", { accountId, properties: CALENDAR_PROPERTIES }, "0"]
-          ], this.calendarUsing());
+          const response = await this.requestCalendars(accountId);
 
           if (response.methodResponses?.[0]?.[0] === "Calendar/get") {
             const rawCalendars = (response.methodResponses[0][1].list || []) as Calendar[];
@@ -5585,6 +6052,57 @@ export class JMAPClient implements IJMAPClient {
   // for why the fan-out has to probe on suspicion).
   private calendarAccessDenied = new Set<string>();
 
+  // Result of the one-off synthetic-id capability probe, shared by every
+  // range query on this client (see supportsSyntheticCalendarIds).
+  private syntheticCalendarIdSupport: Promise<boolean> | null = null;
+
+  /**
+   * Whether CalendarEvent/set accepts the synthetic ids that
+   * CalendarEvent/query?expandRecurrences=true hands out (Stalwart >= 0.16.20).
+   *
+   * Probed once per client with a side-effect-free update of a synthetic id
+   * whose event cannot exist (see SYNTHETIC_ID_PROBE): a server that still
+   * rejects synthetic ids answers `invalidProperties` before looking the
+   * event up, one that supports them answers `notFound`. Anything else
+   * (transport error, non-Stalwart server) counts as unsupported so the
+   * client-side expansion keeps being used. The session's first Calendar/get
+   * carries the probe along (getCalendars), so the usual calendar start-up
+   * pays no extra round trip; a range query that comes first probes itself.
+   */
+  async supportsSyntheticCalendarIds(): Promise<boolean> {
+    if (!this.syntheticCalendarIdSupport) {
+      const accountId = this.getCalendarsAccountId();
+      this.rememberSyntheticIdProbe(
+        this.request([this.syntheticIdProbeCall(accountId)], this.calendarUsing()),
+      );
+    }
+    return this.syntheticCalendarIdSupport!;
+  }
+
+  private static readonly SYNTHETIC_ID_PROBE_CALL_ID = 'synthetic-id-probe';
+
+  private syntheticIdProbeCall(accountId: string): JMAPMethodCall {
+    return ["CalendarEvent/set", { accountId, update: { [SYNTHETIC_ID_PROBE]: {} } }, JMAPClient.SYNTHETIC_ID_PROBE_CALL_ID];
+  }
+
+  /** Derive (and cache) the probe verdict from a response that carried the probe call. */
+  private rememberSyntheticIdProbe(pending: Promise<JMAPResponse>): void {
+    this.syntheticCalendarIdSupport = pending.then(
+      (response) => {
+        const entry = response.methodResponses?.find((r) => r[2] === JMAPClient.SYNTHETIC_ID_PROBE_CALL_ID);
+        if (!entry || entry[0] !== "CalendarEvent/set") return false;
+        const failure = (entry[1] as { notUpdated?: Record<string, { type?: string }> } | undefined)?.notUpdated?.[SYNTHETIC_ID_PROBE];
+        const supported = failure?.type === 'notFound';
+        debug.log('calendar', 'Synthetic calendar id probe', { supported, failure: failure ?? null });
+        return supported;
+      },
+      (error) => {
+        debug.log('calendar', 'Synthetic calendar id probe failed; using client-side recurrence expansion', error);
+        return false;
+      },
+    );
+  }
+
   async queryAllCalendarEvents(
     filter: CalendarEventFilter,
     sort?: Array<{ property: string; isAscending: boolean }>,
@@ -5647,9 +6165,16 @@ export class JMAPClient implements IJMAPClient {
       if (timeZone) {
         queryArgs.timeZone = timeZone;
       }
-      // NOTE: We do NOT use expandRecurrences because Stalwart returns synthetic
-      // IDs that cannot be used for CalendarEvent/set (update/destroy).
-      // Recurrence expansion is done client-side instead.
+      // Let the server expand recurring series into one synthetic id per
+      // occurrence when it also accepts those ids in CalendarEvent/set
+      // (Stalwart >= 0.16.20; the server needs both range bounds for it).
+      // Older servers keep the client-side expansion in
+      // lib/recurrence-expansion.ts, which runs on whatever comes back.
+      const expandRecurrences = Boolean(filter.after && filter.before)
+        && await this.supportsSyntheticCalendarIds();
+      if (expandRecurrences) {
+        queryArgs.expandRecurrences = true;
+      }
       if (sort) {
         queryArgs.sort = sort;
       }
@@ -5693,9 +6218,12 @@ export class JMAPClient implements IJMAPClient {
         }
       }
 
-      const filtered = allEvents
+      const normalized = allEvents
         .filter((event) => !isTaskObject(event))
         .map((event) => normalizeCalendarEventLike(event));
+      const filtered = expandRecurrences
+        ? await this.hydrateExpandedOccurrences(normalized, accountId, timeZone)
+        : normalized;
 
       const eventsWithParticipants = filtered.filter(e => e.participants && Object.keys(e.participants).length > 0);
       debug.log('calendar', 'queryCalendarEvents participant summary', {
@@ -5729,6 +6257,43 @@ export class JMAPClient implements IJMAPClient {
     }
   }
 
+  /**
+   * Server-expanded occurrences come back without their series' recurrence
+   * rule / overrides (and all-day ones without showWithoutTime). Fetch those
+   * from the base events in one batched get and merge them in, so an
+   * occurrence carries the same series context the client-side expansion
+   * used to copy from its master.
+   */
+  private async hydrateExpandedOccurrences(
+    events: CalendarEvent[],
+    accountId: string,
+    timeZone?: string,
+  ): Promise<CalendarEvent[]> {
+    const baseIds = Array.from(new Set(
+      events
+        .filter((event) => isServerRecurrenceInstance(event) && event.recurrenceId)
+        .map((event) => event.baseEventId as string),
+    ));
+    if (baseIds.length === 0) return events;
+
+    const bases = new Map<string, Partial<CalendarEvent>>();
+    for (const batch of batched(baseIds, this.getMaxObjectsInGet())) {
+      const response = await this.request([
+        ["CalendarEvent/get", {
+          accountId,
+          properties: [...RECURRENCE_BASE_PROPERTIES],
+          ids: batch,
+          ...(timeZone ? { timeZone } : {}),
+        }, "0"],
+      ], this.calendarUsing());
+      if (response.methodResponses?.[0]?.[0] !== "CalendarEvent/get") continue;
+      for (const base of (response.methodResponses[0][1].list || []) as Partial<CalendarEvent>[]) {
+        if (base.id) bases.set(base.id, normalizeCalendarEventLike(base));
+      }
+    }
+    return hydrateRecurrenceInstances(events, bases);
+  }
+
   async getCalendarEvent(id: string, targetAccountId?: string): Promise<CalendarEvent | null> {
     try {
       const accountId = targetAccountId || this.getCalendarsAccountId();
@@ -5757,7 +6322,7 @@ export class JMAPClient implements IJMAPClient {
     const accountId = targetAccountId || this.getCalendarsAccountId();
 
     // Strip client-only shared fields before sending to JMAP
-    const { originalId: _oi, originalCalendarIds: _oc, accountId: _ai, accountName: _an, isShared: _is, ...cleanEvent } = event as CalendarEvent;
+    const { originalId: _oi, baseEventId: _be, originalCalendarIds: _oc, accountId: _ai, accountName: _an, isShared: _is, ...cleanEvent } = event as CalendarEvent;
     cleanRecurrenceRules(cleanEvent as unknown as Record<string, unknown>);
 
     debug.group('CalendarEvent/create', 'calendar');
@@ -5938,7 +6503,7 @@ export class JMAPClient implements IJMAPClient {
     const accountId = targetAccountId || this.getCalendarsAccountId();
 
     // Strip client-only and server-immutable fields before sending to JMAP
-    const { id: _id, uid: _uid, '@type': _typ, created: _cr, updated: _up, sequence: _sq, isOrigin: _io, isDraft: _idr, originalId: _oi, originalCalendarIds: _oc, accountId: _ai, accountName: _an, isShared: _is, ...cleanUpdates } = updates as CalendarEvent;
+    const { id: _id, uid: _uid, '@type': _typ, created: _cr, updated: _up, sequence: _sq, isOrigin: _io, isDraft: _idr, originalId: _oi, baseEventId: _be, originalCalendarIds: _oc, accountId: _ai, accountName: _an, isShared: _is, ...cleanUpdates } = updates as CalendarEvent;
     cleanRecurrenceRules(cleanUpdates as unknown as Record<string, unknown>);
 
     const setArgs: Record<string, unknown> = {

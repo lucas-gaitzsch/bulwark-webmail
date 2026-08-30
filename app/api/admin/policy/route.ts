@@ -46,9 +46,16 @@ export async function PUT(request: NextRequest) {
     if (policy.themePolicy && typeof policy.themePolicy !== 'object') {
       return NextResponse.json({ error: 'themePolicy must be an object' }, { status: 400 });
     }
+    if (policy.defaultSidebarApps !== undefined && !Array.isArray(policy.defaultSidebarApps)) {
+      return NextResponse.json({ error: 'defaultSidebarApps must be an array' }, { status: 400 });
+    }
 
     await configManager.setPolicy(policy);
-    await auditLog('policy.update', { restrictionCount: Object.keys(policy.restrictions || {}).length }, ip);
+    await auditLog('policy.update', {
+      restrictionCount: Object.keys(policy.restrictions || {}).length,
+      // Entries the sanitizer dropped never reach users, so log what stuck.
+      defaultSidebarAppCount: configManager.getPolicy().defaultSidebarApps?.length ?? 0,
+    }, ip);
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -158,4 +158,26 @@ describe('email viewer More actions menu', () => {
 
     expect(screen.getByRole('menu', { name: 'more_actions' })).toHaveAttribute('inert');
   });
+
+  it('only slides once the user has opened it, so it cannot flash on mount', () => {
+    renderViewer();
+
+    // Mounted off-canvas with no transition: WebKit would otherwise animate
+    // the fresh panel from on-screen to off-screen on the first paint.
+    const panel = screen.getByRole('menu', { name: 'more_actions' });
+    expect(panel).toHaveAttribute('inert');
+    expect(panel.className).toContain('translate-x-full');
+    expect(panel.className).not.toContain('transition-transform');
+
+    openMoreMenu();
+
+    expect(panel.className).toContain('translate-x-0');
+    expect(panel.className).toContain('transition-transform');
+
+    fireEvent.mouseDown(document.body);
+
+    // Closing keeps the transition so the panel slides out instead of vanishing.
+    expect(panel.className).toContain('translate-x-full');
+    expect(panel.className).toContain('transition-transform');
+  });
 });

@@ -28,10 +28,19 @@ vi.mock('@/lib/admin/csp-frame-origins', () => ({ getEnabledPluginFrameOrigins: 
 // forwards the FULL request header set, tagged with the resolved locale.
 // With localePrefix "always" it redirects to the prefixed path instead.
 let intlMode: 'rewrite' | 'redirect' = 'rewrite';
+let receivedAcceptLanguage: string | null = null;
+let receivedNextUrl: { pathname: string; basePath: string } | null = null;
+let receivedRequest: unknown = null;
 vi.mock('next-intl/middleware', async () => {
   const { NextResponse } = await import('next/server');
   return {
     default: () => (request: Request) => {
+      receivedAcceptLanguage = request.headers.get('accept-language');
+      receivedRequest = request;
+      const { pathname, basePath } = (request as unknown as {
+        nextUrl: { pathname: string; basePath: string };
+      }).nextUrl;
+      receivedNextUrl = { pathname, basePath };
       const url = new URL(request.url);
       url.pathname = `/en${url.pathname}`;
       if (intlMode === 'redirect') return NextResponse.redirect(url);
@@ -69,6 +78,9 @@ function nonceFromCsp(response: Response): string | undefined {
 beforeEach(() => {
   vi.clearAllMocks();
   intlMode = 'rewrite';
+  receivedAcceptLanguage = null;
+  receivedNextUrl = null;
+  receivedRequest = null;
 });
 
 describe('proxy forwards the request headers it does not own (#919)', () => {
@@ -121,5 +133,86 @@ describe('proxy forwards the request headers it does not own (#919)', () => {
     expect(response.headers.get('x-middleware-override-headers')).toBeNull();
     expect(response.headers.get('x-middleware-request-cookie')).toBeNull();
     expect(response.headers.get('x-middleware-request-x-nonce')).toBeNull();
+  });
+});
+
+describe('proxy normalizes Chinese Accept-Language before next-intl matching', () => {
+  it.each([
+    ['zh-HK,zh;q=0.9', 'zh-TW'],
+    ['zh-MO,zh;q=0.9', 'zh-TW'],
+    ['zh-Hant-HK,zh-Hant;q=0.9', 'zh-TW'],
+    ['zh-Hans-TW,zh-Hans;q=0.9', 'zh'],
+    ['zh-CN,zh;q=0.9', 'zh'],
+    ['fr-CA,zh-HK;q=0.9', 'fr-CA,zh-HK;q=0.9'],
+  ])('passes %s to next-intl as %s', async (acceptLanguage, expected) => {
+    await proxy(
+      new NextRequest('http://localhost:3000/', {
+        headers: { 'accept-language': acceptLanguage, cookie: 'jmap_session_0=abc' },
+      }),
+    );
+
+    expect(receivedAcceptLanguage).toBe(expected);
+  });
+
+  it.each(['en', 'zh', 'zh-TW'])(
+    'leaves Accept-Language untouched when a valid NEXT_LOCALE=%s cookie is present',
+    async (cookieLocale) => {
+      const acceptLanguage = 'zh-HK,zh;q=0.9,en;q=0.8';
+      await proxy(
+        new NextRequest('http://localhost:3000/', {
+          headers: { 'accept-language': acceptLanguage, cookie: `NEXT_LOCALE=${cookieLocale}` },
+        }),
+      );
+
+      expect(receivedAcceptLanguage).toBe(acceptLanguage);
+    },
+  );
+
+  it('ignores an invalid locale cookie when normalizing Accept-Language', async () => {
+    await proxy(
+      new NextRequest('http://localhost:3000/', {
+        headers: { 'accept-language': 'zh-HK,zh;q=0.9', cookie: 'NEXT_LOCALE=unsupported' },
+      }),
+    );
+
+    expect(receivedAcceptLanguage).toBe('zh-TW');
+  });
+});
+
+describe('normalizing Accept-Language keeps the rest of the request intact', () => {
+  // A NextRequest clone re-parses its URL and only strips the base path when it
+  // is handed the nextConfig too. Losing it made next-intl rewrite a sub-path
+  // install to /<locale>/<basePath>/... instead of /<basePath>/<locale>/....
+  it('preserves the base path of a sub-path install', async () => {
+    const request = new NextRequest('http://localhost:3000/mail/settings', {
+      headers: { 'accept-language': 'zh-HK,zh;q=0.9' },
+      nextConfig: { basePath: '/mail' },
+    });
+
+    await proxy(request);
+
+    expect(receivedAcceptLanguage).toBe('zh-TW');
+    expect(receivedNextUrl).toEqual({ pathname: '/settings', basePath: '/mail' });
+  });
+
+  it('passes the original request through when the header needs no collapsing', async () => {
+    const request = new NextRequest('http://localhost:3000/', {
+      headers: { 'accept-language': 'zh-TW' },
+    });
+
+    await proxy(request);
+
+    expect(receivedRequest).toBe(request);
+  });
+
+  it('clones only the headers when the header does need collapsing', async () => {
+    const request = new NextRequest('http://localhost:3000/', {
+      headers: { 'accept-language': 'zh-HK,zh;q=0.9' },
+    });
+
+    await proxy(request);
+
+    expect(receivedRequest).not.toBe(request);
+    expect(receivedAcceptLanguage).toBe('zh-TW');
   });
 });

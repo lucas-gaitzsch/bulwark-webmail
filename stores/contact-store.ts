@@ -312,6 +312,7 @@ interface ContactStore {
   moveContactToAddressBook: (client: IJMAPClient, contactIds: string[], addressBook: AddressBook) => Promise<void>;
   createAddressBook: (client: IJMAPClient, name: string) => Promise<AddressBook>;
   renameAddressBook: (client: IJMAPClient, addressBook: AddressBook, newName: string) => Promise<void>;
+  setDefaultAddressBook: (client: IJMAPClient, addressBook: AddressBook) => Promise<void>;
   removeAddressBook: (client: IJMAPClient, addressBook: AddressBook) => Promise<void>;
   shareAddressBook: (client: IJMAPClient, addressBook: AddressBook, principalId: string, rights: AddressBookRights | null) => Promise<void>;
   renameKeyword: (client: IJMAPClient | null, oldKeyword: string, newKeyword: string) => Promise<void>;
@@ -1008,6 +1009,35 @@ export const useContactStore = create<ContactStore>()(
           }));
         } catch (error) {
           const msg = error instanceof Error ? error.message : 'Failed to rename address book';
+          set({ error: msg });
+          throw error;
+        }
+      },
+
+      setDefaultAddressBook: async (client, addressBook) => {
+        set({ error: null });
+        try {
+          const originalId = addressBook.originalId || stripLocalAccountPrefix(addressBook.id, addressBook.localAccountId);
+          const accountId = addressBook.isShared ? addressBook.accountId : undefined;
+          client = resolveAccountClient(client, addressBook.localAccountId);
+          await client.setDefaultAddressBook(originalId, accountId);
+          set((state) => ({
+            addressBooks: state.addressBooks.map(b => {
+              if (b.id === addressBook.id) return { ...b, isDefault: true };
+              // Only one default per account - clear the flag on siblings in the
+              // same local account / shared-account scope.
+              if (
+                b.isDefault
+                && (b.localAccountId ?? null) === (addressBook.localAccountId ?? null)
+                && (b.accountId ?? null) === (addressBook.accountId ?? null)
+              ) {
+                return { ...b, isDefault: false };
+              }
+              return b;
+            }),
+          }));
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : 'Failed to set default address book';
           set({ error: msg });
           throw error;
         }

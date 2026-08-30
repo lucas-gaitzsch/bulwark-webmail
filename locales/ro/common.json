@@ -202,6 +202,9 @@
     "delete_confirm": "Sunteți sigur că doriți să ștergeți „{name}”?",
     "no_apps": "Nu s-au adăugat încă aplicații",
     "no_apps_hint": "Adăugați aplicații personalizate și linkuri în bara laterală",
+    "managed_title": "Furnizate de administrator",
+    "managed_description": "Aceste aplicații sunt configurate pentru toți și nu pot fi modificate.",
+    "managed_badge": "Gestionată",
     "search_icons": "Pictograme de căutare...",
     "show_popular": "Popular",
     "show_all": "Toate",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Solicitare confirmare de citire (faceți clic pentru a dezactiva)",
     "read_receipt_off": "Solicitați o confirmare de citire",
+    "dsn_on": "Notificare de livrare solicitată (clic pentru a dezactiva)",
+    "dsn_off": "Solicită o notificare de livrare",
+    "require_tls_on": "Livrare criptată obligatorie (clic pentru a dezactiva)",
+    "require_tls_off": "Impune livrare criptată (TLS)",
     "new_message": "Mesaj nou",
     "signature_edit_hint": "Dublu clic pentru a edita semnătura",
     "reply": "Răspunde",
@@ -1867,6 +1874,8 @@
       "description": "Gestionați aplicațiile personalizate și linkurile din bara laterală",
       "keep_loaded": "Mențineți aplicațiile încărcate",
       "keep_loaded_description": "Mențineți aplicațiile încorporate în execuție în fundal atunci când comutați între ele, pentru a evita reîncărcarea",
+      "managed_title": "Furnizate de administrator",
+      "managed_description": "Aceste aplicații sunt configurate pentru toți și nu pot fi modificate.",
       "manage_title": "Aplicații personalizate",
       "manage_description": "Adăugați, editați sau eliminați aplicații personalizate din bara laterală"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Subfolder nou...",
     "new_folder": "Dosar nou...",
     "rename": "Redenumire...",
+    "share": "Partajează...",
     "import_email": "Importați fișiere .eml sau .zip...",
     "empty_folder": "Folder gol",
     "empty_folder_generic": "Folder gol",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Nu s-a putut redenumi folderul",
     "toast_error_delete": "Nu s-a putut șterge folderul",
     "toast_error_delete_has_children": "Dosarul conține subdosare. Ștergeți-le mai întâi.",
-    "toast_error_delete_has_email": "Dosarul nu este gol. Goliți-l mai întâi."
+    "toast_error_delete_has_email": "Dosarul nu este gol. Goliți-l mai întâi.",
+    "delete_with_contents_title": "Dosarul nu este gol",
+    "delete_with_contents_message": "Dosarul „{name}” încă mai conține {count, plural, one {1 mesaj} other {# mesaje}}. Ștergi dosarul și toate mesajele sale? Acțiunea nu poate fi anulată.",
+    "delete_with_contents_confirm": "Șterge dosarul și mesajele"
   },
   "shortcuts": {
     "title": "Comenzi rapide de la tastatură",
@@ -2430,6 +2443,9 @@
       "renamed": "Agenda de adrese a fost redenumită",
       "rename_failed": "Nu s-a putut redenumi agenda de adrese",
       "default": "Implicit",
+      "set_default": "Setați ca implicită",
+      "default_updated": "Agenda de adrese implicită a fost actualizată",
+      "set_default_failed": "Nu s-a reușit setarea agendei de adrese implicite",
       "manage": "Gestionați agendele de adrese",
       "share": "Partajați agenda de adrese",
       "new_contact_in_book": "Contact nou în această agendă",
@@ -2785,6 +2801,14 @@
       "color": "Culoare"
     },
     "participants": {
+      "availability": {
+        "title": "Disponibilitate",
+        "free": "Disponibil",
+        "busy": "Ocupat",
+        "tentative": "Provizoriu",
+        "unknown": "Nu este un utilizator al acestui server",
+        "checking": "Se verifică…"
+      },
       "title": "Participanți",
       "add": "Adăugați un participant",
       "organizer": "Organizator",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Întârziere de 1 secundă",
       "hover_preview_delay_2s": "Întârziere de 2 secunde",
       "hover_preview_off": "Dezactivat",
+      "organizer_identity": "Organizează invitațiile ca",
+      "organizer_identity_desc": "Adresa de calendar folosită ca organizator când inviți persoane la evenimente.",
+      "organizer_identity_failed": "Nu s-a putut schimba adresa organizatorului",
       "show_birthday_calendar": "Calendarul zilelor de naștere ale contactelor",
       "show_birthday_calendar_desc": "Afișați un calendar virtual cu zilele de naștere ale contactelor dvs."
     },
@@ -3141,6 +3168,25 @@
       "overdue": "Restant"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "Cineva",
+    "invited": "{name} te-a invitat la „{title}”",
+    "updated": "{name} a actualizat „{title}”",
+    "cancelled": "{name} a anulat „{title}”",
+    "untitled": "Eveniment fără titlu"
+  },
+  "share_notifications": {
+    "someone": "Cineva",
+    "shared": "{name} a partajat cu tine {kind} „{object}”",
+    "changed": "{name} ți-a modificat accesul la {kind} „{object}”",
+    "revoked": "{name} ți-a retras accesul la {kind} „{object}”",
+    "object": {
+      "folder": "dosarul",
+      "calendar": "calendarul",
+      "address_book": "agenda de contacte",
+      "files": "dosarul de fișiere"
+    }
+  },
   "sharing": {
     "title": "Distribuie „{name}”",
     "description": "Acordați acces altor utilizatori sau grupuri de pe acest server. Modificările intră în vigoare imediat.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Anexe",
     "date_after": "După",
     "date_before": "Înainte",
+    "size_min": "Mai mare de (KB)",
+    "size_max": "Mai mic de (KB)",
     "starred": "Cu stea",
     "unread": "Necitit",
     "read": "Citiți",

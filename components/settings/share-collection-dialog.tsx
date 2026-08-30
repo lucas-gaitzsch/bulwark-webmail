@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { X, Loader2, UserPlus, Trash2, Users, ChevronDown } from "lucide-react";
 import type { IJMAPClient } from "@/lib/jmap/client-interface";
-import type { Principal, CalendarRights, AddressBookRights, FileNodeRights } from "@/lib/jmap/types";
+import type { Principal, CalendarRights, AddressBookRights, FileNodeRights, MailboxRights } from "@/lib/jmap/types";
 import { toast } from "@/stores/toast-store";
 
-type ShareKind = "calendar" | "addressBook" | "file";
-type AnyRights = CalendarRights | AddressBookRights | FileNodeRights;
+type ShareKind = "calendar" | "addressBook" | "file" | "mailbox";
+type AnyRights = CalendarRights | AddressBookRights | FileNodeRights | MailboxRights;
 
 type RolePreset = "freeBusy" | "read" | "readWrite" | "manager" | "custom";
 
@@ -54,6 +54,37 @@ const FILE_PRESETS: Record<Exclude<RolePreset, "custom" | "freeBusy">, FileNodeR
   },
 };
 
+// Mail folder rights (RFC 8621 §2 + mail:share). "Read & write" lets the
+// grantee file, flag and remove mail; "Manager" additionally lets them
+// rename/delete the folder, create subfolders, send as it and re-share.
+const MAILBOX_PRESETS: Record<Exclude<RolePreset, "custom" | "freeBusy">, MailboxRights> = {
+  read: {
+    mayReadItems: true, mayAddItems: false, mayRemoveItems: false, maySetSeen: true,
+    maySetKeywords: false, mayCreateChild: false, mayRename: false, mayDelete: false,
+    maySubmit: false, mayShare: false,
+  },
+  readWrite: {
+    mayReadItems: true, mayAddItems: true, mayRemoveItems: true, maySetSeen: true,
+    maySetKeywords: true, mayCreateChild: false, mayRename: false, mayDelete: false,
+    maySubmit: false, mayShare: false,
+  },
+  manager: {
+    mayReadItems: true, mayAddItems: true, mayRemoveItems: true, maySetSeen: true,
+    maySetKeywords: true, mayCreateChild: true, mayRename: true, mayDelete: true,
+    maySubmit: true, mayShare: true,
+  },
+};
+
+function detectMailboxPreset(r: MailboxRights): RolePreset {
+  for (const [name, preset] of Object.entries(MAILBOX_PRESETS) as [Exclude<RolePreset, "custom" | "freeBusy">, MailboxRights][]) {
+    const keys = Object.keys(preset) as (keyof MailboxRights)[];
+    if (keys.every((k) => preset[k] === (r[k] ?? false))) {
+      return name;
+    }
+  }
+  return "custom";
+}
+
 function detectCalendarPreset(r: CalendarRights): RolePreset {
   for (const [name, preset] of Object.entries(CALENDAR_PRESETS) as [Exclude<RolePreset, "custom">, CalendarRights][]) {
     if ((Object.keys(preset) as (keyof CalendarRights)[]).every((k) => preset[k] === r[k])) {
@@ -87,12 +118,14 @@ function presetRights(kind: ShareKind, preset: RolePreset): AnyRights | undefine
   if (preset === "custom") return undefined;
   if (kind === "calendar") return CALENDAR_PRESETS[preset as keyof typeof CALENDAR_PRESETS];
   if (kind === "file") return FILE_PRESETS[preset as keyof typeof FILE_PRESETS];
+  if (kind === "mailbox") return MAILBOX_PRESETS[preset as keyof typeof MAILBOX_PRESETS];
   return ADDRESS_BOOK_PRESETS[preset as keyof typeof ADDRESS_BOOK_PRESETS];
 }
 
 function detectPreset(kind: ShareKind, rights: AnyRights): RolePreset {
   if (kind === "calendar") return detectCalendarPreset(rights as CalendarRights);
   if (kind === "file") return detectFilePreset(rights as FileNodeRights);
+  if (kind === "mailbox") return detectMailboxPreset(rights as MailboxRights);
   return detectAddressBookPreset(rights as AddressBookRights);
 }
 

@@ -5,6 +5,7 @@ import {
   loadState,
   checkOnce,
   effectiveEndpoint,
+  freshStatus,
   disabledByEnv,
   DEFAULT_VERSION_ENDPOINT,
 } from '@/lib/version-check';
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
         lastCheckedAt: state.lastCheckedAt,
         lastSuccessAt: state.lastSuccessAt,
         nextScheduledAt: state.nextScheduledAt,
-        status: state.status,
+        status: freshStatus(state),
       },
       { headers: { 'Cache-Control': 'no-store' } },
     );

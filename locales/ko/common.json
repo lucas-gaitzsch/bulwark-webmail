@@ -202,6 +202,9 @@
     "delete_confirm": "정말 \"{name}\" 앱을 삭제할까요?",
     "no_apps": "아직 추가된 앱이 없어요",
     "no_apps_hint": "사이드바에 맞춤형 앱과 링크를 추가해 보세요",
+    "managed_title": "관리자가 제공",
+    "managed_description": "이 앱은 모든 사용자를 위해 설정되었으며 변경할 수 없습니다.",
+    "managed_badge": "관리됨",
     "search_icons": "아이콘 검색...",
     "show_popular": "인기",
     "show_all": "전체",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "읽음 확인 요청됨 (클릭하여 해제)",
     "read_receipt_off": "읽음 확인 요청",
+    "dsn_on": "배달 알림 요청됨 (클릭하여 해제)",
+    "dsn_off": "배달 알림 요청",
+    "require_tls_on": "암호화 전송 필수 (클릭하여 해제)",
+    "require_tls_off": "암호화 전송 필수 (TLS)",
     "new_message": "새 메시지",
     "signature_edit_hint": "서명을 편집하려면 두 번 클릭하세요",
     "reply": "답장",
@@ -1860,6 +1867,8 @@
       "description": "사이드바의 커스텀 앱과 링크를 관리해요",
       "keep_loaded": "앱 실행 유지",
       "keep_loaded_description": "인라인 앱을 전환할 때 매번 새로고침되지 않도록 백그라운드에서 실행 상태를 유지해요",
+      "managed_title": "관리자가 제공",
+      "managed_description": "이 앱은 모든 사용자를 위해 설정되었으며 변경할 수 없습니다.",
       "manage_title": "커스텀 앱",
       "manage_description": "사이드바에 나만의 앱을 추가, 수정, 삭제해 보세요"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "새 하위 폴더...",
     "new_folder": "새 폴더...",
     "rename": "이름 바꾸기...",
+    "share": "공유...",
     "import_email": ".eml 또는 .zip 가져오기...",
     "empty_folder": "폴더 비우기",
     "empty_folder_generic": "폴더 비우기",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "폴더를 삭제하지 못했습니다",
     "toast_error_delete_has_children": "폴더에 하위 폴더가 있습니다. 먼저 제거하세요.",
     "toast_error_delete_has_email": "폴더가 비어 있지 않습니다. 먼저 비우세요.",
+    "delete_with_contents_title": "폴더가 비어 있지 않습니다",
+    "delete_with_contents_message": "\"{name}\" 폴더에 아직 {count}개의 메시지가 있습니다. 폴더와 모든 메시지를 삭제할까요? 이 작업은 취소할 수 없습니다.",
+    "delete_with_contents_confirm": "폴더와 메시지 삭제",
     "placeholder_folder_name": "폴더 이름",
     "create": "만들기",
     "rename_confirm": "이름 바꾸기"
@@ -2429,6 +2442,9 @@
       "renamed": "주소록 이름이 변경되었습니다",
       "rename_failed": "주소록 이름 변경 실패",
       "default": "기본",
+      "set_default": "기본으로 설정",
+      "default_updated": "기본 주소록이 업데이트되었습니다",
+      "set_default_failed": "기본 주소록을 설정하지 못했습니다",
       "manage": "주소록 관리",
       "share": "주소록 공유",
       "new_contact_in_book": "이 주소록에 새 연락처",
@@ -2785,6 +2801,14 @@
       "color": "색상"
     },
     "participants": {
+      "availability": {
+        "title": "일정 상태",
+        "free": "가능",
+        "busy": "바쁨",
+        "tentative": "미정",
+        "unknown": "이 서버의 사용자가 아님",
+        "checking": "확인 중…"
+      },
       "title": "참석자",
       "add": "참석자 추가",
       "organizer": "주최자",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1초 지연",
       "hover_preview_delay_2s": "2초 지연",
       "hover_preview_off": "사용 안 함",
+      "organizer_identity": "초대 주최자 주소",
+      "organizer_identity_desc": "이벤트에 사람들을 초대할 때 주최자로 사용되는 캘린더 주소입니다.",
+      "organizer_identity_failed": "주최자 주소를 변경하지 못했습니다",
       "show_birthday_calendar": "연락처 생일 캘린더",
       "show_birthday_calendar_desc": "연락처에 등록된 생일을 가상 캘린더로 보여줘요"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "첨부파일 있음",
     "date_after": "이후",
     "date_before": "이전",
+    "size_min": "다음 크기 이상 (KB)",
+    "size_max": "다음 크기 미만 (KB)",
     "starred": "별표 있음",
     "unread": "읽지 않음",
     "read": "읽음",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "통합 보기에서는 검색을 사용할 수 없습니다"
+  },
+  "calendar_event_notifications": {
+    "someone": "누군가",
+    "invited": "{name}님이 \"{title}\"에 초대했습니다",
+    "updated": "{name}님이 \"{title}\"을(를) 업데이트했습니다",
+    "cancelled": "{name}님이 \"{title}\"을(를) 취소했습니다",
+    "untitled": "제목 없는 일정"
+  },
+  "share_notifications": {
+    "someone": "누군가",
+    "shared": "{name}님이 {kind} \"{object}\"을(를) 공유했습니다",
+    "changed": "{name}님이 {kind} \"{object}\"에 대한 접근 권한을 변경했습니다",
+    "revoked": "{name}님이 {kind} \"{object}\"에 대한 접근 권한을 제거했습니다",
+    "object": {
+      "folder": "폴더",
+      "calendar": "캘린더",
+      "address_book": "주소록",
+      "files": "파일 폴더"
+    }
   },
   "sharing": {
     "title": "\"{name}\" 공유",

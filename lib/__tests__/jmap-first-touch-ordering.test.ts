@@ -99,6 +99,9 @@ describe('JMAPClient first-touch ordering (#907)', () => {
     await expect(calendars).resolves.toEqual([]);
     await flush();
 
+    // The synthetic-id probe (lib/recurrence-instances.ts) rides along in
+    // the Calendar/get request, so the query needs no request of its own first.
+    expect(onWire[0].methods).toEqual(['Calendar/get', 'CalendarEvent/set']);
     expect(onWire.map((p) => p.methods[0])).toEqual(['Calendar/get', 'CalendarEvent/query']);
     onWire[1].resolve(emptyResponse('CalendarEvent/query'));
     await expect(events).resolves.toEqual([]);

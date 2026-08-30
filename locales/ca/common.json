@@ -202,6 +202,9 @@
     "delete_confirm": "Segur que voleu suprimir «{name}»?",
     "no_apps": "Encara no s'ha afegit cap aplicació",
     "no_apps_hint": "Afegiu aplicacions i enllaços personalitzats a la barra lateral",
+    "managed_title": "Proporcionades per l'administració",
+    "managed_description": "Aquestes aplicacions estan configurades per a tothom i no es poden canviar.",
+    "managed_badge": "Gestionada",
     "search_icons": "Cerca icones...",
     "show_popular": "Populars",
     "show_all": "Totes",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Confirmació de lectura sol·licitada (feu clic per desactivar-la)",
     "read_receipt_off": "Sol·licita una confirmació de lectura",
+    "dsn_on": "Notificació de lliurament sol·licitada (fes clic per desactivar)",
+    "dsn_off": "Sol·licita una notificació de lliurament",
+    "require_tls_on": "Lliurament xifrat obligatori (fes clic per desactivar)",
+    "require_tls_off": "Exigeix lliurament xifrat (TLS)",
     "new_message": "Missatge nou",
     "signature_edit_hint": "Feu doble clic per editar la signatura",
     "reply": "Respon",
@@ -1867,6 +1874,8 @@
       "description": "Gestioneu aplicacions i enllaços personalitzats a la barra lateral",
       "keep_loaded": "Mantén les aplicacions carregades",
       "keep_loaded_description": "Manté les aplicacions incrustades en execució en segon pla en canviar entre elles per evitar recarregar-les",
+      "managed_title": "Proporcionades per l'administració",
+      "managed_description": "Aquestes aplicacions estan configurades per a tothom i no es poden canviar.",
       "manage_title": "Aplicacions personalitzades",
       "manage_description": "Afegiu, editeu o elimineu aplicacions personalitzades de la barra lateral"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Subcarpeta nova...",
     "new_folder": "Carpeta nova...",
     "rename": "Canvia el nom...",
+    "share": "Comparteix...",
     "import_email": "Importa .eml o .zip...",
     "empty_folder": "Buida la carpeta",
     "empty_folder_generic": "Buida la carpeta",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "No s'ha pogut canviar el nom de la carpeta",
     "toast_error_delete": "No s'ha pogut suprimir la carpeta",
     "toast_error_delete_has_children": "La carpeta té subcarpetes. Elimineu-les primer.",
-    "toast_error_delete_has_email": "La carpeta no és buida. Buideu-la primer."
+    "toast_error_delete_has_email": "La carpeta no és buida. Buideu-la primer.",
+    "delete_with_contents_title": "La carpeta no està buida",
+    "delete_with_contents_message": "La carpeta \"{name}\" encara conté {count, plural, one {1 missatge} other {# missatges}}. Vols suprimir la carpeta i tots els seus missatges? No es pot desfer.",
+    "delete_with_contents_confirm": "Suprimeix la carpeta i els missatges"
   },
   "shortcuts": {
     "title": "Dreceres de teclat",
@@ -2430,6 +2443,9 @@
       "renamed": "Nom de la llibreta d'adreces canviat",
       "rename_failed": "No s'ha pogut canviar el nom de la llibreta d'adreces",
       "default": "Predeterminada",
+      "set_default": "Estableix com a predeterminada",
+      "default_updated": "Llibreta d’adreces predeterminada actualitzada",
+      "set_default_failed": "No s’ha pogut establir la llibreta d’adreces predeterminada",
       "manage": "Gestiona les llibretes d'adreces",
       "share": "Comparteix la llibreta d'adreces",
       "new_contact_in_book": "Contacte nou en aquesta llibreta d'adreces",
@@ -2785,6 +2801,14 @@
       "color": "Color"
     },
     "participants": {
+      "availability": {
+        "title": "Disponibilitat",
+        "free": "Disponible",
+        "busy": "Ocupat",
+        "tentative": "Provisional",
+        "unknown": "No és un usuari d'aquest servidor",
+        "checking": "Comprovant…"
+      },
       "title": "Participants",
       "add": "Afegeix un participant",
       "organizer": "Organitzador",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Retard d'1 segon",
       "hover_preview_delay_2s": "Retard de 2 segons",
       "hover_preview_off": "Desactivada",
+      "organizer_identity": "Organitza les invitacions com a",
+      "organizer_identity_desc": "L'adreça de calendari usada com a organitzador quan convides gent als esdeveniments.",
+      "organizer_identity_failed": "No s'ha pogut canviar l'adreça de l'organitzador",
       "show_birthday_calendar": "Calendari d'aniversaris dels contactes",
       "show_birthday_calendar_desc": "Mostra un calendari virtual amb els aniversaris dels vostres contactes"
     },
@@ -3141,6 +3168,25 @@
       "overdue": "Vençuda"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "Algú",
+    "invited": "{name} t'ha convidat a \"{title}\"",
+    "updated": "{name} ha actualitzat \"{title}\"",
+    "cancelled": "{name} ha cancel·lat \"{title}\"",
+    "untitled": "Esdeveniment sense títol"
+  },
+  "share_notifications": {
+    "someone": "Algú",
+    "shared": "{name} ha compartit amb tu {kind} \"{object}\"",
+    "changed": "{name} ha canviat el teu accés a {kind} \"{object}\"",
+    "revoked": "{name} ha retirat el teu accés a {kind} \"{object}\"",
+    "object": {
+      "folder": "la carpeta",
+      "calendar": "el calendari",
+      "address_book": "la llibreta d'adreces",
+      "files": "la carpeta de fitxers"
+    }
+  },
   "sharing": {
     "title": "Comparteix «{name}»",
     "description": "Concediu accés a altres usuaris o grups d'aquest servidor. Els canvis s'apliquen immediatament.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Fitxers adjunts",
     "date_after": "Després de",
     "date_before": "Abans de",
+    "size_min": "Més gran que (KB)",
+    "size_max": "Més petit que (KB)",
     "starred": "Destacat",
     "unread": "No llegit",
     "read": "Llegit",

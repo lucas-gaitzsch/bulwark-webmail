@@ -167,6 +167,9 @@
     "delete_confirm": "האם אתה בטוח שברצונך למחוק את \"{name}\"?",
     "no_apps": "עדיין לא נוספו אפליקציות",
     "no_apps_hint": "הוסף אפליקציות וקישורים מותאמים אישית לסרגל הצד שלך",
+    "managed_title": "סופקו על ידי מנהל המערכת",
+    "managed_description": "אפליקציות אלו מוגדרות עבור כולם ולא ניתן לשנות אותן.",
+    "managed_badge": "מנוהלת",
     "search_icons": "חיפוש אייקונים...",
     "show_popular": "פּוֹפּוּלָרִי",
     "show_all": "כֹּל",
@@ -615,6 +618,10 @@
     "smime_passphrase_placeholder": "ביטוי סיסמה",
     "read_receipt_on": "קבלת דואר מבוקשת (לחץ כדי להשבית)",
     "read_receipt_off": "בקש קבלת דואר",
+    "dsn_on": "התבקש אישור מסירה (לחצו לביטול)",
+    "dsn_off": "בקשת אישור מסירה",
+    "require_tls_on": "נדרשת מסירה מוצפנת (לחצו לביטול)",
+    "require_tls_off": "דרישת מסירה מוצפנת (TLS)",
     "attach_photos": "תמונות וסרטונים",
     "attach_files": "קבצים",
     "sending": "שולח…",
@@ -1826,6 +1833,8 @@
       "description": "נהל אפליקציות וקישורים מותאמים אישית בסרגל הצד שלך",
       "keep_loaded": "השאר אפליקציות טעונות",
       "keep_loaded_description": "השאר אפליקציות מוטבעות פועלות ברקע בעת המעבר ביניהן כדי למנוע טעינה מחדש",
+      "managed_title": "סופקו על ידי מנהל המערכת",
+      "managed_description": "אפליקציות אלו מוגדרות עבור כולם ולא ניתן לשנות אותן.",
       "manage_title": "אפליקציות מותאמות אישית",
       "manage_description": "הוסף, ערוך או הסר אפליקציות מותאמות אישית מהסרגל הצדדי שלך"
     },
@@ -2351,6 +2360,9 @@
       "renamed": "שם ספר הכתובות שונה",
       "rename_failed": "שינוי שם פנקס הכתובות נכשל",
       "default": "ברירת מחדל",
+      "set_default": "הגדר כברירת מחדל",
+      "default_updated": "פנקס הכתובות ברירת המחדל עודכן",
+      "set_default_failed": "נכשל בהגדרת פנקס כתובות ברירת מחדל",
       "manage": "ניהול פנקסי כתובות",
       "create": "ספר כתובות חדש",
       "created": "ספר כתובות נוצר",
@@ -2713,6 +2725,14 @@
       "color": "צבע"
     },
     "participants": {
+      "availability": {
+        "title": "זמינות",
+        "free": "פנוי",
+        "busy": "עסוק",
+        "tentative": "טנטטיבי",
+        "unknown": "לא משתמש בשרת זה",
+        "checking": "בודק…"
+      },
       "title": "משתתפים",
       "add": "הוסף משתתף",
       "organizer": "מארגן",
@@ -2836,6 +2856,9 @@
       "hover_preview_delay_1s": "עיכוב של שנייה",
       "hover_preview_delay_2s": "עיכוב של 2 שניות",
       "hover_preview_off": "מושבת",
+      "organizer_identity": "ארגון הזמנות בתור",
+      "organizer_identity_desc": "כתובת היומן שתשמש כמארגן כשמזמינים אנשים לאירועים.",
+      "organizer_identity_failed": "שינוי כתובת המארגן נכשל",
       "show_birthday_calendar": "צור קשר עם יומן יום הולדת",
       "show_birthday_calendar_desc": "הצג לוח שנה וירטואלי עם ימי הולדת מאנשי הקשר שלך"
     },
@@ -3084,6 +3107,8 @@
     "has_attachment": "קבצים מצורפים",
     "date_after": "אחרי",
     "date_before": "לפני",
+    "size_min": "גדול מ־(KB)",
+    "size_max": "קטן מ־(KB)",
     "starred": "מסומן בכוכב",
     "unread": "לא נקרא",
     "read": "קרא",
@@ -3410,6 +3435,7 @@
     "new_subfolder": "תת־תיקייה חדשה…",
     "new_folder": "תיקייה חדשה…",
     "rename": "שנה שם…",
+    "share": "שיתוף...",
     "import_email": "ייבא .eml או .zip…",
     "empty_folder": "תיקייה ריקה",
     "empty_folder_generic": "תיקייה ריקה",
@@ -3439,7 +3465,29 @@
     "toast_error_rename": "נכשל בשינוי שם תיקייה",
     "toast_error_delete": "נכשל במחיקת תיקייה",
     "toast_error_delete_has_children": "לתיקייה יש תת־תיקיות. הסר אותן קודם.",
-    "toast_error_delete_has_email": "התיקייה אינה ריקה. תרוקנה קודם."
+    "toast_error_delete_has_email": "התיקייה אינה ריקה. תרוקנה קודם.",
+    "delete_with_contents_title": "התיקייה אינה ריקה",
+    "delete_with_contents_message": "התיקייה \"{name}\" עדיין מכילה {count, plural, one {הודעה אחת} other {# הודעות}}. למחוק את התיקייה ואת כל ההודעות שבה? לא ניתן לבטל פעולה זו.",
+    "delete_with_contents_confirm": "מחיקת התיקייה וההודעות"
+  },
+  "calendar_event_notifications": {
+    "someone": "מישהו",
+    "invited": "{name} הזמין/ה אותך ל\"{title}\"",
+    "updated": "{name} עדכן/ה את \"{title}\"",
+    "cancelled": "{name} ביטל/ה את \"{title}\"",
+    "untitled": "אירוע ללא כותרת"
+  },
+  "share_notifications": {
+    "someone": "מישהו",
+    "shared": "{name} שיתף/ה איתך את {kind} \"{object}\"",
+    "changed": "{name} שינה/תה את הגישה שלך ל{kind} \"{object}\"",
+    "revoked": "{name} הסיר/ה את הגישה שלך ל{kind} \"{object}\"",
+    "object": {
+      "folder": "התיקייה",
+      "calendar": "היומן",
+      "address_book": "פנקס הכתובות",
+      "files": "תיקיית הקבצים"
+    }
   },
   "sharing": {
     "title": "שתף \"{name}\"",

@@ -202,6 +202,9 @@
     "delete_confirm": "Are you sure you want to delete \"{name}\"?",
     "no_apps": "No apps added yet",
     "no_apps_hint": "Add custom apps and links to your sidebar",
+    "managed_title": "Provided by your administrator",
+    "managed_description": "These apps are set up for everyone and cannot be changed.",
+    "managed_badge": "Managed",
     "search_icons": "Search icons...",
     "show_popular": "Popular",
     "show_all": "All",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Read receipt requested (click to disable)",
     "read_receipt_off": "Request a read receipt",
+    "dsn_on": "Delivery notification requested (click to disable)",
+    "dsn_off": "Request a delivery notification",
+    "require_tls_on": "Encrypted delivery required (click to disable)",
+    "require_tls_off": "Require encrypted delivery (TLS)",
     "new_message": "New Message",
     "signature_edit_hint": "Double-click to edit the signature",
     "reply": "Reply",
@@ -1867,6 +1874,8 @@
       "description": "Manage custom apps and links in your sidebar",
       "keep_loaded": "Keep Apps Loaded",
       "keep_loaded_description": "Keep inline apps running in the background when switching between them to avoid reloading",
+      "managed_title": "Provided by your administrator",
+      "managed_description": "These apps are set up for everyone and cannot be changed.",
       "manage_title": "Custom Apps",
       "manage_description": "Add, edit, or remove custom apps from your sidebar"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "New subfolder...",
     "new_folder": "New folder...",
     "rename": "Rename...",
+    "share": "Share...",
     "import_email": "Import .eml or .zip...",
     "empty_folder": "Empty folder",
     "empty_folder_generic": "Empty folder",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Failed to rename folder",
     "toast_error_delete": "Failed to delete folder",
     "toast_error_delete_has_children": "Folder has subfolders. Remove them first.",
-    "toast_error_delete_has_email": "Folder is not empty. Empty it first."
+    "toast_error_delete_has_email": "Folder is not empty. Empty it first.",
+    "delete_with_contents_title": "Folder is not empty",
+    "delete_with_contents_message": "The folder \"{name}\" still contains {count, plural, one {1 message} other {# messages}}. Delete the folder and all of its messages? This cannot be undone.",
+    "delete_with_contents_confirm": "Delete folder and messages"
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
@@ -2430,6 +2443,9 @@
       "renamed": "Address book renamed",
       "rename_failed": "Failed to rename address book",
       "default": "Default",
+      "set_default": "Set as default",
+      "default_updated": "Default address book updated",
+      "set_default_failed": "Failed to set default address book",
       "manage": "Manage address books",
       "share": "Share address book",
       "new_contact_in_book": "New contact in this address book",
@@ -2785,6 +2801,14 @@
       "color": "Color"
     },
     "participants": {
+      "availability": {
+        "title": "Availability",
+        "free": "Available",
+        "busy": "Busy",
+        "tentative": "Tentative",
+        "unknown": "Not a user on this server",
+        "checking": "Checking…"
+      },
       "title": "Participants",
       "add": "Add participant",
       "organizer": "Organizer",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1-second delay",
       "hover_preview_delay_2s": "2-second delay",
       "hover_preview_off": "Disabled",
+      "organizer_identity": "Organize invitations as",
+      "organizer_identity_desc": "The calendar address used as organizer when you invite people to events.",
+      "organizer_identity_failed": "Failed to change the organizer address",
       "show_birthday_calendar": "Contact birthday calendar",
       "show_birthday_calendar_desc": "Show a virtual calendar with birthdays from your contacts"
     },
@@ -3141,6 +3168,25 @@
       "overdue": "Overdue"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "Someone",
+    "invited": "{name} invited you to \"{title}\"",
+    "updated": "{name} updated \"{title}\"",
+    "cancelled": "{name} cancelled \"{title}\"",
+    "untitled": "Untitled event"
+  },
+  "share_notifications": {
+    "someone": "Someone",
+    "shared": "{name} shared the {kind} \"{object}\" with you",
+    "changed": "{name} changed your access to the {kind} \"{object}\"",
+    "revoked": "{name} removed your access to the {kind} \"{object}\"",
+    "object": {
+      "folder": "folder",
+      "calendar": "calendar",
+      "address_book": "address book",
+      "files": "file folder"
+    }
+  },
   "sharing": {
     "title": "Share \"{name}\"",
     "description": "Grant access to other users or groups on this server. Changes take effect immediately.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Attachments",
     "date_after": "After",
     "date_before": "Before",
+    "size_min": "Larger than (KB)",
+    "size_max": "Smaller than (KB)",
     "starred": "Starred",
     "unread": "Unread",
     "read": "Read",

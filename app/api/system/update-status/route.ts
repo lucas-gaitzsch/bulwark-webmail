@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { checkOnce, loadState } from '@/lib/version-check';
+import { checkOnce, freshStatus, loadState } from '@/lib/version-check';
 
 // Public endpoint that returns the latest cached update status. Fed by the
 // background scheduler started in instrumentation.node.ts; in production we
@@ -16,9 +16,11 @@ export async function GET() {
   }
 
   const state = await loadState();
+  // freshStatus drops a status persisted by an earlier build - after an
+  // upgrade it would still advertise the version we just upgraded from (#913).
   return NextResponse.json(
     {
-      status: state.status,
+      status: freshStatus(state),
       lastCheckedAt: state.lastCheckedAt,
       lastSuccessAt: state.lastSuccessAt,
     },

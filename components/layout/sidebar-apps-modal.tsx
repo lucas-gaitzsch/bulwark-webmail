@@ -2,13 +2,14 @@
 
 import { useState, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Plus, Pencil, Trash2, ExternalLink, PanelRight } from 'lucide-react';
+import { X, Plus, Pencil, Trash2, ExternalLink, PanelRight, Lock } from 'lucide-react';
 import { icons as lucideIcons, type LucideIcon } from 'lucide-react';
 import { cn, generateUUID } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { IconPicker } from './icon-picker';
 import { useSettingsStore, type SidebarApp } from '@/stores/settings-store';
+import { useManagedSidebarApps } from '@/hooks/use-resolved-sidebar-apps';
 import { useFocusTrap } from '@/hooks/use-focus-trap';
 import { useConfirmDialog } from '@/hooks/use-confirm-dialog';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -181,6 +182,52 @@ function SidebarAppForm({
   );
 }
 
+/**
+ * Apps the administrator pinned for everyone (#931): shown for context, with
+ * no edit or delete controls - they come from the policy, not user settings.
+ */
+function ManagedAppsList() {
+  const t = useTranslations('sidebar_apps');
+  const managedApps = useManagedSidebarApps();
+
+  if (managedApps.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <h3 className="text-sm font-semibold mb-1">{t('managed_title')}</h3>
+      <p className="text-xs text-muted-foreground mb-3">{t('managed_description')}</p>
+      <div className="space-y-3">
+        {managedApps.map((app) => {
+          const AppIcon = lucideIcons[app.icon as keyof typeof lucideIcons] as LucideIcon | undefined;
+          return (
+            <div key={app.id} className="flex items-center gap-3 p-3 border border-border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-muted">
+                {AppIcon ? <AppIcon className="w-5 h-5 text-muted-foreground" /> : null}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm truncate">{app.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{app.url}</p>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-muted text-muted-foreground inline-flex items-center gap-1">
+                <Lock className="w-2.5 h-2.5" />
+                {t('managed_badge')}
+              </span>
+              <span className={cn(
+                'text-[10px] px-1.5 py-0.5 rounded-full font-medium',
+                app.openMode === 'inline'
+                  ? 'bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-400'
+                  : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+              )}>
+                {app.openMode === 'inline' ? t('inline_badge') : t('tab_badge')}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 interface SidebarAppsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -258,6 +305,8 @@ export function SidebarAppsModal({ isOpen, onClose }: SidebarAppsModalProps) {
 
         {/* Content */}
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+          <ManagedAppsList />
+
           {/* Create form */}
           {isCreating && (
             <div className="mb-6 p-4 border border-border rounded-lg bg-muted/30">

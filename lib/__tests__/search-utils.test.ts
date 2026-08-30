@@ -247,6 +247,8 @@ describe('buildJMAPFilter', () => {
         dateBefore: '2024-12-31',
         isUnread: true,
         isStarred: true,
+        minSizeKb: '',
+        maxSizeKb: '',
       };
       const result = buildJMAPFilter('money', filters, 'mb-1') as {
         operator: string;
@@ -358,6 +360,26 @@ describe('activeFilterCount', () => {
       dateBefore: '2024-12-31',
       isUnread: true,
       isStarred: true,
+      minSizeKb: '',
+      maxSizeKb: '',
     })).toBe(9);
+  });
+});
+
+describe('size filters', () => {
+  const base = { ...DEFAULT_SEARCH_FILTERS };
+
+  it('converts KB bounds to minSize / maxSize byte conditions', () => {
+    expect(buildJMAPFilter('', { ...base, minSizeKb: '100', maxSizeKb: '2048' })).toEqual({
+      operator: 'AND',
+      conditions: [{ minSize: 102400 }, { maxSize: 2097152 }],
+    });
+  });
+
+  it('ignores empty, zero and non-numeric sizes', () => {
+    expect(buildJMAPFilter('', { ...base, minSizeKb: '0', maxSizeKb: 'abc' })).toEqual({});
+    expect(isFilterEmpty({ ...base, minSizeKb: '0', maxSizeKb: '' })).toBe(true);
+    expect(isFilterEmpty({ ...base, minSizeKb: '5' })).toBe(false);
+    expect(activeFilterCount({ ...base, minSizeKb: '5', maxSizeKb: '9' })).toBe(2);
   });
 });

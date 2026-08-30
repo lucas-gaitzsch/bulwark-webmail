@@ -88,6 +88,7 @@ interface SidebarProps {
   onCreateFolder?: (accountId?: string) => void;
   onRenameFolder?: (mailboxId: string) => void;
   onDeleteFolder?: (mailboxId: string) => void;
+  onShareFolder?: (mailboxId: string) => void;
   onImportEmail?: (mailboxId: string) => void;
   onRefreshMailboxes?: () => void;
   scheduledTotal?: number;
@@ -819,6 +820,7 @@ export function Sidebar({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
+  onShareFolder,
   onImportEmail,
   onRefreshMailboxes,
   scheduledTotal = 0,
@@ -1506,6 +1508,7 @@ export function Sidebar({
         onCreateFolder={onCreateFolder}
         onRenameFolder={onRenameFolder}
         onDeleteFolder={onDeleteFolder}
+        onShareFolder={onShareFolder}
         onImportEmail={onImportEmail}
         onRefresh={onRefreshMailboxes}
       />

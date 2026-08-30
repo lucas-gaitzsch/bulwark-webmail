@@ -2,7 +2,7 @@ import { readFile, writeFile, mkdir, rename } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { logger } from '@/lib/logger';
-import type { VersionCheckStateFile } from './types';
+import type { UpdateStatus, VersionCheckStateFile } from './types';
 import { DEFAULT_VERSION_ENDPOINT } from './types';
 
 function getDir(): string {
@@ -59,4 +59,25 @@ export function effectiveEndpoint(state: VersionCheckStateFile): string {
   const envUrl = process.env.BULWARK_UPDATE_CHECK_URL;
   if (envUrl !== undefined) return envUrl.trim();
   return state.endpoint || DEFAULT_VERSION_ENDPOINT;
+}
+
+export function getCurrentVersion(): string {
+  return (process.env.NEXT_PUBLIC_APP_VERSION || '').trim();
+}
+
+// A persisted status describes the build that was running when it was written.
+// After an upgrade it is stale by definition - it can keep claiming "update
+// available" for a version we no longer run - so nothing may surface it until
+// the next check refreshes it (#913). If the running version is unknown we
+// can't tell, so we leave the status alone rather than blanking the banner.
+export function isStatusStale(
+  status: UpdateStatus | null,
+  current: string = getCurrentVersion(),
+): boolean {
+  if (!status || !current) return false;
+  return status.current !== current;
+}
+
+export function freshStatus(state: VersionCheckStateFile): UpdateStatus | null {
+  return isStatusStale(state.status) ? null : state.status;
 }

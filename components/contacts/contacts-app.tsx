@@ -98,6 +98,7 @@ export function ContactsApp({ linkSegments }: ContactsAppProps = {}) {
     renameAddressBook,
     removeAddressBook,
     shareAddressBook,
+    setDefaultAddressBook,
     renameKeyword,
     importContacts,
   } = useContactStore();
@@ -950,6 +951,14 @@ export function ContactsApp({ linkSegments }: ContactsAppProps = {}) {
                       onDropContactsToCategory={handleDropContactsToCategory}
                       onRenameAddressBook={client ? (book) => setRenamingAddressBook(book) : undefined}
                       onShareAddressBook={client ? (book) => setSharingAddressBookId(book.id) : undefined}
+                      onSetDefaultAddressBook={client ? async (book) => {
+                        try {
+                          await setDefaultAddressBook(client, book);
+                          toast.success(t("address_books.default_updated"));
+                        } catch {
+                          toast.error(t("address_books.set_default_failed"));
+                        }
+                      } : undefined}
                       onCreateContactInBook={(book) => {
                         setDefaultBookIdForCreate(book.id);
                         handleCreateNew();

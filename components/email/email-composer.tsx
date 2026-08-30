@@ -5,7 +5,7 @@ import { useFocusTrap } from "@/hooks/use-focus-trap";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { X, Paperclip, Send, Save, Check, Loader2, AlertCircle, FileText, BookmarkPlus, CalendarClock, ChevronDown, MailCheck, Search, Users } from "lucide-react";
+import { X, Paperclip, Send, Save, Check, Loader2, AlertCircle, FileText, BookmarkPlus, CalendarClock, ChevronDown, MailCheck, Search, Users, PackageCheck, LockKeyhole } from "lucide-react";
 import { cn, formatFileSize, formatDateTime, generateUUID } from "@/lib/utils";
 import { debug } from "@/lib/debug";
 import { toast } from "@/stores/toast-store";
@@ -154,6 +154,10 @@ interface EmailComposerProps {
     references?: string[];
     delayedUntil?: string;
     requestReadReceipt?: boolean;
+    /** Ask for SMTP delivery status notifications (RFC 3461). */
+    requestDsn?: boolean;
+    /** Refuse delivery over an unencrypted hop (RFC 8689 REQUIRETLS). */
+    requireTls?: boolean;
   }) => void | Promise<void>;
   onScheduledSendCreated?: () => void | Promise<void>;
   onClose?: () => void;
@@ -558,6 +562,10 @@ export function EmailComposer({
   const [isDraggingChipOverCc, setIsDraggingChipOverCc] = useState(false);
   const [isDraggingChipOverBcc, setIsDraggingChipOverBcc] = useState(false);
   const [requestReadReceipt, setRequestReadReceipt] = useState(requestReadReceiptDefault);
+  // SMTP submission options, offered only when the server advertises the
+  // extension (RFC 8621 §1.3 submissionExtensions).
+  const [requestDsn, setRequestDsn] = useState(false);
+  const [requireTls, setRequireTls] = useState(false);
   const [draftId, setDraftId] = useState<string | null>(initialData?.draftId ?? null);
   // Mirror of draftId for synchronous reads inside chained saves; React's
   // setDraftId is async, so a queued saveDraft would otherwise see the old
@@ -2278,6 +2286,8 @@ export function EmailComposer({
           inReplyTo: threadingHeaders?.inReplyTo,
           references: threadingHeaders?.references,
           requestReadReceipt,
+          requestDsn: requestDsn || undefined,
+          requireTls: requireTls || undefined,
           delayedUntil: effectiveDelayedUntil,
         });
 
@@ -3064,6 +3074,38 @@ export function EmailComposer({
             >
               <MailCheck className="w-4 h-4" />
             </Button>
+            {composerClient?.supportsSubmissionExtension?.('DSN') && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRequestDsn(v => !v)}
+                className={cn(
+                  "h-9 w-9",
+                  requestDsn && "bg-green-600 text-white hover:bg-green-600 hover:text-white dark:bg-green-600 dark:hover:bg-green-600"
+                )}
+                title={requestDsn ? t('dsn_on') : t('dsn_off')}
+                aria-pressed={requestDsn}
+                data-testid="composer-dsn-toggle"
+              >
+                <PackageCheck className="w-4 h-4" />
+              </Button>
+            )}
+            {composerClient?.supportsSubmissionExtension?.('REQUIRETLS') && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setRequireTls(v => !v)}
+                className={cn(
+                  "h-9 w-9",
+                  requireTls && "bg-green-600 text-white hover:bg-green-600 hover:text-white dark:bg-green-600 dark:hover:bg-green-600"
+                )}
+                title={requireTls ? t('require_tls_on') : t('require_tls_off')}
+                aria-pressed={requireTls}
+                data-testid="composer-require-tls-toggle"
+              >
+                <LockKeyhole className="w-4 h-4" />
+              </Button>
+            )}
             <PluginSlot name="composer-toolbar" />
           </div>
 

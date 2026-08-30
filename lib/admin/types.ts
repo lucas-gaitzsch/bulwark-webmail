@@ -117,6 +117,23 @@ export interface PushRelayOption {
   url: string;
 }
 
+/**
+ * A sidebar app the operator ships to every user (#931). Same shape as the
+ * user's own `SidebarApp`, but the id is issued by the admin UI and the entry
+ * is read-only in the client - users see it in the rail without configuring
+ * anything, and cannot edit or delete it.
+ */
+export interface AdminSidebarApp {
+  id: string;
+  name: string;
+  url: string;
+  /** Lucide icon name (e.g. 'Globe'). */
+  icon: string;
+  /** Open in a new browser tab, or embedded in an iframe. */
+  openMode: 'tab' | 'inline';
+  showOnMobile: boolean;
+}
+
 export interface SettingsPolicy {
   restrictions: Record<string, SettingRestriction>;
   features: FeatureGates;
@@ -137,6 +154,13 @@ export interface SettingsPolicy {
   pushRelayUrl?: string;
   /** When true, users are pinned to pushRelayUrl and cannot pick another relay. */
   pushRelayUrlLocked?: boolean;
+  /**
+   * Sidebar apps shown to every user, ahead of their own. Read-only in the
+   * client; sanitized on policy load and save. Independent of the
+   * `sidebarAppsEnabled` gate, which only governs *user-added* apps - an
+   * operator can ship a fixed set while forbidding custom ones.
+   */
+  defaultSidebarApps?: AdminSidebarApp[];
 }
 
 export const DEFAULT_POLICY: SettingsPolicy = {
@@ -150,6 +174,7 @@ export const DEFAULT_POLICY: SettingsPolicy = {
   pushRelays: [],
   pushRelayUrl: '',
   pushRelayUrlLocked: false,
+  defaultSidebarApps: [],
 };
 
 export interface AuditEntry {

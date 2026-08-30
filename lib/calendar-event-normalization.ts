@@ -20,7 +20,7 @@ function isMidnightValue(value: string): boolean {
   return match[1] === '00' && match[2] === '00' && (match[3] ?? '00') === '00';
 }
 
-function parseDurationSeconds(duration: string | undefined): number | null {
+export function parseDurationSeconds(duration: string | undefined): number | null {
   if (!duration) {
     return null;
   }

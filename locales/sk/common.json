@@ -202,6 +202,9 @@
     "delete_confirm": "Naozaj chcete odstrániť \"{name}\"?",
     "no_apps": "Zatiaľ neboli pridané žiadne aplikácie",
     "no_apps_hint": "Pridajte vlastné aplikácie a odkazy do postranného panela",
+    "managed_title": "Poskytnuté správcom",
+    "managed_description": "Tieto aplikácie sú nastavené pre všetkých a nedajú sa zmeniť.",
+    "managed_badge": "Spravované",
     "search_icons": "Hľadať ikony...",
     "show_popular": "Obľúbené",
     "show_all": "Všetky",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Potvrdenie o prečítaní požiadané (kliknutím vypnete)",
     "read_receipt_off": "Požiadať o potvrdenie o prečítaní",
+    "dsn_on": "Oznámenie o doručení vyžiadané (kliknutím vypnete)",
+    "dsn_off": "Vyžiadať oznámenie o doručení",
+    "require_tls_on": "Šifrované doručenie vyžadované (kliknutím vypnete)",
+    "require_tls_off": "Vyžadovať šifrované doručenie (TLS)",
     "new_message": "Nová správa",
     "signature_edit_hint": "Dvojklikom upravíte podpis",
     "reply": "Odpovedať",
@@ -1867,6 +1874,8 @@
       "description": "Spravujte vlastné aplikácie a odkazy v postrannom paneli",
       "keep_loaded": "Ponechať aplikácie načítané",
       "keep_loaded_description": "Udržiavať vložené aplikácie spustené na pozadí počas prepínania",
+      "managed_title": "Poskytnuté správcom",
+      "managed_description": "Tieto aplikácie sú nastavené pre všetkých a nedajú sa zmeniť.",
       "manage_title": "Vlastné aplikácie",
       "manage_description": "Pridávať, upravovať alebo odstraňovať vlastné aplikácie z postranného panela"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Nový podpriečinok...",
     "new_folder": "Nový priečinok...",
     "rename": "Premenovať...",
+    "share": "Zdieľať...",
     "import_email": "Importovať .eml alebo .zip...",
     "empty_folder": "Vyprázdniť priečinok",
     "empty_folder_generic": "Vyprázdniť priečinok",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Nepodarilo sa premenovať priečinok",
     "toast_error_delete": "Nepodarilo sa zmazať priečinok",
     "toast_error_delete_has_children": "Priečinok obsahuje podpriečinky. Najprv ich odstráňte.",
-    "toast_error_delete_has_email": "Priečinok nie je prázdny. Najprv ho vyprázdnite."
+    "toast_error_delete_has_email": "Priečinok nie je prázdny. Najprv ho vyprázdnite.",
+    "delete_with_contents_title": "Priečinok nie je prázdny",
+    "delete_with_contents_message": "Priečinok „{name}“ stále obsahuje {count, plural, one {1 správu} few {# správy} other {# správ}}. Odstrániť priečinok aj všetky jeho správy? Túto akciu nie je možné vrátiť späť.",
+    "delete_with_contents_confirm": "Odstrániť priečinok a správy"
   },
   "shortcuts": {
     "title": "Klávesové skratky",
@@ -2430,6 +2443,9 @@
       "renamed": "Adresár bol premenovaný",
       "rename_failed": "Premenovanie adresára zlyhalo",
       "default": "Predvolený",
+      "set_default": "Nastaviť ako predvolený",
+      "default_updated": "Predvolený adresár aktualizovaný",
+      "set_default_failed": "Nepodarilo sa nastaviť predvolený adresár",
       "manage": "Spravovať adresáre",
       "share": "Zdieľať adresár",
       "new_contact_in_book": "Nový kontakt v tomto adresári",
@@ -2785,6 +2801,14 @@
       "color": "Farba"
     },
     "participants": {
+      "availability": {
+        "title": "Dostupnosť",
+        "free": "Voľný",
+        "busy": "Zaneprázdnený",
+        "tentative": "Predbežne",
+        "unknown": "Nie je používateľom tohto servera",
+        "checking": "Overuje sa…"
+      },
       "title": "Účastníci",
       "add": "Pridať účastníka",
       "organizer": "Organizátor",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Oneskorenie 1 sekunda",
       "hover_preview_delay_2s": "Oneskorenie 2 sekundy",
       "hover_preview_off": "Vypnuté",
+      "organizer_identity": "Organizovať pozvánky ako",
+      "organizer_identity_desc": "Adresa kalendára použitá ako organizátor, keď pozývate ľudí na udalosti.",
+      "organizer_identity_failed": "Nepodarilo sa zmeniť adresu organizátora",
       "show_birthday_calendar": "Kalendár narodenín",
       "show_birthday_calendar_desc": "Zobrazovať virtuálny kalendár s narodeninami z vašich kontaktov"
     },
@@ -3141,6 +3168,25 @@
       "overdue": "Po termíne"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "Niekto",
+    "invited": "{name} vás pozval(a) na „{title}“",
+    "updated": "{name} aktualizoval(a) „{title}“",
+    "cancelled": "{name} zrušil(a) „{title}“",
+    "untitled": "Udalosť bez názvu"
+  },
+  "share_notifications": {
+    "someone": "Niekto",
+    "shared": "{name} s vami zdieľa {kind} „{object}“",
+    "changed": "{name} zmenil(a) váš prístup k {kind} „{object}“",
+    "revoked": "{name} odobral(a) váš prístup k {kind} „{object}“",
+    "object": {
+      "folder": "priečinok",
+      "calendar": "kalendár",
+      "address_book": "adresár",
+      "files": "priečinok súborov"
+    }
+  },
   "sharing": {
     "title": "Zdieľať \"{name}\"",
     "description": "Udeľte prístup ďalším používateľom alebo skupinám na tomto serveri. Zmeny sa prejavia okamžite.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "Prílohy",
     "date_after": "Po",
     "date_before": "Pred",
+    "size_min": "Väčšie ako (KB)",
+    "size_max": "Menšie ako (KB)",
     "starred": "S hviezdičkou",
     "unread": "Neprečítané",
     "read": "Prečítané",

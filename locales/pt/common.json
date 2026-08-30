@@ -202,6 +202,9 @@
     "delete_confirm": "Tem certeza de que deseja excluir \"{name}\"?",
     "no_apps": "Nenhum app adicionado",
     "no_apps_hint": "Adicione apps e links personalizados à sua barra lateral",
+    "managed_title": "Fornecidas pelo seu administrador",
+    "managed_description": "Estas aplicações estão configuradas para todos e não podem ser alteradas.",
+    "managed_badge": "Gerida",
     "search_icons": "Pesquisar ícones...",
     "show_popular": "Populares",
     "show_all": "Todos",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Confirmação de leitura solicitada (clique para desativar)",
     "read_receipt_off": "Solicitar confirmação de leitura",
+    "dsn_on": "Notificação de entrega pedida (clique para desativar)",
+    "dsn_off": "Pedir notificação de entrega",
+    "require_tls_on": "Entrega cifrada obrigatória (clique para desativar)",
+    "require_tls_off": "Exigir entrega cifrada (TLS)",
     "new_message": "Nova Mensagem",
     "signature_edit_hint": "Clique duas vezes para editar a assinatura",
     "reply": "Responder",
@@ -1860,6 +1867,8 @@
       "description": "Gerenciar aplicativos e links personalizados na barra lateral",
       "keep_loaded": "Manter apps carregados",
       "keep_loaded_description": "Manter apps inline em execução em segundo plano ao alternar entre eles para evitar recarregamento",
+      "managed_title": "Fornecidas pelo seu administrador",
+      "managed_description": "Estas aplicações estão configuradas para todos e não podem ser alteradas.",
       "manage_title": "Apps personalizados",
       "manage_description": "Adicionar, editar ou remover apps personalizados da barra lateral"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Nova subpasta...",
     "new_folder": "Nova pasta...",
     "rename": "Renomear...",
+    "share": "Partilhar...",
     "import_email": "Importar .eml ou .zip...",
     "empty_folder": "Esvaziar pasta",
     "empty_folder_generic": "Esvaziar pasta",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "Falha ao excluir a pasta",
     "toast_error_delete_has_children": "A pasta contém subpastas. Remova-as primeiro.",
     "toast_error_delete_has_email": "A pasta não está vazia. Esvazie-a primeiro.",
+    "delete_with_contents_title": "A pasta não está vazia",
+    "delete_with_contents_message": "A pasta \"{name}\" ainda contém {count, plural, one {1 mensagem} other {# mensagens}}. Eliminar a pasta e todas as suas mensagens? Esta ação não pode ser anulada.",
+    "delete_with_contents_confirm": "Eliminar pasta e mensagens",
     "placeholder_folder_name": "Nome da pasta",
     "create": "Criar",
     "rename_confirm": "Renomear"
@@ -2429,6 +2442,9 @@
       "renamed": "Catálogo de endereços renomeado",
       "rename_failed": "Falha ao renomear o catálogo de endereços",
       "default": "Padrão",
+      "set_default": "Definir como padrão",
+      "default_updated": "Catálogo de endereços padrão atualizado",
+      "set_default_failed": "Falha ao definir o catálogo de endereços padrão",
       "manage": "Gerenciar catálogos de endereços",
       "share": "Compartilhar lista de contatos",
       "new_contact_in_book": "Novo contato nesta lista",
@@ -2785,6 +2801,14 @@
       "color": "Cor"
     },
     "participants": {
+      "availability": {
+        "title": "Disponibilidade",
+        "free": "Disponível",
+        "busy": "Ocupado",
+        "tentative": "Provisório",
+        "unknown": "Não é um utilizador deste servidor",
+        "checking": "A verificar…"
+      },
       "title": "Participantes",
       "add": "Adicionar participante",
       "organizer": "Organizador",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Atraso de 1 segundo",
       "hover_preview_delay_2s": "Atraso de 2 segundos",
       "hover_preview_off": "Desativado",
+      "organizer_identity": "Organizar convites como",
+      "organizer_identity_desc": "O endereço de calendário usado como organizador quando convida pessoas para eventos.",
+      "organizer_identity_failed": "Não foi possível alterar o endereço do organizador",
       "show_birthday_calendar": "Calendário de aniversários",
       "show_birthday_calendar_desc": "Mostrar um calendário virtual com os aniversários dos seus contatos"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Anexos",
     "date_after": "Após",
     "date_before": "Antes de",
+    "size_min": "Maior que (KB)",
+    "size_max": "Menor que (KB)",
     "starred": "Favoritos",
     "unread": "Não lidos",
     "read": "Lidos",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "A pesquisa não está disponível na vista unificada"
+  },
+  "calendar_event_notifications": {
+    "someone": "Alguém",
+    "invited": "{name} convidou-o para \"{title}\"",
+    "updated": "{name} atualizou \"{title}\"",
+    "cancelled": "{name} cancelou \"{title}\"",
+    "untitled": "Evento sem título"
+  },
+  "share_notifications": {
+    "someone": "Alguém",
+    "shared": "{name} partilhou consigo {kind} \"{object}\"",
+    "changed": "{name} alterou o seu acesso a {kind} \"{object}\"",
+    "revoked": "{name} removeu o seu acesso a {kind} \"{object}\"",
+    "object": {
+      "folder": "a pasta",
+      "calendar": "o calendário",
+      "address_book": "o livro de endereços",
+      "files": "a pasta de ficheiros"
+    }
   },
   "sharing": {
     "title": "Compartilhar \"{name}\"",

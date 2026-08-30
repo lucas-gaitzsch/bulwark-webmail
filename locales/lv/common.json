@@ -202,6 +202,9 @@
     "delete_confirm": "Vai tiešām vēlaties dzēst \"{name}\"?",
     "no_apps": "Lietotnes vēl nav pievienotas",
     "no_apps_hint": "Pievienojiet pielāgotas lietotnes un saites sānu joslā",
+    "managed_title": "Nodrošina administrators",
+    "managed_description": "Šīs lietotnes ir iestatītas visiem, un tās nevar mainīt.",
+    "managed_badge": "Pārvaldīta",
     "search_icons": "Meklēt ikonas...",
     "show_popular": "Populārākās",
     "show_all": "Visas",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Pieprasīts lasīšanas apstiprinājums (noklikšķiniet, lai atspējotu)",
     "read_receipt_off": "Pieprasīt lasīšanas apstiprinājumu",
+    "dsn_on": "Piegādes paziņojums pieprasīts (noklikšķiniet, lai atspējotu)",
+    "dsn_off": "Pieprasīt piegādes paziņojumu",
+    "require_tls_on": "Nepieciešama šifrēta piegāde (noklikšķiniet, lai atspējotu)",
+    "require_tls_off": "Pieprasīt šifrētu piegādi (TLS)",
     "new_message": "Jauns ziņojums",
     "signature_edit_hint": "Veiciet dubultklikšķi, lai rediģētu parakstu",
     "reply": "Atbildēt",
@@ -1860,6 +1867,8 @@
       "description": "Pārvaldiet pielāgotas lietotnes un saites sānu joslā",
       "keep_loaded": "Turēt lietotnes ielādētas",
       "keep_loaded_description": "Turēt iebūvētās lietotnes fonā, lai izvairītos no pārlādēšanas",
+      "managed_title": "Nodrošina administrators",
+      "managed_description": "Šīs lietotnes ir iestatītas visiem, un tās nevar mainīt.",
       "manage_title": "Pielāgotas lietotnes",
       "manage_description": "Pievienojiet, rediģējiet vai dzēsiet sānu joslas lietotnes"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Jauna apakšmape...",
     "new_folder": "Jauna mape...",
     "rename": "Pārsaukt...",
+    "share": "Kopīgot...",
     "import_email": "Importēt .eml vai .zip...",
     "empty_folder": "Iztukšot mapi",
     "empty_folder_generic": "Iztukšot mapi",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "Neizdevās dzēst mapi",
     "toast_error_delete_has_children": "Mapei ir apakšmapes. Vispirms noņemiet tās.",
     "toast_error_delete_has_email": "Mape nav tukša. Vispirms iztukšojiet to.",
+    "delete_with_contents_title": "Mape nav tukša",
+    "delete_with_contents_message": "Mapē “{name}” joprojām ir {count, plural, one {1 ziņa} other {# ziņas}}. Dzēst mapi un visas tās ziņas? To nevar atsaukt.",
+    "delete_with_contents_confirm": "Dzēst mapi un ziņas",
     "placeholder_folder_name": "Mapes nosaukums",
     "create": "Izveidot",
     "rename_confirm": "Pārsaukt"
@@ -2425,6 +2438,9 @@
       "renamed": "Adrešu grāmata pārdēvēta",
       "rename_failed": "Neizdevās pārdēvēt adrešu grāmatu",
       "default": "Noklusējuma",
+      "set_default": "Iestatīt kā noklusējumu",
+      "default_updated": "Noklusējuma adrešu grāmata atjaunināta",
+      "set_default_failed": "Neizdevās iestatīt noklusējuma adrešu grāmatu",
       "manage": "Pārvaldīt adrešu grāmatas",
       "share": "Kopīgot adrešu grāmatu",
       "new_contact_in_book": "Jauns kontakts šajā adrešu grāmatā",
@@ -2784,6 +2800,14 @@
       "color": "Krāsa"
     },
     "participants": {
+      "availability": {
+        "title": "Pieejamība",
+        "free": "Pieejams",
+        "busy": "Aizņemts",
+        "tentative": "Provizoriski",
+        "unknown": "Nav šī servera lietotājs",
+        "checking": "Pārbauda…"
+      },
       "title": "Dalībnieki",
       "add": "Pievienot dalībnieku",
       "organizer": "Organizators",
@@ -2907,6 +2931,9 @@
       "hover_preview_delay_1s": "1 sekundes aizture",
       "hover_preview_delay_2s": "2 sekunžu aizture",
       "hover_preview_off": "Izslēgts",
+      "organizer_identity": "Organizēt ielūgumus kā",
+      "organizer_identity_desc": "Kalendāra adrese, ko izmanto kā organizatoru, uzaicinot cilvēkus uz notikumiem.",
+      "organizer_identity_failed": "Neizdevās mainīt organizatora adresi",
       "show_birthday_calendar": "Kontaktu dzimšanas dienu kalendārs",
       "show_birthday_calendar_desc": "Rādīt virtuālu kalendāru ar kontaktu dzimšanas dienām"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Ar pielikumu",
     "date_after": "Pēc",
     "date_before": "Pirms",
+    "size_min": "Lielāks par (KB)",
+    "size_max": "Mazāks par (KB)",
     "starred": "Ar zvaigznīti",
     "unread": "Nelasītas",
     "read": "Izlasītas",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "Meklēšana nav pieejama apvienotajā skatā"
+  },
+  "calendar_event_notifications": {
+    "someone": "Kāds",
+    "invited": "{name} uzaicināja jūs uz “{title}”",
+    "updated": "{name} atjaunināja “{title}”",
+    "cancelled": "{name} atcēla “{title}”",
+    "untitled": "Notikums bez nosaukuma"
+  },
+  "share_notifications": {
+    "someone": "Kāds",
+    "shared": "{name} kopīgoja ar jums {kind} “{object}”",
+    "changed": "{name} mainīja jūsu piekļuvi {kind} “{object}”",
+    "revoked": "{name} noņēma jūsu piekļuvi {kind} “{object}”",
+    "object": {
+      "folder": "mapi",
+      "calendar": "kalendāru",
+      "address_book": "adrešu grāmatu",
+      "files": "failu mapi"
+    }
   },
   "sharing": {
     "title": "Kopīgot \"{name}\"",

@@ -37,6 +37,10 @@ export interface Email {
   subject?: string;
   sentAt?: string;
   preview?: string;
+  // Server-side search highlighting (SearchSnippet/get, RFC 8621 §5): the
+  // subject / body excerpt with the matched terms in <mark>, set on search
+  // hits only. See lib/search-snippet.ts.
+  searchSnippet?: { subject: string | null; preview: string | null };
   textBody?: EmailBodyPart[];
   htmlBody?: EmailBodyPart[];
   bodyValues?: Record<string, EmailBodyValue>;
@@ -206,22 +210,30 @@ export interface Mailbox {
   unreadEmails: number;
   totalThreads: number;
   unreadThreads: number;
-  myRights: {
-    mayReadItems: boolean;
-    mayAddItems: boolean;
-    mayRemoveItems: boolean;
-    maySetSeen: boolean;
-    maySetKeywords: boolean;
-    mayCreateChild: boolean;
-    mayRename: boolean;
-    mayDelete: boolean;
-    maySubmit: boolean;
-  };
+  myRights: MailboxRights;
   isSubscribed: boolean;
+  // Sharing (urn:ietf:params:jmap:mail:share): principalId -> rights. Only
+  // present when explicitly requested (see getMailboxShareWith).
+  shareWith?: Record<string, MailboxRights> | null;
   // Shared folder support
   accountId?: string;
   accountName?: string;
   isShared?: boolean;
+}
+
+// Mailbox rights (RFC 8621 §2 myRights; `mayShare` from the mail:share
+// extension). Also the value type of Mailbox.shareWith.
+export interface MailboxRights {
+  mayReadItems: boolean;
+  mayAddItems: boolean;
+  mayRemoveItems: boolean;
+  maySetSeen: boolean;
+  maySetKeywords: boolean;
+  mayCreateChild: boolean;
+  mayRename: boolean;
+  mayDelete: boolean;
+  maySubmit: boolean;
+  mayShare?: boolean;
 }
 
 export interface Thread {
@@ -498,6 +510,17 @@ export interface Principal {
   accountId?: string;
 }
 
+/**
+ * One busy interval from Principal/getAvailability (RFC 9670 §2.5 /
+ * draft-ietf-jmap-calendars). `busyStatus` null means the server did not
+ * classify the period (treated as busy).
+ */
+export interface BusyPeriod {
+  utcStart: string;
+  utcEnd: string;
+  busyStatus: 'confirmed' | 'tentative' | 'unavailable' | null;
+}
+
 export interface VacationResponse {
   id: string;
   isEnabled: boolean;
@@ -593,6 +616,11 @@ export interface CalendarRights {
 export interface CalendarEvent {
   id: string;
   originalId?: string;
+  // Set by the server on every CalendarEvent/get result. For an occurrence
+  // handed out by CalendarEvent/query?expandRecurrences=true (a "synthetic"
+  // id) this is the id of the stored base event; for a base event it equals
+  // `id`. See lib/recurrence-instances.ts.
+  baseEventId?: string | null;
   calendarIds: Record<string, boolean>;
   originalCalendarIds?: Record<string, boolean>;
   accountId?: string;
@@ -777,11 +805,17 @@ export interface CalendarTask {
   relatedTo: Record<string, CalendarRelation> | null;
 }
 
+/**
+ * A ParticipantIdentity (draft-ietf-jmap-calendars §6): one of the calendar
+ * addresses the user may act as when organising or replying to events. The
+ * server derives them from the account's addresses; the default one is what
+ * new invitations are sent from.
+ */
 export interface CalendarParticipantIdentity {
   id: string;
   name: string;
-  scheduleId: string;
-  sendTo: Record<string, string>;
+  /** `mailto:` URI of the scheduling address. */
+  calendarAddress: string;
   isDefault: boolean;
 }
 
@@ -834,8 +868,27 @@ export interface StateChange {
       Calendar?: string;
       CalendarEvent?: string;
       SieveScript?: string;
+      ShareNotification?: string;
+      CalendarEventNotification?: string;
     };
   };
+}
+
+/**
+ * A ShareNotification (RFC 9670 §3): someone changed this user's rights on
+ * one of their collections. `oldRights` null = newly shared, `newRights`
+ * null = access revoked.
+ */
+export interface ShareNotification {
+  id: string;
+  created: string;
+  changedBy: { name: string; email: string | null; principalId: string | null };
+  objectType: 'Mailbox' | 'Calendar' | 'AddressBook' | 'FileNode' | string;
+  objectAccountId: string;
+  objectId: string;
+  name: string;
+  oldRights: Record<string, boolean> | null;
+  newRights: Record<string, boolean> | null;
 }
 
 // draft-ietf-jmap-emailpush EmailPushConfig: the server evaluates `filter`
@@ -865,6 +918,22 @@ export interface PushSubscription {
 }
 
 // For tracking last known states
+/**
+ * A `Foo/changes` response (RFC 8620 §5.2) as consumed by the stores' delta
+ * sync. `updatedProperties` is set when the server can tell that only those
+ * properties changed on the updated records (Stalwart reports the four
+ * Mailbox counters this way).
+ */
+export interface CollectionChanges {
+  oldState: string;
+  newState: string;
+  hasMoreChanges: boolean;
+  created: string[];
+  updated: string[];
+  destroyed: string[];
+  updatedProperties: string[] | null;
+}
+
 export interface AccountStates {
   [accountId: string]: {
     Email?: string;

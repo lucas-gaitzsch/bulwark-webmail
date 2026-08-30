@@ -202,6 +202,9 @@
     "delete_confirm": "「{name}」を削除してもよろしいですか？",
     "no_apps": "アプリが追加されていません",
     "no_apps_hint": "カスタムアプリやリンクをサイドバーに追加できます",
+    "managed_title": "管理者によって提供",
+    "managed_description": "これらのアプリは全員向けに設定されており、変更できません。",
+    "managed_badge": "管理対象",
     "search_icons": "アイコンを検索...",
     "show_popular": "人気",
     "show_all": "すべて",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "開封確認を要求中（クリックで無効化）",
     "read_receipt_off": "開封確認を要求する",
+    "dsn_on": "配信通知を要求中（クリックで解除）",
+    "dsn_off": "配信通知を要求する",
+    "require_tls_on": "暗号化配信を必須にしています（クリックで解除）",
+    "require_tls_off": "暗号化配信を必須にする（TLS）",
     "new_message": "新規メッセージ",
     "signature_edit_hint": "ダブルクリックで署名を編集",
     "reply": "返信",
@@ -1860,6 +1867,8 @@
       "description": "サイドバーのカスタムアプリとリンクを管理",
       "keep_loaded": "アプリを読み込んだまま保持",
       "keep_loaded_description": "切り替え時にインラインアプリをバックグラウンドで実行し続けて再読み込みを回避",
+      "managed_title": "管理者によって提供",
+      "managed_description": "これらのアプリは全員向けに設定されており、変更できません。",
       "manage_title": "カスタムアプリ",
       "manage_description": "サイドバーのカスタムアプリを追加、編集、削除"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "新しいサブフォルダー...",
     "new_folder": "新しいフォルダー...",
     "rename": "名前を変更...",
+    "share": "共有...",
     "import_email": ".eml または .zip をインポート...",
     "empty_folder": "フォルダーを空にする",
     "empty_folder_generic": "フォルダーを空にする",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "フォルダーを削除できませんでした",
     "toast_error_delete_has_children": "フォルダーにサブフォルダーがあります。先に削除してください。",
     "toast_error_delete_has_email": "フォルダーが空ではありません。先に空にしてください。",
+    "delete_with_contents_title": "フォルダーが空ではありません",
+    "delete_with_contents_message": "フォルダー「{name}」にはまだ {count} 件のメッセージがあります。フォルダーとすべてのメッセージを削除しますか？この操作は元に戻せません。",
+    "delete_with_contents_confirm": "フォルダーとメッセージを削除",
     "placeholder_folder_name": "フォルダー名",
     "create": "作成",
     "rename_confirm": "名前を変更"
@@ -2429,6 +2442,9 @@
       "renamed": "アドレス帳の名前を変更しました",
       "rename_failed": "アドレス帳の名前変更に失敗しました",
       "default": "デフォルト",
+      "set_default": "デフォルトに設定",
+      "default_updated": "デフォルトのアドレス帳を更新しました",
+      "set_default_failed": "デフォルトのアドレス帳を設定できませんでした",
       "manage": "アドレス帳を管理",
       "share": "アドレス帳を共有",
       "new_contact_in_book": "このアドレス帳に新規連絡先",
@@ -2785,6 +2801,14 @@
       "color": "色"
     },
     "participants": {
+      "availability": {
+        "title": "空き状況",
+        "free": "空き",
+        "busy": "予定あり",
+        "tentative": "仮",
+        "unknown": "このサーバーのユーザーではありません",
+        "checking": "確認中…"
+      },
       "title": "参加者",
       "add": "参加者を追加",
       "organizer": "主催者",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "1秒遅延",
       "hover_preview_delay_2s": "2秒遅延",
       "hover_preview_off": "無効",
+      "organizer_identity": "招待の主催者アドレス",
+      "organizer_identity_desc": "イベントに人を招待する際に主催者として使用するカレンダーアドレスです。",
+      "organizer_identity_failed": "主催者アドレスを変更できませんでした",
       "show_birthday_calendar": "誕生日カレンダー",
       "show_birthday_calendar_desc": "連絡先の誕生日を表示する仮想カレンダーを表示します"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "添付ファイル",
     "date_after": "以降",
     "date_before": "以前",
+    "size_min": "次のサイズ以上 (KB)",
+    "size_max": "次のサイズ未満 (KB)",
     "starred": "スター付き",
     "unread": "未読",
     "read": "既読",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "統合ビューでは検索を利用できません"
+  },
+  "calendar_event_notifications": {
+    "someone": "誰か",
+    "invited": "{name} さんが「{title}」に招待しました",
+    "updated": "{name} さんが「{title}」を更新しました",
+    "cancelled": "{name} さんが「{title}」をキャンセルしました",
+    "untitled": "無題の予定"
+  },
+  "share_notifications": {
+    "someone": "誰か",
+    "shared": "{name} さんが{kind}「{object}」を共有しました",
+    "changed": "{name} さんが{kind}「{object}」へのアクセス権を変更しました",
+    "revoked": "{name} さんが{kind}「{object}」へのアクセス権を削除しました",
+    "object": {
+      "folder": "フォルダー",
+      "calendar": "カレンダー",
+      "address_book": "アドレス帳",
+      "files": "ファイルフォルダー"
+    }
   },
   "sharing": {
     "title": "「{name}」を共有",

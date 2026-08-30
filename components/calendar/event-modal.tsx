@@ -13,6 +13,7 @@ import { buildAllDayDuration, getEventDisplayEndDate, getEventEndDate, getEventS
 import { displayNow, getEffectiveTimeZone } from "@/lib/timezone";
 import { createRecurrenceRule } from "@/lib/recurrence-rule";
 import { ParticipantInput, type ParticipantInputHandle } from "./participant-input";
+import { ParticipantAvailability } from "./participant-availability";
 import {
   isOrganizer,
   getUserParticipantId,
@@ -408,6 +409,19 @@ export function EventModal({
   });
   const [sendInvitations, setSendInvitations] = useState(true);
   const participantInputRef = useRef<ParticipantInputHandle>(null);
+
+  // The event window the attendees' free/busy is checked against. Parsed in
+  // local time like the save path; an all-day event spans its whole days.
+  const availabilityWindow = useMemo(() => {
+    const startStr = allDay ? `${startDate}T00:00:00` : `${startDate}T${startTime || "00:00"}:00`;
+    const endStr = allDay ? `${endDate}T23:59:59` : `${endDate}T${endTime || "00:00"}:00`;
+    const start = startDate ? new Date(startStr) : null;
+    const end = endDate ? new Date(endStr) : null;
+    return {
+      start: start && !Number.isNaN(start.getTime()) ? start : null,
+      end: end && !Number.isNaN(end.getTime()) ? end : null,
+    };
+  }, [startDate, startTime, endDate, endTime, allDay]);
 
   // Plugin transform: collect conflict warnings for the current event form.
   // Re-runs (debounced) whenever fields that affect scheduling change.
@@ -1113,6 +1127,11 @@ export function EventModal({
               participants={attendees}
               onAdd={handleAddAttendee}
               onRemove={handleRemoveAttendee}
+            />
+            <ParticipantAvailability
+              attendees={attendees}
+              start={availabilityWindow.start}
+              end={availabilityWindow.end}
             />
             {isEdit && statusCounts && (existingParticipants.length > 0) && (
               <p className="text-xs text-muted-foreground mt-1.5">

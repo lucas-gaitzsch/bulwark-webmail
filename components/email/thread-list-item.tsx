@@ -21,6 +21,7 @@ import { useSwipeActions } from "@/hooks/use-swipe-actions";
 import type { SwipeAction } from "@/stores/settings-store";
 import { ThreadEmailItem } from "./thread-email-item";
 import { EmailHoverActions } from "./email-hover-actions";
+import { SearchSnippetText } from "./search-snippet-text";
 import { useTranslations } from "next-intl";
 
 /**
@@ -145,6 +146,10 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
     const isFocusedMailLayout = mailLayout === 'focus' && !isMobile;
     const trimmedPreview = stripInvisibleLeading(email.preview ?? '');
     const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
+    // Search hits carry server snippets with the matched terms marked; they
+    // replace the plain subject / preview so the user sees why a mail matched.
+    const subjectSnippet = email.searchSnippet?.subject ?? null;
+    const previewSnippet = showPreview ? (email.searchSnippet?.preview ?? null) : null;
     const scheduledSendLabel = email.isScheduled && email.scheduledSendAt
       ? formatDateTime(email.scheduledSendAt, timeFormat)
       : null;
@@ -294,8 +299,8 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
           className={cn('px-3', isFocusedMailLayout ? 'flex items-center' : 'flex items-start', swipeEnabled && 'relative z-10 bg-inherit')}
           style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)', transform: swipeEnabled && offsetX ? `translateX(${offsetX}px)` : undefined, transition: swipeEnabled && offsetX === 0 ? 'transform 200ms ease-out' : undefined }}
         >
-          {/* Checkbox - only visible when in selection mode */}
-          {selectedEmailIds.size > 0 && (
+          {/* Checkbox - only for extra-compact density (no avatar) while in selection mode */}
+          {density === 'extra-compact' && selectedEmailIds.size > 0 && (
             <button
               onClick={handleCheckboxClick}
               className={cn(
@@ -329,7 +334,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
               className="flex-shrink-0 shadow-sm"
               disableImages={hideJunkAvatarImages}
               checked={isChecked}
-              onToggle={() => toggleEmailSelection(email.id)}
+              onToggle={handleCheckboxClick}
               selectLabel={tBatch('select')}
             />
           )}
@@ -363,10 +368,12 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                       'min-w-0 truncate',
                       isUnread ? 'font-semibold text-foreground' : 'text-foreground/90'
                     )}>
-                      {email.subject || '(no subject)'}
+                      {subjectSnippet ? <SearchSnippetText snippet={subjectSnippet} /> : (email.subject || '(no subject)')}
                     </span>
-                    {inlinePreview && (
-                      <span className="min-w-0 shrink-[9999] truncate text-muted-foreground">{inlinePreview}</span>
+                    {(previewSnippet || inlinePreview) && (
+                      <span className="min-w-0 shrink-[9999] truncate text-muted-foreground">
+                        {previewSnippet ? <> <SearchSnippetText snippet={previewSnippet} /></> : inlinePreview}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -488,7 +495,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                       ? "font-semibold text-foreground"
                       : "font-normal text-foreground/90"
                   )}>
-                    {email.subject || "(no subject)"}
+                    {subjectSnippet ? <SearchSnippetText snippet={subjectSnippet} /> : (email.subject || "(no subject)")}
                   </span>
                 </div>
 
@@ -499,7 +506,7 @@ const SingleEmailItem = React.forwardRef<HTMLDivElement, SingleEmailItemProps>(
                       ? "text-muted-foreground"
                       : "text-muted-foreground/80"
                   )}>
-                    {trimmedPreview || t('no_preview_available')}
+                    {previewSnippet ? <SearchSnippetText snippet={previewSnippet} /> : (trimmedPreview || t('no_preview_available'))}
                   </p>
                 )}
               </>
@@ -563,6 +570,11 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
     const isFocusedMailLayout = mailLayout === 'focus' && !isMobile;
     const trimmedPreview = stripInvisibleLeading(latestEmail.preview ?? '');
     const inlinePreview = showPreview && trimmedPreview ? ` ${trimmedPreview}` : '';
+    // In a search the matched mail need not be the thread's latest one: show
+    // the snippet of whichever email in the thread carries one.
+    const threadSnippet = thread.emails.find((e) => e.searchSnippet)?.searchSnippet ?? latestEmail.searchSnippet;
+    const subjectSnippet = threadSnippet?.subject ?? null;
+    const previewSnippet = showPreview ? (threadSnippet?.preview ?? null) : null;
     const scheduledSendLabel = latestEmail.isScheduled && latestEmail.scheduledSendAt
       ? formatDateTime(latestEmail.scheduledSendAt, timeFormat)
       : null;
@@ -733,8 +745,8 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
             className={cn('px-3', isFocusedMailLayout ? 'flex items-center' : 'flex items-start')}
             style={{ gap: 'var(--density-item-gap)', paddingBlock: 'var(--density-item-py)' }}
           >
-            {/* Checkbox for thread selection - only visible when in selection mode */}
-            {selectedEmailIds.size > 0 && (
+            {/* Checkbox for thread selection - only for extra-compact density (no avatar) while in selection mode */}
+            {density === 'extra-compact' && selectedEmailIds.size > 0 && (
               <button
                 onClick={handleThreadCheckboxClick}
                 className={cn(
@@ -769,7 +781,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                   className="shadow-sm"
                   disableImages={hideJunkAvatarImages}
                   checked={isChecked}
-                  onToggle={toggleThreadSelection}
+                  onToggle={handleThreadCheckboxClick}
                   selectLabel={tBatch('select')}
                 />
                 {!isMobile && (
@@ -837,10 +849,12 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                         'min-w-0 truncate',
                         hasUnread ? 'font-semibold text-foreground' : 'text-foreground/90'
                       )}>
-                        {latestEmail.subject || '(no subject)'}
+                        {subjectSnippet ? <SearchSnippetText snippet={subjectSnippet} /> : (latestEmail.subject || '(no subject)')}
                       </span>
-                      {inlinePreview && (
-                        <span className="min-w-0 shrink-[9999] truncate text-muted-foreground">{inlinePreview}</span>
+                      {(previewSnippet || inlinePreview) && (
+                        <span className="min-w-0 shrink-[9999] truncate text-muted-foreground">
+                          {previewSnippet ? <> <SearchSnippetText snippet={previewSnippet} /></> : inlinePreview}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -965,7 +979,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                         ? "font-semibold text-foreground"
                         : "font-normal text-foreground/90"
                     )}>
-                      {latestEmail.subject || "(no subject)"}
+                      {subjectSnippet ? <SearchSnippetText snippet={subjectSnippet} /> : (latestEmail.subject || "(no subject)")}
                     </span>
                   </div>
 
@@ -976,7 +990,7 @@ export const ThreadListItem = React.forwardRef<HTMLDivElement, ThreadListItemPro
                         ? "text-muted-foreground"
                         : "text-muted-foreground/80"
                     )}>
-                      {trimmedPreview || tEmailViewer('no_preview_available')}
+                      {previewSnippet ? <SearchSnippetText snippet={previewSnippet} /> : (trimmedPreview || tEmailViewer('no_preview_available'))}
                     </p>
                   )}
                 </>

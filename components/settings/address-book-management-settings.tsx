@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Book, BookPlus, Pencil, Share2, Tag, Users } from "lucide-react";
+import { Book, BookPlus, Pencil, Share2, Star, Tag, Users } from "lucide-react";
 import { useContactStore } from "@/stores/contact-store";
 import { useAuthStore } from "@/stores/auth-store";
 import { useManagedAccountStore } from "@/stores/managed-account-store";
@@ -74,7 +74,7 @@ export function AddressBookManagementSettings() {
   const tSettings = useTranslations("settings.contacts");
   const { client } = useAuthStore();
   const managedAccountId = useManagedAccountStore((s) => s.managedAccountId);
-  const { addressBooks, contacts, supportsSync, fetchAddressBooks, createAddressBook, renameAddressBook, shareAddressBook, renameKeyword } = useContactStore();
+  const { addressBooks, contacts, supportsSync, fetchAddressBooks, createAddressBook, renameAddressBook, shareAddressBook, setDefaultAddressBook, renameKeyword } = useContactStore();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingKeyword, setEditingKeyword] = useState<string | null>(null);
   const [sharingId, setSharingId] = useState<string | null>(null);
@@ -116,6 +116,19 @@ export function AddressBookManagementSettings() {
     }
   };
 
+  const handleSetDefault = async (book: AddressBook) => {
+    if (!client) return;
+    setIsLoading(true);
+    try {
+      await setDefaultAddressBook(client, book);
+      toast.success(t("default_updated"));
+    } catch {
+      toast.error(t("set_default_failed"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Group: personal first, then by shared account
   const personal = addressBooks.filter((b) => !b.isShared);
   const sharedGroups = new Map<string, { accountName: string; books: AddressBook[] }>();
@@ -141,6 +154,9 @@ export function AddressBookManagementSettings() {
     }
 
     const canRename = !book.isShared || book.myRights?.mayWrite !== false;
+    // The default only applies to books the account owns, and re-setting the
+    // current default is a no-op, so hide it in both cases.
+    const canSetDefault = !!client && !book.isShared && !book.isDefault;
 
     return (
       <div
@@ -180,6 +196,17 @@ export function AddressBookManagementSettings() {
               title={t("rename")}
             >
               <Pencil className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {canSetDefault && (
+            <button
+              type="button"
+              onClick={() => handleSetDefault(book)}
+              disabled={isLoading}
+              className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+              title={t("set_default")}
+            >
+              <Star className="w-3.5 h-3.5" />
             </button>
           )}
           {!book.isShared && book.myRights?.mayShare && (

@@ -202,6 +202,9 @@
     "delete_confirm": "Êtes-vous sûr de vouloir supprimer \"{name}\" ?",
     "no_apps": "Aucune application ajoutée",
     "no_apps_hint": "Ajoutez des applications et liens personnalisés à votre barre latérale",
+    "managed_title": "Fournies par votre administrateur",
+    "managed_description": "Ces applications sont configurées pour tout le monde et ne peuvent pas être modifiées.",
+    "managed_badge": "Gérée",
     "search_icons": "Rechercher des icônes...",
     "show_popular": "Populaires",
     "show_all": "Toutes",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Accusé de lecture demandé (cliquez pour désactiver)",
     "read_receipt_off": "Demander un accusé de lecture",
+    "dsn_on": "Notification de remise demandée (cliquer pour désactiver)",
+    "dsn_off": "Demander une notification de remise",
+    "require_tls_on": "Remise chiffrée exigée (cliquer pour désactiver)",
+    "require_tls_off": "Exiger une remise chiffrée (TLS)",
     "new_message": "Nouveau message",
     "signature_edit_hint": "Double-cliquez pour modifier la signature",
     "reply": "Répondre",
@@ -1860,6 +1867,8 @@
       "description": "Gérer les applications et liens personnalisés dans la barre latérale",
       "keep_loaded": "Garder les apps chargées",
       "keep_loaded_description": "Garder les apps en ligne en arrière-plan lors du basculement pour éviter le rechargement",
+      "managed_title": "Fournies par votre administrateur",
+      "managed_description": "Ces applications sont configurées pour tout le monde et ne peuvent pas être modifiées.",
       "manage_title": "Apps personnalisées",
       "manage_description": "Ajouter, modifier ou supprimer des apps personnalisées de la barre latérale"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Nouveau sous-dossier...",
     "new_folder": "Nouveau dossier...",
     "rename": "Renommer...",
+    "share": "Partager...",
     "import_email": "Importer .eml ou .zip...",
     "empty_folder": "Vider le dossier",
     "empty_folder_generic": "Vider le dossier",
@@ -2229,6 +2239,9 @@
     "toast_error_delete": "Échec de la suppression du dossier",
     "toast_error_delete_has_children": "Le dossier contient des sous-dossiers. Supprimez-les d'abord.",
     "toast_error_delete_has_email": "Le dossier n'est pas vide. Videz-le d'abord.",
+    "delete_with_contents_title": "Le dossier n'est pas vide",
+    "delete_with_contents_message": "Le dossier « {name} » contient encore {count, plural, one {1 message} other {# messages}}. Supprimer le dossier et tous ses messages ? Cette action est irréversible.",
+    "delete_with_contents_confirm": "Supprimer le dossier et les messages",
     "placeholder_folder_name": "Nom du dossier",
     "create": "Créer",
     "rename_confirm": "Renommer"
@@ -2429,6 +2442,9 @@
       "renamed": "Carnet d'adresses renommé",
       "rename_failed": "Échec du renommage du carnet d'adresses",
       "default": "Par défaut",
+      "set_default": "Définir par défaut",
+      "default_updated": "Carnet d’adresses par défaut mis à jour",
+      "set_default_failed": "Échec de la définition du carnet d’adresses par défaut",
       "manage": "Gérer les carnets d'adresses",
       "share": "Partager le carnet d'adresses",
       "new_contact_in_book": "Nouveau contact dans ce carnet d'adresses",
@@ -2785,6 +2801,14 @@
       "color": "Couleur"
     },
     "participants": {
+      "availability": {
+        "title": "Disponibilité",
+        "free": "Disponible",
+        "busy": "Occupé",
+        "tentative": "Provisoire",
+        "unknown": "Pas un utilisateur de ce serveur",
+        "checking": "Vérification…"
+      },
       "title": "Participants",
       "add": "Ajouter un participant",
       "organizer": "Organisateur",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Délai de 1 seconde",
       "hover_preview_delay_2s": "Délai de 2 secondes",
       "hover_preview_off": "Désactivé",
+      "organizer_identity": "Organiser les invitations en tant que",
+      "organizer_identity_desc": "L'adresse d'agenda utilisée comme organisateur lorsque vous invitez des personnes à des événements.",
+      "organizer_identity_failed": "Impossible de modifier l'adresse de l'organisateur",
       "show_birthday_calendar": "Calendrier des anniversaires",
       "show_birthday_calendar_desc": "Afficher un calendrier virtuel avec les anniversaires de vos contacts"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Pièces jointes",
     "date_after": "Après le",
     "date_before": "Avant le",
+    "size_min": "Plus grand que (Ko)",
+    "size_max": "Plus petit que (Ko)",
     "starred": "Suivis",
     "unread": "Non lus",
     "read": "Lus",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "La recherche n'est pas disponible dans la vue unifiée"
+  },
+  "calendar_event_notifications": {
+    "someone": "Quelqu'un",
+    "invited": "{name} vous a invité à « {title} »",
+    "updated": "{name} a mis à jour « {title} »",
+    "cancelled": "{name} a annulé « {title} »",
+    "untitled": "Événement sans titre"
+  },
+  "share_notifications": {
+    "someone": "Quelqu'un",
+    "shared": "{name} a partagé {kind} « {object} » avec vous",
+    "changed": "{name} a modifié votre accès à {kind} « {object} »",
+    "revoked": "{name} a retiré votre accès à {kind} « {object} »",
+    "object": {
+      "folder": "le dossier",
+      "calendar": "l'agenda",
+      "address_book": "le carnet d'adresses",
+      "files": "le dossier de fichiers"
+    }
   },
   "sharing": {
     "title": "Partager « {name} »",

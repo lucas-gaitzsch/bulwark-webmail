@@ -151,6 +151,26 @@ export function EmailList({
 
   const [isProcessing, setIsProcessing] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
+  const batchToolbarRef = useRef<HTMLDivElement>(null);
+  // The batch toolbar sits above the scroll container, so as it animates
+  // open it shrinks the list and would shove every row downwards. Feed each
+  // height change back into scrollTop so the rows stay put on screen (and
+  // slide back when the toolbar collapses again).
+  useEffect(() => {
+    const toolbar = batchToolbarRef.current;
+    if (!toolbar || typeof ResizeObserver === 'undefined') return;
+    let lastHeight = toolbar.getBoundingClientRect().height;
+    const observer = new ResizeObserver((entries) => {
+      const height = entries[0]?.contentRect.height ?? toolbar.getBoundingClientRect().height;
+      const delta = height - lastHeight;
+      lastHeight = height;
+      const list = parentRef.current;
+      if (!list || delta === 0) return;
+      list.scrollTop += delta;
+    });
+    observer.observe(toolbar);
+    return () => observer.disconnect();
+  }, []);
   // One tag treatment for the whole list, measured from the scroll container.
   const tagDisplay = useMeasuredTagDisplay(parentRef);
   const density = useSettingsStore((state) => state.density);
@@ -353,6 +373,7 @@ export function EmailList({
     <div className={cn("flex flex-col min-h-0", className)}>
       {/* Batch Actions Toolbar */}
       <div
+        ref={batchToolbarRef}
         className={cn(
           "transition-all duration-300 ease-in-out overflow-hidden",
           hasSelection && !isScheduledView ? "max-h-16 opacity-100" : "max-h-0 opacity-0"

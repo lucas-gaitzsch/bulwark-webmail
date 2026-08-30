@@ -115,7 +115,7 @@
 
 ## Internationalization
 
-24 languages: Català · Česky · Dansk · Deutsch · English · Español · Français · Italiano · Latviešu · Magyar · Nederlands · Polski · Português · Română · Slovenčina · Türkçe · Русский · Українська · עברית · العربية · فارسی · 한국어 · 日本語 · 简体中文
+27 languages: Català · Česky · Dansk · Deutsch · English · Español · Français · Italiano · Latviešu · Magyar · Nederlands · Norsk bokmål · Polski · Português · Română · Slovenčina · Türkçe · Монгол · Русский · Українська · עברית · العربية · فارسی · 한국어 · 日本語 · 简体中文 · 繁體中文
 
 - Arabic, Hebrew, and Persian render right-to-left; document direction and logical layout flip automatically
 - The browser's `Accept-Language` picks the first language, and the choice persists per user

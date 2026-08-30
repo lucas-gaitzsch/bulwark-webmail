@@ -202,6 +202,9 @@
     "delete_confirm": "آیا از حذف \"{name}\" اطمینان دارید؟",
     "no_apps": "هنوز برنامه‌ای اضافه نشده",
     "no_apps_hint": "برنامه‌ها و لینک‌های دلخواه را به نوار کناری اضافه کنید",
+    "managed_title": "ارائه‌شده توسط مدیر شما",
+    "managed_description": "این برنامه‌ها برای همه تنظیم شده‌اند و قابل تغییر نیستند.",
+    "managed_badge": "مدیریت‌شده",
     "search_icons": "جستجوی آیکون‌ها...",
     "show_popular": "محبوب",
     "show_all": "همه",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "درخواست تأیید خواندن فعال (کلیک برای غیرفعال کردن)",
     "read_receipt_off": "درخواست تأیید خواندن",
+    "dsn_on": "اعلان تحویل درخواست شد (برای غیرفعال کردن کلیک کنید)",
+    "dsn_off": "درخواست اعلان تحویل",
+    "require_tls_on": "تحویل رمزگذاری‌شده الزامی است (برای غیرفعال کردن کلیک کنید)",
+    "require_tls_off": "الزام تحویل رمزگذاری‌شده (TLS)",
     "new_message": "پیام جدید",
     "signature_edit_hint": "برای ویرایش امضا دوبار کلیک کنید",
     "reply": "پاسخ",
@@ -1867,6 +1874,8 @@
       "description": "مدیریت برنامه‌ها و لینک‌های سفارشی در نوار کناری",
       "keep_loaded": "نگه داشتن برنامه‌ها در حالت بارگذاری",
       "keep_loaded_description": "برنامه‌های inline هنگام تعویض بین آنها در پس‌زمینه فعال بمانند تا از بارگذاری مجدد جلوگیری شود",
+      "managed_title": "ارائه‌شده توسط مدیر شما",
+      "managed_description": "این برنامه‌ها برای همه تنظیم شده‌اند و قابل تغییر نیستند.",
       "manage_title": "برنامه‌های سفارشی",
       "manage_description": "افزودن، ویرایش یا حذف برنامه‌های سفارشی از نوار کناری"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "زیرپوشه جدید...",
     "new_folder": "پوشه جدید...",
     "rename": "تغییر نام...",
+    "share": "اشتراک‌گذاری...",
     "import_email": "وارد کردن .eml/.zip...",
     "empty_folder": "خالی کردن پوشه",
     "empty_folder_generic": "خالی کردن پوشه",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "خطای تغییر نام",
     "toast_error_delete": "خطای حذف",
     "toast_error_delete_has_children": "زیرپوشه دارد",
-    "toast_error_delete_has_email": "خالی نیست"
+    "toast_error_delete_has_email": "خالی نیست",
+    "delete_with_contents_title": "پوشه خالی نیست",
+    "delete_with_contents_message": "پوشه «{name}» هنوز شامل {count, plural, one {۱ پیام} other {# پیام}} است. پوشه و همه پیام‌های آن حذف شود؟ این عمل قابل بازگشت نیست.",
+    "delete_with_contents_confirm": "حذف پوشه و پیام‌ها"
   },
   "shortcuts": {
     "title": "میانبرهای صفحه کلید",
@@ -2430,6 +2443,9 @@
       "renamed": "نام دفترچه آدرس تغییر کرد",
       "rename_failed": "تغییر نام دفترچه آدرس ناموفق بود",
       "default": "پیش‌فرض",
+      "set_default": "تنظیم به عنوان پیش‌فرض",
+      "default_updated": "دفترچه آدرس پیش‌فرض به‌روزرسانی شد",
+      "set_default_failed": "تنظیم دفترچه آدرس پیش‌فرض ناموفق بود",
       "manage": "مدیریت دفترچه‌های آدرس",
       "share": "اشتراک‌گذاری دفترچه آدرس",
       "new_contact_in_book": "مخاطب جدید در این دفترچه آدرس",
@@ -2785,6 +2801,14 @@
       "color": "رنگ"
     },
     "participants": {
+      "availability": {
+        "title": "در دسترس بودن",
+        "free": "در دسترس",
+        "busy": "مشغول",
+        "tentative": "احتمالی",
+        "unknown": "کاربر این سرور نیست",
+        "checking": "در حال بررسی…"
+      },
       "title": "شرکت‌کنندگان",
       "add": "افزودن شرکت‌کننده",
       "organizer": "برگزارکننده",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "تأخیر ۱ ثانیه",
       "hover_preview_delay_2s": "تأخیر ۲ ثانیه",
       "hover_preview_off": "غیرفعال",
+      "organizer_identity": "سازمان‌دهی دعوت‌ها به‌عنوان",
+      "organizer_identity_desc": "آدرس تقویمی که هنگام دعوت افراد به رویدادها به‌عنوان برگزارکننده استفاده می‌شود.",
+      "organizer_identity_failed": "تغییر آدرس برگزارکننده ناموفق بود",
       "show_birthday_calendar": "تقویم تولد مخاطبین",
       "show_birthday_calendar_desc": "نمایش تقویم مجازی با تولدهای مخاطبین"
     },
@@ -3141,6 +3168,25 @@
       "overdue": "عقب‌افتاده"
     }
   },
+  "calendar_event_notifications": {
+    "someone": "کسی",
+    "invited": "{name} شما را به «{title}» دعوت کرد",
+    "updated": "{name} «{title}» را به‌روزرسانی کرد",
+    "cancelled": "{name} «{title}» را لغو کرد",
+    "untitled": "رویداد بدون عنوان"
+  },
+  "share_notifications": {
+    "someone": "کسی",
+    "shared": "{name} {kind} «{object}» را با شما به اشتراک گذاشت",
+    "changed": "{name} دسترسی شما به {kind} «{object}» را تغییر داد",
+    "revoked": "{name} دسترسی شما به {kind} «{object}» را حذف کرد",
+    "object": {
+      "folder": "پوشه",
+      "calendar": "تقویم",
+      "address_book": "دفترچه آدرس",
+      "files": "پوشه فایل"
+    }
+  },
   "sharing": {
     "title": "اشتراک‌گذاری \"{name}\"",
     "description": "دسترسی به سایر کاربران یا گروه‌های این سرور را فراهم کنید.",
@@ -3179,6 +3225,8 @@
     "has_attachment": "پیوست",
     "date_after": "بعد از",
     "date_before": "قبل از",
+    "size_min": "بزرگ‌تر از (کیلوبایت)",
+    "size_max": "کوچک‌تر از (کیلوبایت)",
     "starred": "ستاره‌دار",
     "unread": "خوانده نشده",
     "read": "خوانده شده",

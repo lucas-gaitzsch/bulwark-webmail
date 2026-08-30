@@ -1,16 +1,30 @@
 "use client";
 
+import { useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { useCalendarStore, CalendarViewMode } from '@/stores/calendar-store';
 import { useSettingsStore } from '@/stores/settings-store';
 import { usePolicyStore } from '@/stores/policy-store';
+import { useAuthStore } from '@/stores/auth-store';
+import { toast } from '@/stores/toast-store';
 import { SettingsSection, SettingItem, Select, ToggleSwitch } from './settings-section';
 
 export function CalendarSettings() {
   const t = useTranslations('calendar.settings');
   const tViews = useTranslations('calendar.views');
 
-  const { viewMode, setViewMode } = useCalendarStore();
+  const { viewMode, setViewMode, participantIdentities, fetchParticipantIdentities, setDefaultParticipantIdentity } = useCalendarStore();
+  const client = useAuthStore((s) => s.client);
+
+  // ParticipantIdentity list (draft-ietf-jmap-calendars §6): which of the
+  // user's addresses organises new invitations. Loaded here because the
+  // settings page can open before the calendar app ever did.
+  useEffect(() => {
+    if (client && participantIdentities.length === 0) {
+      void fetchParticipantIdentities(client);
+    }
+  }, [client, participantIdentities.length, fetchParticipantIdentities]);
+  const defaultIdentityId = participantIdentities.find((i) => i.isDefault)?.id ?? participantIdentities[0]?.id ?? '';
   const {
     showTimeInMonthView,
     showWeekNumbers,
@@ -36,6 +50,26 @@ export function CalendarSettings() {
           ]}
         />
       </SettingItem>
+
+      {client && participantIdentities.length > 1 && (
+        <SettingItem
+          label={t('organizer_identity')}
+          description={t('organizer_identity_desc')}
+        >
+          <Select
+            value={defaultIdentityId}
+            onChange={(value) => {
+              setDefaultParticipantIdentity(client, value).catch((err) => {
+                toast.error(err instanceof Error ? err.message : t('organizer_identity_failed'));
+              });
+            }}
+            options={participantIdentities.map((i) => {
+              const address = i.calendarAddress.replace(/^mailto:/i, '');
+              return { value: i.id, label: i.name && i.name !== address ? `${i.name} <${address}>` : address };
+            })}
+          />
+        </SettingItem>
+      )}
 
       <SettingItem
         label={t('show_time_in_month_view')}

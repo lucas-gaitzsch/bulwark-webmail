@@ -359,6 +359,12 @@ export function ContactForm({ contact, addressBooks, allKeywords, defaultAddress
     if (defaultAddressBookId && addressBooks?.some(b => b.id === defaultAddressBookId)) {
       return defaultAddressBookId;
     }
+    // New contacts land in the account's default book unless told otherwise -
+    // preselect it so the form shows where the contact will actually go.
+    if (!contact) {
+      const ownDefault = addressBooks?.find(b => b.isDefault && !b.isShared);
+      if (ownDefault) return ownDefault.id;
+    }
     return "";
   }, [contact, defaultAddressBookId, addressBooks]);
   const [selectedBookId, setSelectedBookId] = useState(currentBookId);

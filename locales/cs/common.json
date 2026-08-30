@@ -202,6 +202,9 @@
     "delete_confirm": "Opravdu chcete odstranit \"{name}\"?",
     "no_apps": "Zatím nebyly přidány žádné aplikace",
     "no_apps_hint": "Přidejte vlastní aplikace a odkazy do postranního panelu",
+    "managed_title": "Poskytnuto správcem",
+    "managed_description": "Tyto aplikace jsou nastaveny pro všechny a nelze je změnit.",
+    "managed_badge": "Spravováno",
     "search_icons": "Hledat ikony...",
     "show_popular": "Oblíbené",
     "show_all": "Všechny",
@@ -577,6 +580,10 @@
   "email_composer": {
     "read_receipt_on": "Vyžádáno potvrzení o přečtení (kliknutím vypnete)",
     "read_receipt_off": "Vyžádat potvrzení o přečtení",
+    "dsn_on": "Oznámení o doručení vyžádáno (kliknutím vypnete)",
+    "dsn_off": "Vyžádat oznámení o doručení",
+    "require_tls_on": "Šifrované doručení vyžadováno (kliknutím vypnete)",
+    "require_tls_off": "Vyžadovat šifrované doručení (TLS)",
     "new_message": "Nová zpráva",
     "signature_edit_hint": "Dvojklikem upravíte podpis",
     "reply": "Odpovědět",
@@ -1860,6 +1867,8 @@
       "description": "Spravujte vlastní aplikace a odkazy v postranním panelu",
       "keep_loaded": "Ponechat aplikace načtené",
       "keep_loaded_description": "Udržovat vložené aplikace spuštěné na pozadí během přepínání, aby se předešlo jejich opětovnému načítání",
+      "managed_title": "Poskytnuto správcem",
+      "managed_description": "Tyto aplikace jsou nastaveny pro všechny a nelze je změnit.",
       "manage_title": "Vlastní aplikace",
       "manage_description": "Přidávat, upravovat nebo odebírat vlastní aplikace z postranního panelu"
     },
@@ -2202,6 +2211,7 @@
     "new_subfolder": "Nová podsložka...",
     "new_folder": "Nová složka...",
     "rename": "Přejmenovat...",
+    "share": "Sdílet...",
     "import_email": "Importovat .eml nebo .zip...",
     "empty_folder": "Vyprázdnit složku",
     "empty_folder_generic": "Vyprázdnit složku",
@@ -2231,7 +2241,10 @@
     "toast_error_rename": "Nepodařilo se přejmenovat složku",
     "toast_error_delete": "Nepodařilo se smazat složku",
     "toast_error_delete_has_children": "Složka obsahuje podsložky. Nejprve je odstraňte.",
-    "toast_error_delete_has_email": "Složka není prázdná. Nejprve ji vyprázdněte."
+    "toast_error_delete_has_email": "Složka není prázdná. Nejprve ji vyprázdněte.",
+    "delete_with_contents_title": "Složka není prázdná",
+    "delete_with_contents_message": "Složka „{name}“ stále obsahuje {count, plural, one {1 zprávu} few {# zprávy} other {# zpráv}}. Smazat složku i všechny její zprávy? Tuto akci nelze vrátit.",
+    "delete_with_contents_confirm": "Smazat složku i zprávy"
   },
   "shortcuts": {
     "title": "Klávesové zkratky",
@@ -2429,6 +2442,9 @@
       "renamed": "Adresář byl přejmenován",
       "rename_failed": "Přejmenování adresáře selhalo",
       "default": "Výchozí",
+      "set_default": "Nastavit jako výchozí",
+      "default_updated": "Výchozí adresář aktualizován",
+      "set_default_failed": "Nepodařilo se nastavit výchozí adresář",
       "manage": "Spravovat adresáře",
       "share": "Sdílet adresář",
       "new_contact_in_book": "Nový kontakt v tomto adresáři",
@@ -2785,6 +2801,14 @@
       "color": "Barva"
     },
     "participants": {
+      "availability": {
+        "title": "Dostupnost",
+        "free": "Volný",
+        "busy": "Zaneprázdněn",
+        "tentative": "Předběžně",
+        "unknown": "Není uživatelem tohoto serveru",
+        "checking": "Ověřuje se…"
+      },
       "title": "Účastníci",
       "add": "Přidat účastníka",
       "organizer": "Organizátor",
@@ -2908,6 +2932,9 @@
       "hover_preview_delay_1s": "Zpoždění 1 sekunda",
       "hover_preview_delay_2s": "Zpoždění 2 sekundy",
       "hover_preview_off": "Vypnuto",
+      "organizer_identity": "Organizovat pozvánky jako",
+      "organizer_identity_desc": "Adresa kalendáře použitá jako organizátor, když zvete lidi na události.",
+      "organizer_identity_failed": "Nepodařilo se změnit adresu organizátora",
       "show_birthday_calendar": "Kalendář narozenin",
       "show_birthday_calendar_desc": "Zobrazovat virtuální kalendář s narozeninami z vašich kontaktů"
     },
@@ -3156,6 +3183,8 @@
     "has_attachment": "Obsahuje přílohu",
     "date_after": "Po",
     "date_before": "Před",
+    "size_min": "Větší než (KB)",
+    "size_max": "Menší než (KB)",
     "starred": "S hvězdičkou",
     "unread": "Nepřečtené",
     "read": "Přečtené",
@@ -3442,6 +3471,25 @@
   },
   "unified_mailbox": {
     "search_unavailable": "Vyhledávání není ve sjednoceném zobrazení k dispozici"
+  },
+  "calendar_event_notifications": {
+    "someone": "Někdo",
+    "invited": "{name} vás pozval(a) na „{title}“",
+    "updated": "{name} aktualizoval(a) „{title}“",
+    "cancelled": "{name} zrušil(a) „{title}“",
+    "untitled": "Událost bez názvu"
+  },
+  "share_notifications": {
+    "someone": "Někdo",
+    "shared": "{name} s vámi sdílí {kind} „{object}“",
+    "changed": "{name} změnil(a) váš přístup k {kind} „{object}“",
+    "revoked": "{name} odebral(a) váš přístup k {kind} „{object}“",
+    "object": {
+      "folder": "složku",
+      "calendar": "kalendář",
+      "address_book": "adresář",
+      "files": "složku souborů"
+    }
   },
   "sharing": {
     "title": "Sdílet „{name}\"",

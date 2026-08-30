@@ -1,15 +1,50 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
+import { localeFromAcceptLanguage } from "./i18n/locale-matcher";
 import { getEnabledPluginFrameOrigins } from "./lib/admin/csp-frame-origins";
 import {
   APP_FRAME_ORIGINS_COOKIE,
+  inlineAppFrameOrigins,
   parseAppFrameOrigins,
 } from "./lib/security/app-frame-origins";
 import { configManager } from "./lib/admin/config-manager";
 import { detectSetupState } from "./lib/setup/state";
 
 const intlMiddleware = createIntlMiddleware(routing);
+
+/**
+ * next-intl uses best-fit locale matching, which can rank `zh` ahead of
+ * `zh-TW` for regional Traditional Chinese tags such as `zh-HK`. Collapse a
+ * Chinese Accept-Language list to the exact locale selected by Bulwark's
+ * script/region-aware matcher before handing the request to next-intl. URL
+ * prefixes and the NEXT_LOCALE cookie still keep their higher precedence.
+ */
+function withMatchedChineseAcceptLanguage(request: NextRequest): NextRequest {
+  const localeCookie = routing.localeCookie;
+  const localeCookieName =
+    localeCookie === false
+      ? null
+      : typeof localeCookie === "object" && localeCookie.name
+        ? localeCookie.name
+        : "NEXT_LOCALE";
+  const cookieLocale = localeCookieName ? request.cookies.get(localeCookieName)?.value : undefined;
+  if (cookieLocale && (routing.locales as readonly string[]).includes(cookieLocale)) return request;
+
+  const acceptLanguage = request.headers.get("accept-language");
+  const locale = localeFromAcceptLanguage(acceptLanguage, routing.locales);
+  if (locale !== "zh" && locale !== "zh-TW") return request;
+  if (acceptLanguage === locale) return request; // nothing to collapse, keep the original request
+
+  const headers = new Headers(request.headers);
+  headers.set("accept-language", locale);
+  // A cloned NextRequest re-parses its URL, so `nextConfig` has to be handed
+  // over as well: without it the base path stays glued to nextUrl.pathname and
+  // next-intl rewrites a sub-path install to /zh-TW/<basePath>/... (a 404)
+  // instead of /<basePath>/zh-TW/....
+  const basePath = request.nextUrl.basePath;
+  return new NextRequest(request, { headers, nextConfig: basePath ? { basePath } : undefined });
+}
 
 // Next 16's Proxy always runs on Node.js runtime and route-segment config
 // (e.g. `export const config = { matcher }`) is no longer allowed in the
@@ -159,15 +194,21 @@ export async function proxy(request: NextRequest) {
   // read, so the client mirrors their origins into a cookie (#787). Ignored
   // when the admin has turned the feature off, so a stale cookie can't keep
   // widening the CSP after the fact.
-  const sidebarAppsEnabled =
-    configManager.getPolicy().features?.sidebarAppsEnabled !== false;
+  const policy = configManager.getPolicy();
+  const sidebarAppsEnabled = policy.features?.sidebarAppsEnabled !== false;
   const appFrameOrigins = sidebarAppsEnabled
     ? parseAppFrameOrigins(request.cookies.get(APP_FRAME_ORIGINS_COOKIE)?.value)
     : [];
 
+  // Apps the operator pins for everyone (#931) are known server-side, so their
+  // origins go straight into the header - no cookie handshake, and no reload
+  // the first time a user opens one. They survive the gate above, which only
+  // governs the apps users add themselves.
+  const managedAppFrameOrigins = inlineAppFrameOrigins(policy.defaultSidebarApps);
+
   const frameOrigins: string[] = [];
   const seenFrameOrigins = new Set<string>();
-  for (const origin of [...pluginFrameOrigins, ...appFrameOrigins]) {
+  for (const origin of [...pluginFrameOrigins, ...managedAppFrameOrigins, ...appFrameOrigins]) {
     const key = origin.toLowerCase();
     if (seenFrameOrigins.has(key)) continue;
     seenFrameOrigins.add(key);
@@ -214,7 +255,7 @@ export async function proxy(request: NextRequest) {
   let intlResponse: ReturnType<typeof intlMiddleware> | null = null;
   if (!isAdminRoute && !isProtocolRoute && !isSetupRoute && !isSandboxRoute && !hasLocalePrefix) {
     try {
-      intlResponse = intlMiddleware(request);
+      intlResponse = intlMiddleware(withMatchedChineseAcceptLanguage(request));
     } catch (error) {
       console.error('Locale middleware error:', error);
     }

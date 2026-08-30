@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SearchFilters } from "@/lib/jmap/search-utils";
+import { SearchFilters, sizeFilterBytes } from "@/lib/jmap/search-utils";
 
 interface SearchChipsProps {
   filters: SearchFilters;
@@ -60,6 +60,12 @@ export function SearchChips({
       label: t("starred"),
       value: filters.isStarred ? t("yes") : t("no"),
     });
+  }
+  if (sizeFilterBytes(filters.minSizeKb) !== null) {
+    chips.push({ key: "minSizeKb", label: t("size_min"), value: `${filters.minSizeKb} KB` });
+  }
+  if (sizeFilterBytes(filters.maxSizeKb) !== null) {
+    chips.push({ key: "maxSizeKb", label: t("size_max"), value: `${filters.maxSizeKb} KB` });
   }
 
   if (chips.length === 0) return null;

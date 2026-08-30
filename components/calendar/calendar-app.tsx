@@ -53,6 +53,8 @@ import { useProMultiAccountCalendars } from "@/hooks/use-pro-multi-account-calen
 import { ResizeHandle } from "@/components/layout/resize-handle";
 import { sanitizeOutgoingCalendarEventData } from "@/lib/calendar-event-normalization";
 import { buildRecurrenceOverridePatch } from "@/lib/recurrence-overrides";
+import { baseEventStoreId, isServerRecurrenceInstance } from "@/lib/recurrence-instances";
+import { getClientByLocalAccountId } from "@/stores/client-registry";
 import { getEventStartDate } from "@/lib/calendar-utils";
 import { displayNow } from "@/lib/timezone";
 import { useTaskStore } from "@/stores/task-store";
@@ -135,9 +137,18 @@ export function CalendarApp({ linkSegments }: CalendarAppProps = {}) {
     void fetchPrincipal();
   }, [accountEmails, fetchPrincipal]);
 
+  // The default ParticipantIdentity (draft-ietf-jmap-calendars §6) is the
+  // address new invitations are organised from, so it goes first: the event
+  // modal takes currentUserEmails[0] as organizer.
+  const participantIdentities = useCalendarStore((s) => s.participantIdentities);
   const currentUserEmails = useMemo(
-    () => collectUserCalendarAddresses(identities.map(id => id.email), accountEmails),
-    [identities, accountEmails]
+    () => collectUserCalendarAddresses(
+      participantIdentities.filter(i => i.isDefault).map(i => i.calendarAddress.replace(/^mailto:/i, '')),
+      participantIdentities.map(i => i.calendarAddress.replace(/^mailto:/i, '')),
+      identities.map(id => id.email),
+      accountEmails,
+    ),
+    [participantIdentities, identities, accountEmails]
   );
 
   const [showEventModal, setShowEventModal] = useState(false);
@@ -676,6 +687,27 @@ export function CalendarApp({ linkSegments }: CalendarAppProps = {}) {
     if ((occurrence.recurrenceRules?.length ?? 0) > 0 && !occurrence.recurrenceId) {
       return occurrence;
     }
+    // An occurrence expanded by the server names its base event outright.
+    // Fetch it through the occurrence's own account and hand it back under
+    // the store id the base would have, so the store routes mutations on it
+    // through the same account (see resolveMutationTarget).
+    if (isServerRecurrenceInstance(occurrence) && occurrence.baseEventId) {
+      const accountClient = (occurrence.localAccountId && getClientByLocalAccountId(occurrence.localAccountId)) || client;
+      if (!accountClient) return null;
+      const master = await accountClient.getCalendarEvent(occurrence.baseEventId, occurrence.accountId);
+      if (!master) return null;
+      return {
+        ...master,
+        id: baseEventStoreId(occurrence) ?? master.id,
+        originalId: master.id,
+        originalCalendarIds: master.calendarIds,
+        calendarIds: occurrence.calendarIds,
+        accountId: occurrence.accountId,
+        accountName: occurrence.accountName,
+        localAccountId: occurrence.localAccountId,
+        isShared: occurrence.isShared,
+      };
+    }
     const master = events.find(e =>
       e.uid === occurrence.uid && !e.recurrenceId && (e.recurrenceRules?.length ?? 0) > 0
     );
@@ -848,8 +880,14 @@ export function CalendarApp({ linkSegments }: CalendarAppProps = {}) {
       if (type === "edit" && updates) {
         switch (scope) {
           case "this": {
-            // Synthetic IDs (from expandRecurrences) can't be updated directly.
-            // Patch the master event's recurrenceOverrides instead.
+            if (isServerRecurrenceInstance(event)) {
+              // A server-expanded occurrence is written through its own
+              // (synthetic) id; the store handles the older-server fallback.
+              await updateEvent(client, event.id, updates, sendScheduling);
+              break;
+            }
+            // Client-side expanded occurrence: patch the master event's
+            // recurrenceOverrides instead.
             const master = await findMasterEvent(event);
             if (master && event.recurrenceId) {
               const patchUpdates = buildRecurrenceOverridePatch(updates, event.recurrenceId);
@@ -917,8 +955,12 @@ export function CalendarApp({ linkSegments }: CalendarAppProps = {}) {
       } else {
         switch (scope) {
           case "this": {
-            // Synthetic IDs (from expandRecurrences) can't be destroyed directly.
-            // Exclude the instance via recurrenceOverrides on the master event.
+            if (isServerRecurrenceInstance(event)) {
+              await deleteEvent(client, event.id, sendScheduling);
+              break;
+            }
+            // Client-side expanded occurrence: exclude the instance via
+            // recurrenceOverrides on the master event.
             const delMaster = await findMasterEvent(event);
             if (delMaster && event.recurrenceId) {
               await updateEvent(
