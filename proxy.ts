@@ -206,9 +206,20 @@ export async function proxy(request: NextRequest) {
   // governs the apps users add themselves.
   const managedAppFrameOrigins = inlineAppFrameOrigins(policy.defaultSidebarApps);
 
+  // WOPI document editor (#425): the editor is launched by POSTing the access
+  // token into an iframe on its origin, so that origin must be allowed in both
+  // frame-src AND form-action (which is otherwise 'self').
+  let wopiOrigin = "";
+  try {
+    const wopiClientUrl = configManager.get<string>("wopiClientUrl", "").trim();
+    if (wopiClientUrl) wopiOrigin = new URL(wopiClientUrl).origin;
+  } catch {
+    // Invalid admin-supplied URL - leave the CSP unchanged.
+  }
+
   const frameOrigins: string[] = [];
   const seenFrameOrigins = new Set<string>();
-  for (const origin of [...pluginFrameOrigins, ...managedAppFrameOrigins, ...appFrameOrigins]) {
+  for (const origin of [...pluginFrameOrigins, ...managedAppFrameOrigins, ...appFrameOrigins, ...(wopiOrigin ? [wopiOrigin] : [])]) {
     const key = origin.toLowerCase();
     if (seenFrameOrigins.has(key)) continue;
     seenFrameOrigins.add(key);
@@ -230,7 +241,7 @@ export async function proxy(request: NextRequest) {
     frameSrc,
     `object-src 'self' blob:`,
     `base-uri 'self'`,
-    `form-action 'self'`,
+    `form-action 'self'${wopiOrigin ? ` ${wopiOrigin}` : ""}`,
     `frame-ancestors ${frameAncestors}`,
     `media-src 'self' blob:`,
   ].join("; ");

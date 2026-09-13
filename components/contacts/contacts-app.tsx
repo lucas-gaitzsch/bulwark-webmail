@@ -39,7 +39,7 @@ import { useRefreshGesture } from "@/hooks/use-refresh-gesture";
 import type { ContactCard, AddressBook, AddressBookRights } from "@/lib/jmap/types";
 import { ShareCollectionDialog } from "@/components/settings/share-collection-dialog";
 import { appPath, buildContactsPath, parseContactsPath, type ContactDeepLink } from "@/lib/deep-links";
-import { consumePendingDeepLink, subscribePendingDeepLink } from "@/lib/deep-link-handoff";
+import { consumePendingDeepLinkEntry, subscribePendingDeepLink } from "@/lib/deep-link-handoff";
 import { useDeepLinkUrl } from "@/hooks/use-deep-link-url";
 import { useProInterfaceActive } from "@/components/pro/pro-interface-redirect";
 
@@ -201,10 +201,11 @@ export function ContactsApp({ linkSegments }: ContactsAppProps = {}) {
 
   useEffect(() => {
     if (intentAppliedRef.current) return;
-    const segments = linkSegments ?? consumePendingDeepLink('contacts') ?? [];
+    const entry = linkSegments ? { segments: linkSegments } : consumePendingDeepLinkEntry('contacts');
+    const segments = entry?.segments ?? [];
     const link = parseContactsPath(
       segments,
-      new URLSearchParams(searchParams.toString()),
+      new URLSearchParams(entry?.search ?? searchParams.toString()),
     );
     intentAppliedRef.current = true;
     if (!link) return;
@@ -217,8 +218,8 @@ export function ContactsApp({ linkSegments }: ContactsAppProps = {}) {
   // briefly and must not steal the link parked for the Pro one.
   useEffect(() => {
     if (!isEmbedded) return;
-    return subscribePendingDeepLink('contacts', (segments) => {
-      const link = parseContactsPath(segments, new URLSearchParams(window.location.search));
+    return subscribePendingDeepLink('contacts', (segments, search) => {
+      const link = parseContactsPath(segments, new URLSearchParams(search ?? window.location.search));
       if (link) applyContactsDeepLinkRef.current(link);
     });
   }, [isEmbedded]);
@@ -391,6 +392,13 @@ export function ContactsApp({ linkSegments }: ContactsAppProps = {}) {
 
   const handleCreateNew = () => {
     setSelectedContact(null);
+    // When a specific address book is being viewed, create the new contact in
+    // that book instead of falling back to the account's default book.
+    if (typeof activeCategory === "object" && "addressBookId" in activeCategory) {
+      setDefaultBookIdForCreate(activeCategory.addressBookId);
+    } else {
+      setDefaultBookIdForCreate(undefined);
+    }
     setView("create");
   };
 
@@ -961,7 +969,8 @@ export function ContactsApp({ linkSegments }: ContactsAppProps = {}) {
                       } : undefined}
                       onCreateContactInBook={(book) => {
                         setDefaultBookIdForCreate(book.id);
-                        handleCreateNew();
+                        setSelectedContact(null);
+                        setView("create");
                       }}
                       onDeleteAddressBook={client ? async (book) => {
                         const ok = await confirmDialog({

@@ -488,10 +488,18 @@ export function ContactForm({ contact, addressBooks, allKeywords, defaultAddress
       if (suffix.trim()) nameComponents.push({ kind: "generation" as const, value: suffix.trim() });
     }
 
+    // Always set `name.full` (RFC 9553): the vCard FN property is derived from it,
+    // and FN is mandatory (RFC 6350 §6.2.1) — strict CardDAV clients like Apple
+    // Contacts silently drop cards without it (#430).
+    const fullName = [prefix, givenName, additionalName, surname, suffix]
+      .map(s => s.trim())
+      .filter(Boolean)
+      .join(" ");
+
     // Without personal name components, carry the organization name in `name.full`
     // so servers and other clients have something to display.
     const nameValue: ContactCard["name"] = nameComponents.length > 0
-      ? { components: nameComponents, isOrdered: true }
+      ? { components: nameComponents, isOrdered: true, full: fullName || undefined }
       : { full: orgName };
 
     const titlesMap: Record<string, { name: string; kind?: "title" | "role" }> = {};

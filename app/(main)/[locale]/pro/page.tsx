@@ -16,6 +16,9 @@ import { PaneSizeContext } from "@/hooks/use-pane-size";
 import { PaneIdContext, ProTabFocusContext } from "@/hooks/use-pane-context";
 import { useDeepLinkUrl } from "@/hooks/use-deep-link-url";
 import { appPath, buildMailPath } from "@/lib/deep-links";
+import { GlobalSearchPalette } from "@/components/global-search/global-search-palette";
+import { SearchTabBody } from "@/components/global-search/search-tab-body";
+import { useGlobalSearchStore } from "@/stores/global-search-store";
 import { ProTabBar } from "@/components/pro/pro-tab-bar";
 import {
   PRO_TAB_DRAG_MIME,
@@ -61,6 +64,9 @@ function renderTabBody(tab: ProTab): React.ReactNode {
   }
   if (tab.kind === 'folder' && tab.folderData) {
     return <ProFolderTabBody tabId={tab.id} data={tab.folderData} />;
+  }
+  if (tab.kind === 'search' && tab.searchData) {
+    return <SearchTabBody tabId={tab.id} data={tab.searchData} />;
   }
   const Component = APP_TAB_COMPONENTS[tab.kind];
   return Component ? <Component /> : null;
@@ -298,14 +304,34 @@ export default function ProHome() {
         return data.accountId ? `${path}?account=${encodeURIComponent(data.accountId)}` : path;
       }
       case 'compose':
-        // A draft has no permalink - fall back to the shell's own route so
-        // the bar never shows a message the user is no longer looking at.
+      case 'search':
+        // Neither a draft nor a search-results tab has a permalink - fall
+        // back to the shell's own route so the bar never shows a message the
+        // user is no longer looking at.
         return appPath('/pro');
       default:
         return null;
     }
   }, [isAuthenticated, client, focusedActiveTab, selectedMailbox, selectedEmailId, mailboxes, accountMailboxes]);
   useDeepLinkUrl(reflectedPath);
+
+  // Global search shortcuts: Ctrl/⌘+K toggles the palette, Ctrl+Shift+F
+  // opens it (features doc §"Focus global search"). Window-level and keyed on
+  // event.code so they fire from inside inputs and on non-Latin layouts.
+  useEffect(() => {
+    const onSearchShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (event.code === 'KeyK' && !event.shiftKey) {
+        event.preventDefault();
+        useGlobalSearchStore.getState().togglePalette();
+      } else if (event.code === 'KeyF' && event.shiftKey) {
+        event.preventDefault();
+        useGlobalSearchStore.getState().openPalette();
+      }
+    };
+    window.addEventListener('keydown', onSearchShortcut);
+    return () => window.removeEventListener('keydown', onSearchShortcut);
+  }, []);
 
   const handleRailNavigate = (itemId: 'mail' | 'calendar' | 'contacts' | 'files' | 'settings') => {
     openTab(itemId);
@@ -496,6 +522,7 @@ export default function ProHome() {
               activeAppId={inlineApp?.id ?? null}
               onNavigate={handleRailNavigate}
               activeItemId={railActiveItemId}
+              onOpenSearch={() => useGlobalSearchStore.getState().openPalette()}
             />
           </div>
 
@@ -525,6 +552,8 @@ export default function ProHome() {
             </div>
           )}
         </div>
+
+        <GlobalSearchPalette />
 
         <KeyboardShortcutsModal
           isOpen={showShortcutsModal}

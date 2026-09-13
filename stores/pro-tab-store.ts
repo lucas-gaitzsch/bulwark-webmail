@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { ComposerDraftData } from '@/components/email/email-composer';
+import type { SearchScope } from '@/lib/global-search/query-parser';
 
 export type ProTabKind =
   | 'mail' | 'calendar' | 'contacts' | 'files' | 'settings'
-  | 'compose' | 'email' | 'folder';
+  | 'compose' | 'email' | 'folder' | 'search';
 
-export type ProAppTabKind = Exclude<ProTabKind, 'compose' | 'email' | 'folder'>;
+export type ProAppTabKind = Exclude<ProTabKind, 'compose' | 'email' | 'folder' | 'search'>;
 
 export type ProPaneId = 'main' | 'split';
 
@@ -64,6 +65,12 @@ export interface ProEmailTabData {
   emailId: string;
   mailboxId: string | null;
   title: string;
+  /**
+   * Connected-account id (login) whose client fetches this email; unset = the
+   * active account. Set when a hit from another login is opened (global
+   * search) - bare email ids are ambiguous across logins (#847).
+   */
+  clientAccountId?: string;
 }
 
 export interface ProFolderTabData {
@@ -77,6 +84,15 @@ export interface ProFolderTabData {
   title: string;
 }
 
+export interface ProSearchTabData {
+  /** The submitted query, exactly as typed (operators included). */
+  query: string;
+  scope: SearchScope;
+  /** Connected-account id to restrict to; null = every login. */
+  accountId: string | null;
+  title: string;
+}
+
 export interface ProTab {
   id: string;
   kind: ProTabKind;
@@ -87,6 +103,7 @@ export interface ProTab {
   composeData?: ProComposeTabData;
   emailData?: ProEmailTabData;
   folderData?: ProFolderTabData;
+  searchData?: ProSearchTabData;
   /** Which pane this tab lives in. Defaults to 'main' for the single-pane case. */
   paneId: ProPaneId;
 }
@@ -135,6 +152,13 @@ interface ProTabState extends ProTabCoreState {
    * its tab instead of duplicating it.
    */
   openFolderTab: (data: ProFolderTabData, opts?: { pane?: ProPaneId }) => string;
+  /**
+   * Opens a search-results tab (global search, #641). One tab per submitted
+   * query: re-submitting an identical query focuses the existing tab.
+   */
+  openSearchTab: (data: ProSearchTabData, opts?: { pane?: ProPaneId }) => string;
+  /** Refining the query inside a search tab renames and re-scopes that tab. */
+  updateSearchTab: (id: string, data: Partial<ProSearchTabData>) => void;
   closeTab: (id: string) => void;
   /**
    * Request closing a tab, honouring any registered close interceptor (e.g. a
@@ -462,6 +486,44 @@ export const useProTabStore = create<ProTabState>()(
           };
           commit((s) => withTabActivated({ ...s, tabs: [...s.tabs, newTab] }, newTab));
           return newTab.id;
+        },
+
+        openSearchTab: (data, opts) => {
+          const state = core(get());
+
+          // Same query already open: focus it, never open twice.
+          const existing = state.tabs.find(
+            (tab) => tab.kind === 'search'
+              && tab.searchData?.query === data.query
+              && tab.searchData?.scope === data.scope
+              && (tab.searchData?.accountId ?? null) === (data.accountId ?? null)
+          );
+          if (existing) {
+            commit((s) => withTabActivated(s, existing));
+            return existing.id;
+          }
+
+          const newTab: ProTab = {
+            id: makeId(),
+            kind: 'search',
+            labelKey: '',
+            title: data.title,
+            closeable: true,
+            searchData: data,
+            paneId: opts?.pane ?? state.focusedPaneId,
+          };
+          commit((s) => withTabActivated({ ...s, tabs: [...s.tabs, newTab] }, newTab));
+          return newTab.id;
+        },
+
+        updateSearchTab: (id, data) => {
+          set({
+            tabs: get().tabs.map((tab) => {
+              if (tab.id !== id || tab.kind !== 'search' || !tab.searchData) return tab;
+              const searchData = { ...tab.searchData, ...data };
+              return { ...tab, searchData, title: searchData.title };
+            }),
+          });
         },
 
         requestCloseTab: (id) => {

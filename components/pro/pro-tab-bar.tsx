@@ -2,7 +2,7 @@
 
 import { useRef, useState, type DragEvent } from "react";
 import { useTranslations } from "next-intl";
-import { Mail, Calendar, BookUser, HardDrive, Settings, PenSquare, MailOpen, Folder, X, type LucideIcon } from "lucide-react";
+import { Mail, Calendar, BookUser, HardDrive, Settings, PenSquare, MailOpen, Folder, Search, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProTabStore, type ProTab, type ProTabKind, type ProPaneId } from "@/stores/pro-tab-store";
 import {
@@ -44,6 +44,7 @@ const TAB_ICONS: Record<ProTabKind, LucideIcon> = {
   compose: PenSquare,
   email: MailOpen,
   folder: Folder,
+  search: Search,
 };
 
 type DropIndicator = { targetId: string; edge: "before" | "after" } | null;

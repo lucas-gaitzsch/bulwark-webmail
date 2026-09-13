@@ -402,6 +402,7 @@ export function ProEmailTabBody({ tabId, data }: ProEmailTabBodyProps) {
   const closeTab = useProTabStore((s) => s.closeTab);
   const updateTabTitle = useProTabStore((s) => s.updateTabTitle);
   const mailboxes = useEmailStore((s) => s.mailboxes);
+  const getClientForAccount = useAuthStore((s) => s.getClientForAccount);
 
   const handleLoaded = useCallback((email: Email) => {
     if (email.subject) updateTabTitle(tabId, email.subject);
@@ -418,10 +419,15 @@ export function ProEmailTabBody({ tabId, data }: ProEmailTabBodyProps) {
     return mb?.isShared ? mb.accountId : undefined;
   }, [mailboxes, data.mailboxId]);
 
+  // A hit opened from another login (global search) is fetched through that
+  // login's client, targeting the owner accountId stamped on the hit (#847).
+  const clientOverride = data.clientAccountId ? getClientForAccount(data.clientAccountId) ?? null : null;
+
   return (
     <ProEmailView
       emailId={data.emailId}
-      accountId={ownerAccountId}
+      client={clientOverride ?? undefined}
+      accountId={clientOverride ? data.accountId : ownerAccountId}
       onLoaded={handleLoaded}
       onClose={handleClose}
       className="w-full"

@@ -9,6 +9,11 @@ import type { AppSurface } from '@/lib/deep-links';
  * parks the segments here, opens the right tab, and the surface picks them up
  * on mount - exactly like `protocol-handlers/session` does for `mailto:`.
  *
+ * Some links carry a query-string half too (`?account=` for calendar events,
+ * `?preview=` for files). Under `/pro` the address bar has no search string
+ * left by the time the surface parses the link, so it travels with the parked
+ * entry instead of being read back from `window.location`.
+ *
  * Surfaces in the Pro shell stay mounted for the whole session, so a link that
  * arrives *while the shell is already running* (an in-app link to
  * `/settings/folders`, a `mailto:`-style handoff, ...) would be parked and
@@ -19,29 +24,45 @@ import type { AppSurface } from '@/lib/deep-links';
  * Module state, deliberately: it must not survive a reload (the URL is gone by
  * then, so re-applying it would reopen something the user already closed).
  */
-const pending = new Map<AppSurface, string[]>();
+export interface PendingDeepLink {
+  segments: string[];
+  /** Query-string half of the link (leading `?` included), when it has one. */
+  search?: string;
+}
 
-type PendingDeepLinkListener = (segments: string[]) => void;
+const pending = new Map<AppSurface, PendingDeepLink>();
+
+type PendingDeepLinkListener = (segments: string[], search?: string) => void;
 
 const listeners = new Map<AppSurface, Set<PendingDeepLinkListener>>();
 
-export function setPendingDeepLink(surface: AppSurface, segments: string[]): void {
+export function setPendingDeepLink(surface: AppSurface, segments: string[], search?: string): void {
   const live = listeners.get(surface);
   if (live && live.size > 0) {
     // A mounted surface is listening - deliver instead of parking, so links
     // arriving while the Pro shell is already running still land.
-    for (const listener of [...live]) listener(segments);
+    // No trailing undefined: listeners predating the search half see the
+    // exact call shape they always did.
+    for (const listener of [...live]) {
+      if (search === undefined) listener(segments);
+      else listener(segments, search);
+    }
     return;
   }
-  pending.set(surface, segments);
+  pending.set(surface, { segments, search });
 }
 
-/** Returns the parked segments once, then forgets them. */
-export function consumePendingDeepLink(surface: AppSurface): string[] | null {
-  const segments = pending.get(surface);
-  if (!segments) return null;
+/** Returns the parked link once, then forgets it. */
+export function consumePendingDeepLinkEntry(surface: AppSurface): PendingDeepLink | null {
+  const entry = pending.get(surface);
+  if (!entry) return null;
   pending.delete(surface);
-  return segments;
+  return entry;
+}
+
+/** Segments-only variant for surfaces whose links never carry a search string. */
+export function consumePendingDeepLink(surface: AppSurface): string[] | null {
+  return consumePendingDeepLinkEntry(surface)?.segments ?? null;
 }
 
 /**

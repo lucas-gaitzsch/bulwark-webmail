@@ -317,10 +317,17 @@ async function handleNotificationClick(event) {
   const standaloneClient = allClients.find((client) => MAILTO_CLIENTS.get(client.id)?.standalone === true);
   if (standaloneClient && "focus" in standaloneClient) {
     try {
-      const navigatedClient = "navigate" in standaloneClient
-        ? await standaloneClient.navigate(absoluteTargetUrl)
-        : standaloneClient;
-      return await (navigatedClient || standaloneClient).focus();
+      // Focus before navigating: navigation can invalidate the client handle
+      // and consume the notification click's transient user activation.
+      const focused = await standaloneClient.focus();
+      if (focused && "navigate" in focused) {
+        try {
+          await focused.navigate(absoluteTargetUrl);
+        } catch (_) {
+          // Keep the focused window even if navigation fails.
+        }
+      }
+      return focused;
     } catch {
       // Detached client - fall through to opening the installed app/window.
     }
@@ -350,10 +357,16 @@ async function handleNotificationClick(event) {
   for (const client of allClients) {
     if (!("focus" in client)) continue;
     try {
-      const navigatedClient = "navigate" in client
-        ? await client.navigate(absoluteTargetUrl)
-        : client;
-      return await (navigatedClient || client).focus();
+      // Use the click activation to focus before replacing the document.
+      const focused = await client.focus();
+      if (focused && "navigate" in focused) {
+        try {
+          await focused.navigate(absoluteTargetUrl);
+        } catch (_) {
+          // Keep the focused window even if navigation fails.
+        }
+      }
+      return focused;
     } catch {
       // Closed or detached client - try the next one.
     }

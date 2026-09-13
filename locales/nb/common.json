@@ -225,6 +225,10 @@
     "and_others": "og {count} andre",
     "draft": "Utkast",
     "starred": "Stjernemerket",
+    "pinned": "Festet",
+    "replied": "Besvart",
+    "forwarded": "Videresendt",
+    "has_attachment": "Har vedlegg",
     "conversations_count": "{count} av {total} samtaler",
     "conversations_count_plus": "{count}+ samtaler",
     "conversations_count_simple": "{count} samtaler",
@@ -292,6 +296,7 @@
     "forward": "Videresend",
     "delete": "Slett",
     "archive": "Arkiver",
+    "archive_mailbox_not_found": "Archive mailbox not found - cannot archive email",
     "star": "Stjernemerk",
     "unstar": "Fjern stjerne",
     "mark_unread": "Merk som ulest",
@@ -728,7 +733,11 @@
       "delete_column": "Slett kolonne",
       "toggle_header_row": "Slå overskriftsraden av eller på",
       "delete_table": "Slett tabell",
-      "pick_size": "Velg størrelse"
+      "pick_size": "Velg størrelse",
+      "font_size": "Skriftstørrelse",
+      "font_size_default": "Standard",
+      "background_color": "Bakgrunnsfarge",
+      "remove_background_color": "Fjern bakgrunnsfarge"
     },
     "send_filing_warning": "Meldingen ble sendt, men oppryddingen etterpå mislyktes. Et gammelt utkast kan bli liggende."
   },
@@ -1243,6 +1252,10 @@
       }
     },
     "email_behavior": {
+      "clear_search_on_folder_change": {
+        "label": "Tøm søket ved bytte av mappe",
+        "description": "Å klikke på en mappe (Innboks, Sendt …) tømmer det aktive søket og viser mappen. Når det er av, beholdes søket og kjøres på nytt i mappen du bytter til."
+      },
       "request_read_receipt": {
         "label": "Be om lesebekreftelser som standard",
         "description": "Be automatisk om lesebekreftelse når du skriver en ny melding."
@@ -1325,6 +1338,12 @@
       "auto_select_reply_identity": {
         "label": "Svar fra mottatt adresse",
         "description": "Når du svarer, bruker Bulwark adressen meldingen opprinnelig ble sendt til. Programmet ser først etter en samsvarende identitet. For meldinger til et oppsamlingsdomene brukes aliaset i Fra-feltet, mens sendingen går gjennom hovedidentiteten din."
+      },
+      "reply_identity_match": {
+        "label": "Samsvar for mottaksadresse",
+        "description": "Hvilke mottaksadresser som regnes som dine. «Kun nøyaktig adresse» velger bare en av dine oppsatte identiteter; «samme domene» behandler i tillegg enhver annen adresse på identitetsdomenene dine som et catch-all-alias og skriver om Fra-headeren til den. Velg nøyaktig adresse hvis disse adressene er distribusjonslister.",
+        "exact": "Kun nøyaktig adresse",
+        "domain": "Enhver adresse på mine domener"
       },
       "signature_position": {
         "label": "Signaturposisjon",
@@ -1772,6 +1791,8 @@
       "role_trash": "Papirkurv",
       "role_junk": "Søppelpost",
       "role_archive": "Arkiv",
+      "role_scheduled": "Scheduled",
+      "role_snoozed": "Snoozed",
       "role_none": "Ingen",
       "create_folder": "Opprett mappe",
       "create_subfolder": "Opprett undermappe",
@@ -1881,6 +1902,8 @@
       "title": "Kontakter",
       "description": "Importer og eksporter kontaktene dine",
       "group_by_letter_label": "Grupper etter første bokstav",
+      "sort_by_last_name_label": "Sorter etter etternavn",
+      "sort_by_last_name_description": "Sorter kontaktlisten etter etternavn slik at familiemedlemmer står samlet",
       "group_by_letter_description": "Vis alfabetiske overskrifter i kontaktlisten",
       "import_label": "Importer kontakter",
       "import_description": "Importer kontakter fra en vCard-fil (.vcf).",
@@ -2276,7 +2299,8 @@
       "search": "Aktiver søkefeltet",
       "help": "Vis tastatursnarveier",
       "refresh": "Oppdater e-poster",
-      "select_all": "Velg alle"
+      "select_all": "Velg alle",
+      "global_search": "Søk i alt"
     },
     "threads": {
       "expand_collapse": "Utvid eller fold sammen tråden"
@@ -2728,7 +2752,10 @@
       "any_month": "Alle måneder",
       "has_email": "Har e-postadresse",
       "has_phone": "Har telefonnummer",
-      "has_photo": "Har bilde"
+      "has_photo": "Har bilde",
+      "sort_by": "Sorter etter",
+      "sort_first_name": "Fornavn",
+      "sort_last_name": "Etternavn"
     }
   },
   "calendar": {
@@ -2764,6 +2791,10 @@
       "duplicate": "Dupliser",
       "today_header": "I dag",
       "tomorrow_header": "I morgen",
+      "agenda_show_earlier": "Vis tidligere hendelser",
+      "agenda_loading": "Laster…",
+      "agenda_range_start": "Hendelser fra {date}",
+      "agenda_range_end": "Hendelser til {date}",
       "export_ics": "Eksporter som .ics",
       "copy_title": "Kopier tittel",
       "copy_link": "Kopier møtelenken",
@@ -2919,6 +2950,8 @@
       "show_time_in_month_view_desc": "Vis klokkeslettet for hendelser i månedsvisningen. På små skjermer vises hele hendelsesoppføringen i stedet for en prikk.",
       "show_week_numbers": "Vis ukenummer",
       "show_week_numbers_desc": "Vis ukenummer i minikalenderen",
+      "calendar_free_scroll": "Fri rulling",
+      "calendar_free_scroll_desc": "Rull fortløpende gjennom måneder, uker og dager i stedet for én periode om gangen",
       "enable_tasks": "Aktiver oppgaver",
       "enable_tasks_desc": "Vis en oppgavevisning i kalenderen for å administrere gjøremål",
       "show_tasks_on_calendar": "Vis oppgaver i kalenderen",
@@ -3266,6 +3299,10 @@
     "hint": "Klikk på en av e-postene til venstre for å komme i gang, eller start omvisningen nedenfor."
   },
   "files": {
+    "office_edit": "Rediger dokument",
+    "office_loading": "Åpner dokumentredigering…",
+    "office_error": "Dokumentredigeringen kunne ikke åpnes.",
+    "office_close": "Lukk redigering",
     "open_in_new_tab": "Åpne i ny fane",
     "title": "Filer",
     "search_placeholder": "Søk etter filer...",
@@ -3539,5 +3576,45 @@
     "copy_event": "Kopier lenken til hendelsen",
     "copied": "Lenken er kopiert",
     "copy_failed": "Kunne ikke kopiere lenken"
+  },
+  "plugins": {
+    "oauth_callback": {
+      "completing": "Fullfører autorisering…",
+      "completing_message": "Vennligst vent mens tilkoblingen opprettes.",
+      "received_title": "Autorisering mottatt",
+      "received_message": "Du kan gå tilbake til fanen der du startet tilkoblingen.",
+      "failed_title": "Autorisering mislyktes",
+      "denied": "Autorisering ble avslått.",
+      "failed_detail": "Autorisering mislyktes: {error}",
+      "missing_params": "Mangler autorisasjonskode eller tilstand.",
+      "delivery_failed": "Autoriseringsresultatet kunne ikke leveres til app-fanen. Lukk dette vinduet og prøv igjen."
+    }
+  },
+  "global_search": {
+    "title": "Søk i alt",
+    "placeholder": "Søk i e-post, kontakter, kalender, filer...",
+    "scope_label": "Søk i",
+    "account_label": "Konto",
+    "scope_all": "Alt",
+    "scope_mail": "E-post",
+    "scope_contacts": "Kontakter",
+    "scope_calendar": "Kalender",
+    "scope_files": "Filer",
+    "all_accounts": "Alle kontoer",
+    "show_all": "Vis alle resultater",
+    "no_results": "Ingen resultater for “{query}”",
+    "server_hint": "Hele ord søker på serveren; deler av ord treffer allerede innlastede elementer",
+    "searching": "Søker...",
+    "account_error": "Kunne ikke søke i {account}",
+    "recent_searches": "Nylige søk",
+    "recurring": "Gjentakende",
+    "no_subject": "(no subject)",
+    "empty_hint": "Søk i e-post, kontakter, hendelser og filer på alle kontoer. Prøv from:, subject:, has:attachment, after:2026-01-01.",
+    "flat_by_date": "Flatt etter dato",
+    "grouped": "Gruppert",
+    "load_more": "Last inn flere",
+    "preview_empty": "Velg et resultat for å forhåndsvise det",
+    "open_full": "Åpne",
+    "view_label": "Visning"
   }
 }

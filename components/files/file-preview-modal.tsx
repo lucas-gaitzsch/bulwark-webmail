@@ -292,7 +292,13 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
 
   return (
     <div role="dialog" aria-label={name} className="fixed inset-0 z-50 flex flex-col bg-black/80" onClick={onClose}>
-      <div className="flex items-center justify-between px-4 py-3 bg-background/90 backdrop-blur border-b border-border" onClick={(e) => e.stopPropagation()}>
+      {/* The dialog is `fixed inset-0` under `viewport-fit=cover`, so in an
+          installed iOS PWA (no browser chrome above it) the header would sit
+          underneath the status bar and its buttons - including the close
+          button - became unreachable (#936). Pad the bar itself so its
+          background still bleeds behind the status bar / notch. The insets are
+          physical, so pl/pr (not ps/pe) is correct in RTL too. */}
+      <div className="flex items-center justify-between gap-2 pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 bg-background/90 backdrop-blur border-b border-border" onClick={(e) => e.stopPropagation()}>
         <h3 className="text-sm font-medium truncate">{name}</h3>
         <div className="flex items-center gap-2">
           {objectUrl && canOpenInNewTab && (
@@ -316,7 +322,7 @@ export function FilePreviewModal({ name, onClose, onDownload, getFileContent }: 
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center overflow-auto p-4">
+      <div className="flex-1 flex items-center justify-center overflow-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))]">
         {loading && (
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <Loader2 className="w-8 h-8 animate-spin" />

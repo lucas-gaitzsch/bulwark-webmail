@@ -103,6 +103,21 @@ describe('ContactForm', () => {
     );
   });
 
+  it('sets name.full from the name components so exported vCards carry FN (#430)', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    render(<ContactForm onSave={onSave} onCancel={vi.fn()} />);
+
+    fireEvent.change(screen.getByPlaceholderText('given_name'), { target: { value: 'ABTest' } });
+    fireEvent.change(screen.getByPlaceholderText('surname'), { target: { value: 'Web' } });
+    fireEvent.submit(screen.getByText('save').closest('form')!);
+
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledOnce();
+    });
+
+    expect(onSave.mock.calls[0][0].name.full).toBe('ABTest Web');
+  });
+
   it('saves an organization-only card when the organization type is selected', async () => {
     const onSave = vi.fn().mockResolvedValue(undefined);
     render(<ContactForm onSave={onSave} onCancel={vi.fn()} />);

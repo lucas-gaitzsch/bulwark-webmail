@@ -52,6 +52,21 @@ describe("parseVCard", () => {
     expect(components.find((c) => c.kind === "surname")?.value).toBe("Doe");
   });
 
+  it("preserves FN as name.full so re-export keeps the mandatory FN (#430)", () => {
+    // FN alone
+    const fnOnly = parseVCard(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:John Doe\r\nEND:VCARD`);
+    expect(fnOnly[0].name?.full).toBe("John Doe");
+
+    // FN before N: N overwrites components but must keep full
+    const fnFirst = parseVCard(`BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Dr. John Doe Jr.\r\nN:Doe;John;;;\r\nEND:VCARD`);
+    expect(fnFirst[0].name?.full).toBe("Dr. John Doe Jr.");
+
+    // N before FN: FN fills full on the existing name
+    const nFirst = parseVCard(`BEGIN:VCARD\r\nVERSION:3.0\r\nN:Doe;John;;;\r\nFN:Dr. John Doe Jr.\r\nEND:VCARD`);
+    expect(nFirst[0].name?.full).toBe("Dr. John Doe Jr.");
+    expect(nFirst[0].name?.components?.find((c) => c.kind === "given")?.value).toBe("John");
+  });
+
   it("maps prefix and middle name to RFC 9553 standard kinds (issue #224)", () => {
     // N: family;given;additional;prefix;suffix (RFC 6350 order)
     const withPrefix = parseVCard(`BEGIN:VCARD\r\nVERSION:3.0\r\nN:Smith;John;;Mr.;\r\nEMAIL:j@example.com\r\nEND:VCARD`);

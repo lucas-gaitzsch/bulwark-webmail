@@ -1,0 +1,58 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
+/**
+ * Whether a WOPI document editor is configured for this deployment and which
+ * file extensions it handles (#425). Fetched once per page load and shared
+ * across consumers via a module-level promise.
+ */
+export interface WopiStatus {
+  enabled: boolean;
+  editExtensions: string[];
+  viewExtensions: string[];
+}
+
+const DISABLED: WopiStatus = { enabled: false, editExtensions: [], viewExtensions: [] };
+
+let statusPromise: Promise<WopiStatus> | null = null;
+
+function fetchWopiStatus(): Promise<WopiStatus> {
+  if (!statusPromise) {
+    statusPromise = fetch("/api/wopi/status")
+      .then((res) => (res.ok ? res.json() : DISABLED))
+      .then((data) => ({
+        enabled: !!data?.enabled,
+        editExtensions: Array.isArray(data?.editExtensions) ? data.editExtensions : [],
+        viewExtensions: Array.isArray(data?.viewExtensions) ? data.viewExtensions : [],
+      }))
+      .catch(() => {
+        statusPromise = null; // allow a retry on the next mount
+        return DISABLED;
+      });
+  }
+  return statusPromise;
+}
+
+export function useWopiStatus(enabled: boolean): WopiStatus | null {
+  const [status, setStatus] = useState<WopiStatus | null>(null);
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    fetchWopiStatus().then((s) => {
+      if (!cancelled) setStatus(s);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [enabled]);
+
+  return status;
+}
+
+/** Lowercased extension of a file name, without the dot. */
+export function fileExtension(name: string): string {
+  const parts = name.toLowerCase().split(".");
+  return parts.length > 1 ? parts.pop() || "" : "";
+}

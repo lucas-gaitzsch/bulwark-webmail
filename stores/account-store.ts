@@ -223,6 +223,24 @@ export const useAccountStore = create<AccountState>()(
         activeAccountId: state.activeAccountId,
         defaultAccountId: state.defaultAccountId,
       }),
+      // `isConnected` / `hasError` describe a *live* JMAP client, which never
+      // survives a reload - yet the whole entry is persisted, so a fresh tab
+      // rehydrated them as still-connected. Consumers then treated an account
+      // whose client had not been restored yet as ready: the unified mailbox
+      // filters on `isConnected` and silently dropped such accounts when their
+      // client was missing from the map, and the effects keyed on the
+      // "connected accounts" signature never re-fired because the signature was
+      // already complete at mount. Clearing them here makes both reflect this
+      // session, so the signature genuinely changes as each account connects
+      // (#950).
+      onRehydrateStorage: () => (state) => {
+        if (!state) return;
+        state.accounts = state.accounts.map((a) => (
+          a.isConnected || a.hasError
+            ? { ...a, isConnected: false, hasError: false, errorMessage: undefined }
+            : a
+        ));
+      },
     }
   )
 );

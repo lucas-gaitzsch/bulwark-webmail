@@ -52,14 +52,19 @@ async function resolveTargetForAccount(
           const session = (await res.json()) as {
             apiUrl?: string;
             primaryAccounts?: Record<string, string>;
+            accounts?: Record<string, unknown>;
           };
           const mailAccountId = session.primaryAccounts?.['urn:ietf:params:jmap:mail'];
           if (!session.apiUrl || !mailAccountId) return null;
-          if (mailAccountId !== accountId) return null;
+          // Shared and group mailboxes only appear in session.accounts. (#839)
+          const isSharedAccount =
+            accountId !== mailAccountId &&
+            Object.prototype.hasOwnProperty.call(session.accounts ?? {}, accountId);
+          if (mailAccountId !== accountId && !isSharedAccount) return null;
           return {
             authHeader: ctx.authHeader,
             apiUrl: session.apiUrl,
-            accountId: mailAccountId,
+            accountId,
             localAccountId: generateAccountId(ctx.username, ctx.serverUrl),
             trusted,
           };

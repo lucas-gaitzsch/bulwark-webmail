@@ -11,7 +11,7 @@ import {
   AlertCircle, Star, Clock, FolderUp,
   FileArchive, FileSpreadsheet, Presentation, FileCode,
   Box, PenTool, Terminal as TerminalIcon, Database, Type as TypeIcon,
-  Menu, Users, Share2,
+  Menu, Users, Share2, SquarePen,
 } from "lucide-react";
 import { useIsDesktop } from "@/hooks/use-media-query";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,9 @@ interface FileBrowserProps {
   onMoveToParent: (names: string[]) => Promise<void>;
   onPreviewImage: (name: string) => void;
   onPreviewFile: (name: string) => void;
+  /** WOPI document editing (#425): whether a file can open in the document editor. */
+  isOfficeEditable?: (name: string) => boolean;
+  onEditFile?: (name: string) => void;
   onShowDetails: (name: string) => void;
   onCreateTextFile: (name: string) => Promise<void>;
   onDuplicate: (name: string) => Promise<void>;
@@ -194,6 +197,12 @@ function isPresentationFile(name: string): boolean {
   return PRESENTATION_EXTENSIONS.has(ext);
 }
 
+const WORD_DOCUMENT_EXTENSIONS = new Set(["doc", "docx", "odt", "rtf"]);
+function isWordDocumentFile(name: string): boolean {
+  const ext = name.split(".").pop()?.toLowerCase() || "";
+  return WORD_DOCUMENT_EXTENSIONS.has(ext);
+}
+
 const FONT_EXTENSIONS = new Set(["ttf", "otf", "woff", "woff2", "eot"]);
 function isFontFile(name: string): boolean {
   const ext = name.split(".").pop()?.toLowerCase() || "";
@@ -221,6 +230,7 @@ function getFileIconByName(name: string, size: "sm" | "lg") {
   if (isExecutableFile(name)) return <TerminalIcon className={`${cls} text-red-500`} />;
   if (isSpreadsheetFile(name)) return <FileSpreadsheet className={`${cls} text-green-600`} />;
   if (isPresentationFile(name)) return <Presentation className={`${cls} text-orange-600`} />;
+  if (isWordDocumentFile(name)) return <FileText className={`${cls} text-blue-600`} />;
   if (isFontFile(name)) return <TypeIcon className={`${cls} text-indigo-500`} />;
   if (isDatabaseFile(name)) return <Database className={`${cls} text-slate-500`} />;
   if (isPdfFile(name)) return <FileText className={`${cls} text-red-600`} />;
@@ -365,6 +375,8 @@ export function FileBrowser({
   onMoveToParent,
   onPreviewImage,
   onPreviewFile,
+  isOfficeEditable,
+  onEditFile,
   onShowDetails,
   onCreateTextFile,
   onDuplicate,
@@ -686,6 +698,8 @@ export function FileBrowser({
         ? `/${resource.name}`
         : `${currentPath}/${resource.name}`;
       onNavigate(newPath, resource.id);
+    } else if (isOfficeEditable?.(resource.name) && onEditFile) {
+      onEditFile(resource.name);
     } else if (isPreviewable(resource.name)) {
       if (isImageFile(resource.name)) {
         onPreviewImage(resource.name);
@@ -1695,6 +1709,18 @@ export function FileBrowser({
               >
                 <ImageIcon className="w-4 h-4" />
                 {t("preview")}
+              </button>
+            )}
+            {!resources.find(r => r.name === contextMenu.name)?.isDirectory && isOfficeEditable?.(contextMenu.name) && onEditFile && (
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-start"
+                onClick={() => {
+                  onEditFile(contextMenu.name);
+                  setContextMenu(null);
+                }}
+              >
+                <SquarePen className="w-4 h-4" />
+                {t("office_edit")}
               </button>
             )}
             {!resources.find(r => r.name === contextMenu.name)?.isDirectory && (

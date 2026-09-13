@@ -25,6 +25,7 @@ export function ReadingSettings() {
     returnToListAfterAction,
     swipeRightAction,
     swipeLeftAction,
+    clearSearchOnFolderChange,
     showPreview,
     mailLayout,
     disableThreading,
@@ -242,6 +243,13 @@ export function ReadingSettings() {
             { value: 'star', label: t('swipe_actions.star') },
             { value: 'spam', label: t('swipe_actions.spam') },
           ]}
+        />
+      </SettingItem>
+
+      <SettingItem label={t('clear_search_on_folder_change.label')} description={t('clear_search_on_folder_change.description')}>
+        <ToggleSwitch
+          checked={clearSearchOnFolderChange}
+          onChange={(checked) => updateSetting('clearSearchOnFolderChange', checked)}
         />
       </SettingItem>
 

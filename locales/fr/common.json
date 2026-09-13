@@ -225,6 +225,10 @@
     "and_others": "et {count} autres",
     "draft": "Brouillon",
     "starred": "Favori",
+    "pinned": "Épinglé",
+    "replied": "Répondu",
+    "forwarded": "Transféré",
+    "has_attachment": "Avec pièce jointe",
     "conversations_count": "{count} sur {total} conversations",
     "conversations_count_plus": "{count}+ conversations",
     "conversations_count_simple": "{count} conversations",
@@ -292,6 +296,7 @@
     "forward": "Transférer",
     "delete": "Supprimer",
     "archive": "Archiver",
+    "archive_mailbox_not_found": "Archive mailbox not found - cannot archive email",
     "star": "Marquer comme favori",
     "unstar": "Retirer des favoris",
     "mark_unread": "Marquer comme non lu",
@@ -303,12 +308,10 @@
     "move": "Déplacer",
     "print": "Imprimer",
     "view_source": "Voir la source",
-
     "fullscreen": "Plein écran",
-
     "exit_fullscreen": "Quitter le plein écran",
     "export_email": "Exporter en .eml",
-    "forward_as_attachment": "Forward as attachment",
+    "forward_as_attachment": "Transférer en pièce jointe",
     "import_email": "Importer .eml ou .zip",
     "keyboard_shortcuts": "Raccourcis clavier (?)",
     "email_source": "Source de l'email",
@@ -730,7 +733,11 @@
       "delete_column": "Supprimer la colonne",
       "toggle_header_row": "Basculer la ligne d'en-tête",
       "delete_table": "Supprimer le tableau",
-      "pick_size": "Choisir la taille"
+      "pick_size": "Choisir la taille",
+      "font_size": "Taille de police",
+      "font_size_default": "Par défaut",
+      "background_color": "Couleur d'arrière-plan",
+      "remove_background_color": "Supprimer la couleur d'arrière-plan"
     },
     "send_filing_warning": "Envoyé - mais le nettoyage après envoi a échoué, un ancien brouillon peut subsister."
   },
@@ -1242,6 +1249,10 @@
       }
     },
     "email_behavior": {
+      "clear_search_on_folder_change": {
+        "label": "Effacer la recherche lors du changement de dossier",
+        "description": "Cliquer sur un dossier (Boîte de réception, Envoyés…) efface la recherche active et affiche ce dossier. Désactivé, la recherche reste appliquée et est relancée dans le dossier choisi."
+      },
       "request_read_receipt": {
         "label": "Demander un accusé de lecture par défaut",
         "description": "Activer au préalable la demande d''accusé de lecture lors de la rédaction d''un nouveau message."
@@ -1319,6 +1330,12 @@
       "auto_select_reply_identity": {
         "label": "Sélection automatique de l'adresse de réponse",
         "description": "Lors d'une réponse, bascule automatiquement l'adresse d'expédition vers l'identité qui a reçu le message d'origine"
+      },
+      "reply_identity_match": {
+        "label": "Correspondance de l'adresse de réception",
+        "description": "Quelles adresses de réception comptent comme les vôtres. « Adresse exacte uniquement » ne choisit qu'une de vos identités configurées ; « même domaine » traite aussi toute autre adresse de vos domaines d'identité comme un alias catch-all et y réécrit l'en-tête De. Choisissez l'adresse exacte si ces adresses sont des listes de diffusion.",
+        "exact": "Adresse exacte uniquement",
+        "domain": "Toute adresse de mes domaines"
       },
       "signature_position": {
         "label": "Position de la signature",
@@ -1767,6 +1784,8 @@
       "role_trash": "Corbeille",
       "role_junk": "Spam / Indésirables",
       "role_archive": "Archives",
+      "role_scheduled": "Scheduled",
+      "role_snoozed": "Snoozed",
       "role_none": "Aucun",
       "create_folder": "Créer un dossier",
       "create_subfolder": "Créer un sous-dossier",
@@ -1886,7 +1905,9 @@
       "categories_description": "Renommer les catégories de contacts",
       "no_categories": "Aucune catégorie trouvée",
       "group_by_letter_description": "Afficher des en-têtes alphabétiques dans la liste de contacts",
-      "group_by_letter_label": "Grouper par première lettre"
+      "group_by_letter_label": "Grouper par première lettre",
+      "sort_by_last_name_label": "Trier par nom de famille",
+      "sort_by_last_name_description": "Classer la liste des contacts par nom de famille pour regrouper les membres d'une même famille"
     },
     "downloads": {
       "title": "Téléchargements",
@@ -2278,7 +2299,8 @@
       "search": "Rechercher",
       "help": "Afficher les raccourcis",
       "refresh": "Actualiser les emails",
-      "select_all": "Tout sélectionner"
+      "select_all": "Tout sélectionner",
+      "global_search": "Tout rechercher"
     },
     "threads": {
       "expand_collapse": "Développer/réduire la conversation"
@@ -2729,7 +2751,10 @@
       "any_month": "Tous les mois",
       "has_email": "Avec e-mail",
       "has_phone": "Avec téléphone",
-      "has_photo": "Avec photo"
+      "has_photo": "Avec photo",
+      "sort_by": "Trier par",
+      "sort_first_name": "Prénom",
+      "sort_last_name": "Nom de famille"
     },
     "open_categories": "Ouvrir les catégories"
   },
@@ -2766,6 +2791,10 @@
       "duplicate": "Dupliquer",
       "today_header": "Aujourd'hui",
       "tomorrow_header": "Demain",
+      "agenda_show_earlier": "Afficher les événements précédents",
+      "agenda_loading": "Chargement…",
+      "agenda_range_start": "Événements à partir du {date}",
+      "agenda_range_end": "Événements jusqu'au {date}",
       "export_ics": "Exporter en .ics",
       "copy_title": "Copier le titre",
       "copy_link": "Copier le lien de réunion",
@@ -2921,6 +2950,8 @@
       "show_time_in_month_view_desc": "Afficher les heures des événements dans la vue mensuelle du calendrier",
       "show_week_numbers": "Afficher les numéros de semaine",
       "show_week_numbers_desc": "Afficher les numéros de semaine dans le mini-calendrier",
+      "calendar_free_scroll": "Défilement libre",
+      "calendar_free_scroll_desc": "Faire défiler les mois, semaines et jours en continu au lieu d'une période à la fois",
       "enable_tasks": "Activer les tâches",
       "enable_tasks_desc": "Afficher une vue des tâches dans le calendrier pour gérer les choses à faire",
       "show_tasks_on_calendar": "Afficher les tâches dans le calendrier",
@@ -3226,6 +3257,10 @@
     "hint": "Cliquez sur un e-mail à gauche pour commencer, ou lancez la visite."
   },
   "files": {
+    "office_edit": "Modifier le document",
+    "office_loading": "Ouverture de l'éditeur de documents…",
+    "office_error": "L'éditeur de documents n'a pas pu être ouvert.",
+    "office_close": "Fermer l'éditeur",
     "open_in_new_tab": "Ouvrir dans un nouvel onglet",
     "title": "Fichiers",
     "search_placeholder": "Rechercher des fichiers...",
@@ -3541,5 +3576,45 @@
     "copy_event": "Copier le lien de l'événement",
     "copied": "Lien copié",
     "copy_failed": "Impossible de copier le lien"
+  },
+  "plugins": {
+    "oauth_callback": {
+      "completing": "Finalisation de l'autorisation…",
+      "completing_message": "Veuillez patienter pendant l'établissement de la connexion.",
+      "received_title": "Autorisation reçue",
+      "received_message": "Vous pouvez revenir à l'onglet où vous avez commencé la connexion.",
+      "failed_title": "Échec de l'autorisation",
+      "denied": "Lautorisation a été refusée.",
+      "failed_detail": "Échec de lautorisation : {error}",
+      "missing_params": "Code dautorisation ou état manquant.",
+      "delivery_failed": "Le résultat de lautorisation na pas pu être transmis à longlet de lapplication. Fermez cette fenêtre et réessayez."
+    }
+  },
+  "global_search": {
+    "title": "Tout rechercher",
+    "placeholder": "Rechercher courriels, contacts, calendrier, fichiers...",
+    "scope_label": "Rechercher dans",
+    "account_label": "Compte",
+    "scope_all": "Tout",
+    "scope_mail": "Messagerie",
+    "scope_contacts": "Contacts",
+    "scope_calendar": "Calendrier",
+    "scope_files": "Fichiers",
+    "all_accounts": "Tous les comptes",
+    "show_all": "Afficher tous les résultats",
+    "no_results": "Aucun résultat pour « {query} »",
+    "server_hint": "Les mots complets interrogent le serveur ; les mots partiels correspondent aux éléments déjà chargés",
+    "searching": "Recherche...",
+    "account_error": "Impossible de rechercher dans {account}",
+    "recent_searches": "Recherches récentes",
+    "recurring": "Récurrent",
+    "no_subject": "(no subject)",
+    "empty_hint": "Recherchez courriels, contacts, événements et fichiers sur tous les comptes. Essayez from:, subject:, has:attachment, after:2026-01-01.",
+    "flat_by_date": "À plat par date",
+    "grouped": "Groupé",
+    "load_more": "Charger plus",
+    "preview_empty": "Sélectionnez un résultat pour l'aperçu",
+    "open_full": "Ouvrir",
+    "view_label": "Affichage"
   }
 }

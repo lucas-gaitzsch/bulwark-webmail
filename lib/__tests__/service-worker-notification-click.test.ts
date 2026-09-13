@@ -14,13 +14,15 @@ interface MockClient {
 const workerSource = readFileSync(resolve(process.cwd(), "public/sw.js"), "utf8");
 
 function createClient(id: string, url = "https://mail.example/webmail/"): MockClient {
-  return {
+  const client: MockClient = {
     id,
     url,
     postMessage: vi.fn(),
     navigate: vi.fn().mockResolvedValue(undefined),
     focus: vi.fn().mockResolvedValue(undefined),
   };
+  client.focus.mockResolvedValue(client);
+  return client;
 }
 
 function createWorker(userAgent: string, windowClients: MockClient[]) {
@@ -120,7 +122,7 @@ describe("service worker notification clicks", () => {
     expect(worker.openedClient.focus).toHaveBeenCalledOnce();
   });
 
-  it("navigates and focuses a running standalone PWA", async () => {
+  it("focuses a running standalone PWA before navigating", async () => {
     const standalone = createClient("standalone");
     const browserTab = createClient("browser");
     const worker = createWorker("Mozilla/5.0 (Linux; Android 15) Chrome/140", [browserTab, standalone]);
@@ -132,6 +134,7 @@ describe("service worker notification clicks", () => {
       "https://mail.example/webmail/mail/message/m1?account=alice%40mail.example",
     );
     expect(standalone.focus).toHaveBeenCalledOnce();
+    expect(standalone.focus.mock.invocationCallOrder[0]).toBeLessThan(standalone.navigate.mock.invocationCallOrder[0]);
     expect(worker.clients.openWindow).not.toHaveBeenCalled();
   });
 
@@ -145,6 +148,7 @@ describe("service worker notification clicks", () => {
       "https://mail.example/webmail/mail/folder/inbox?account=alice%40mail.example",
     );
     expect(browserTab.focus).toHaveBeenCalledOnce();
+    expect(browserTab.focus.mock.invocationCallOrder[0]).toBeLessThan(browserTab.navigate.mock.invocationCallOrder[0]);
     expect(worker.clients.openWindow).not.toHaveBeenCalled();
   });
 

@@ -225,6 +225,10 @@
     "and_others": "und {count} weitere",
     "draft": "Entwurf",
     "starred": "Mit Stern",
+    "pinned": "Angeheftet",
+    "replied": "Beantwortet",
+    "forwarded": "Weitergeleitet",
+    "has_attachment": "Mit Anhang",
     "conversations_count": "{count} von {total} Unterhaltungen",
     "conversations_count_plus": "{count}+ Unterhaltungen",
     "conversations_count_simple": "{count} Unterhaltungen",
@@ -292,6 +296,7 @@
     "forward": "Weiterleiten",
     "delete": "Löschen",
     "archive": "Archivieren",
+    "archive_mailbox_not_found": "Archive mailbox not found - cannot archive email",
     "star": "Stern hinzufügen",
     "unstar": "Stern entfernen",
     "mark_unread": "Als ungelesen markieren",
@@ -303,12 +308,10 @@
     "move": "Verschieben",
     "print": "Drucken",
     "view_source": "Quelltext anzeigen",
-
     "fullscreen": "Vollbild",
-
     "exit_fullscreen": "Vollbild beenden",
     "export_email": "Als .eml exportieren",
-    "forward_as_attachment": "Forward as attachment",
+    "forward_as_attachment": "Als Anhang weiterleiten",
     "import_email": ".eml oder .zip importieren",
     "keyboard_shortcuts": "Tastaturkürzel (?)",
     "email_source": "E-Mail-Quelltext",
@@ -730,7 +733,11 @@
       "delete_column": "Spalte löschen",
       "toggle_header_row": "Kopfzeile umschalten",
       "delete_table": "Tabelle löschen",
-      "pick_size": "Größe wählen"
+      "pick_size": "Größe wählen",
+      "font_size": "Schriftgröße",
+      "font_size_default": "Standard",
+      "background_color": "Hintergrundfarbe",
+      "remove_background_color": "Hintergrundfarbe entfernen"
     },
     "send_filing_warning": "Gesendet - aber das Aufräumen danach schlug fehl, evtl. bleibt ein alter Entwurf sichtbar."
   },
@@ -1242,6 +1249,10 @@
       }
     },
     "email_behavior": {
+      "clear_search_on_folder_change": {
+        "label": "Suche beim Ordnerwechsel löschen",
+        "description": "Ein Klick auf einen Ordner (Posteingang, Gesendet …) löscht die aktive Suche und zeigt den Ordner. Ist die Option aus, bleibt die Suche bestehen und wird im neuen Ordner erneut ausgeführt."
+      },
       "request_read_receipt": {
         "label": "Lesebestätigung standardmäßig anfordern",
         "description": "Beim Verfassen einer neuen Nachricht die Anforderung einer Lesebestätigung vorab aktivieren."
@@ -1324,6 +1335,12 @@
       "auto_select_reply_identity": {
         "label": "Antwortadresse automatisch wählen",
         "description": "Beim Antworten die Absenderadresse automatisch auf die Identität umstellen, die die ursprüngliche Nachricht erhalten hat"
+      },
+      "reply_identity_match": {
+        "label": "Abgleich der Empfangsadresse",
+        "description": "Welche Empfangsadressen als eigene gelten. „Nur exakte Adresse“ wählt ausschließlich eine Ihrer eingerichteten Identitäten. „Gleiche Domain“ behandelt zusätzlich jede andere Adresse auf einer Ihrer Identitäts-Domains als Catch-all-Alias und ersetzt den Absender-Header damit. Wählen Sie die exakte Adresse, wenn solche Adressen Verteilerlisten und keine Aliasse sind.",
+        "exact": "Nur exakte Adresse",
+        "domain": "Jede Adresse auf meinen Domains"
       },
       "signature_position": {
         "label": "Signaturposition",
@@ -1767,6 +1784,8 @@
       "role_trash": "Papierkorb",
       "role_junk": "Spam / Junk",
       "role_archive": "Archiv",
+      "role_scheduled": "Scheduled",
+      "role_snoozed": "Snoozed",
       "role_none": "Keine",
       "create_folder": "Ordner erstellen",
       "create_subfolder": "Unterordner erstellen",
@@ -1886,7 +1905,9 @@
       "categories_description": "Kontaktkategorien umbenennen",
       "no_categories": "Keine Kategorien gefunden",
       "group_by_letter_description": "Alphabetische Abschnittsüberschriften in der Kontaktliste anzeigen",
-      "group_by_letter_label": "Nach Anfangsbuchstaben gruppieren"
+      "group_by_letter_label": "Nach Anfangsbuchstaben gruppieren",
+      "sort_by_last_name_label": "Nach Nachname sortieren",
+      "sort_by_last_name_description": "Kontaktliste nach Nachnamen ordnen, damit Familienmitglieder zusammenstehen"
     },
     "downloads": {
       "title": "Downloads",
@@ -2278,7 +2299,8 @@
       "search": "Suche fokussieren",
       "help": "Tastaturkürzel anzeigen",
       "refresh": "E-Mails aktualisieren",
-      "select_all": "Alle auswählen"
+      "select_all": "Alle auswählen",
+      "global_search": "Alles durchsuchen"
     },
     "threads": {
       "expand_collapse": "Unterhaltung erweitern/einklappen"
@@ -2729,7 +2751,10 @@
       "any_month": "Beliebiger Monat",
       "has_email": "Mit E-Mail",
       "has_phone": "Mit Telefon",
-      "has_photo": "Mit Foto"
+      "has_photo": "Mit Foto",
+      "sort_by": "Sortieren nach",
+      "sort_first_name": "Vorname",
+      "sort_last_name": "Nachname"
     },
     "open_categories": "Kategorien öffnen"
   },
@@ -2766,6 +2791,10 @@
       "duplicate": "Duplizieren",
       "today_header": "Heute",
       "tomorrow_header": "Morgen",
+      "agenda_show_earlier": "Frühere Termine anzeigen",
+      "agenda_loading": "Wird geladen…",
+      "agenda_range_start": "Termine ab {date}",
+      "agenda_range_end": "Termine bis {date}",
       "export_ics": "Als .ics exportieren",
       "copy_title": "Titel kopieren",
       "copy_link": "Meeting-Link kopieren",
@@ -2921,6 +2950,8 @@
       "show_time_in_month_view_desc": "Ereigniszeiten in der Monatskalenderansicht anzeigen",
       "show_week_numbers": "Kalenderwochen anzeigen",
       "show_week_numbers_desc": "Kalenderwochen im Minikalender anzeigen",
+      "calendar_free_scroll": "Freies Scrollen",
+      "calendar_free_scroll_desc": "Fortlaufend durch Monate, Wochen und Tage scrollen statt nur einen Zeitraum auf einmal anzuzeigen",
       "enable_tasks": "Aufgaben aktivieren",
       "enable_tasks_desc": "Eine Aufgabenansicht im Kalender zum Verwalten von To-dos anzeigen",
       "show_tasks_on_calendar": "Aufgaben im Kalender anzeigen",
@@ -3226,6 +3257,10 @@
     "hint": "Klicken Sie links auf eine E-Mail, um loszulegen, oder starten Sie die Tour."
   },
   "files": {
+    "office_edit": "Dokument bearbeiten",
+    "office_loading": "Dokumenteditor wird geöffnet…",
+    "office_error": "Der Dokumenteditor konnte nicht geöffnet werden.",
+    "office_close": "Editor schließen",
     "open_in_new_tab": "In neuem Tab öffnen",
     "title": "Dateien",
     "search_placeholder": "Dateien suchen...",
@@ -3541,5 +3576,45 @@
     "copy_event": "Link zum Termin kopieren",
     "copied": "Link kopiert",
     "copy_failed": "Link konnte nicht kopiert werden"
+  },
+  "plugins": {
+    "oauth_callback": {
+      "completing": "Autorisierung wird abgeschlossen…",
+      "completing_message": "Bitte warten, während die Verbindung hergestellt wird.",
+      "received_title": "Autorisierung empfangen",
+      "received_message": "Sie können zu dem Tab zurückkehren, in dem Sie die Verbindung gestartet haben.",
+      "failed_title": "Autorisierung fehlgeschlagen",
+      "denied": "Autorisierung wurde verweigert.",
+      "failed_detail": "Autorisierung fehlgeschlagen: {error}",
+      "missing_params": "Autorisierungscode oder State fehlt.",
+      "delivery_failed": "Das Autorisierungsergebnis konnte nicht an den App-Tab übermittelt werden. Bitte schließen Sie dieses Fenster und versuchen Sie es erneut."
+    }
+  },
+  "global_search": {
+    "title": "Alles durchsuchen",
+    "placeholder": "Mail, Kontakte, Kalender, Dateien durchsuchen...",
+    "scope_label": "Suchen in",
+    "account_label": "Konto",
+    "scope_all": "Alle",
+    "scope_mail": "E-Mail",
+    "scope_contacts": "Kontakte",
+    "scope_calendar": "Kalender",
+    "scope_files": "Dateien",
+    "all_accounts": "Alle Konten",
+    "show_all": "Alle Ergebnisse anzeigen",
+    "no_results": "Keine Ergebnisse für „{query}“",
+    "server_hint": "Ganze Wörter durchsuchen den Server; Wortteile treffen bereits geladene Einträge",
+    "searching": "Suche läuft...",
+    "account_error": "{account} konnte nicht durchsucht werden",
+    "recent_searches": "Letzte Suchen",
+    "recurring": "Wiederkehrend",
+    "no_subject": "(no subject)",
+    "empty_hint": "Mail, Kontakte, Termine und Dateien aller Konten durchsuchen. Zum Beispiel from:, subject:, has:attachment, after:2026-01-01.",
+    "flat_by_date": "Flach nach Datum",
+    "grouped": "Gruppiert",
+    "load_more": "Mehr laden",
+    "preview_empty": "Ergebnis auswählen, um es anzuzeigen",
+    "open_full": "Öffnen",
+    "view_label": "Ansicht"
   }
 }

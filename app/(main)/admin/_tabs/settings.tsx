@@ -153,6 +153,16 @@ export function SettingsTab() {
         )}
       </SettingsSection>
 
+      <SettingsSection title="Document Editing (WOPI)">
+        <TextSetting label="WOPI Client URL" configKey="wopiClientUrl" value={currentValue('wopiClientUrl') as string} source={config.wopiClientUrl?.source} onChange={handleChange} onRevert={handleRevert} placeholder="https://office.example.com" />
+        <TextSetting label="WOPI Host URL Override" configKey="wopiHostUrl" value={currentValue('wopiHostUrl') as string} source={config.wopiHostUrl?.source} onChange={handleChange} onRevert={handleRevert} placeholder="https://mail.example.com" />
+        <div className="px-4 py-2.5">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Point the client URL at a WOPI-compatible office suite (Collabora Online, OnlyOffice, EuroOffice, …) to let users edit documents in Files. The host override is only needed when the editor reaches this webmail under a different address than the browser does (e.g. Docker networks). The editor must also allow this webmail as a WOPI host.
+          </p>
+        </div>
+      </SettingsSection>
+
       <SettingsSection title="Logging">
         <SelectSetting label="Log Format" configKey="logFormat" value={currentValue('logFormat') as string} source={config.logFormat?.source} options={['text', 'json']} onChange={handleChange} onRevert={handleRevert} />
         <SelectSetting label="Log Level" configKey="logLevel" value={currentValue('logLevel') as string} source={config.logLevel?.source} options={['error', 'warn', 'info', 'debug']} onChange={handleChange} onRevert={handleRevert} />

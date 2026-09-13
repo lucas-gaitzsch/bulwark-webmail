@@ -225,6 +225,10 @@
     "and_others": "and {count} others",
     "draft": "Draft",
     "starred": "Starred",
+    "pinned": "Pinned",
+    "replied": "Replied",
+    "forwarded": "Forwarded",
+    "has_attachment": "Has attachment",
     "conversations_count": "{count} of {total} conversations",
     "conversations_count_plus": "{count}+ conversations",
     "conversations_count_simple": "{count} conversations",
@@ -292,6 +296,7 @@
     "forward": "Forward",
     "delete": "Delete",
     "archive": "Archive",
+    "archive_mailbox_not_found": "Archive mailbox not found - cannot archive email",
     "star": "Star",
     "unstar": "Unstar",
     "mark_unread": "Mark as unread",
@@ -303,9 +308,7 @@
     "move": "Move",
     "print": "Print",
     "view_source": "View source",
-
     "fullscreen": "Fullscreen",
-
     "exit_fullscreen": "Exit fullscreen",
     "export_email": "Export as .eml",
     "forward_as_attachment": "Forward as attachment",
@@ -730,7 +733,11 @@
       "delete_column": "Delete column",
       "toggle_header_row": "Toggle header row",
       "delete_table": "Delete table",
-      "pick_size": "Pick size"
+      "pick_size": "Pick size",
+      "font_size": "Font size",
+      "font_size_default": "Default",
+      "background_color": "Background color",
+      "remove_background_color": "Remove background color"
     },
     "send_filing_warning": "Sent - but the post-send cleanup failed, a stale draft may remain."
   },
@@ -1033,7 +1040,7 @@
       },
       "unified_mailbox": {
         "label": "Unified Mailbox",
-        "description": "Show combined folders (Inbox, Sent, etc.) for the active account and its shared folders.",
+        "description": "Show combined folders (Inbox, Sent, etc.) for the active account and its shared folders. Needs more than one connected account (or a group inbox included below) before any folders appear here - with just one account, this only adds the section header. The All mail / Unread / Starred entries below are separate, admin-gated options that won't show up until your admin turns them on.",
         "cross_account": {
           "label": "Across all accounts",
           "description": "Merge the unified mailbox across every connected account instead of staying within the active account."
@@ -1062,8 +1069,8 @@
         "description": "Show the total message count next to folders and tags, alongside the unread count. Disable to show only unread counts."
       },
       "favicon_unread_badge": {
-        "label": "Unread Count on Tab Icon",
-        "description": "Show the inbox unread count as a badge on the browser tab icon, so new mail is visible when the tab is not focused. Disable to keep the icon unbadged."
+        "label": "Unread Count on Tab and App Icon",
+        "description": "Show the inbox unread count as a badge on the browser tab icon, and on the installed app icon where supported, so new mail is visible when the tab is not focused. Disable to keep both icons unbadged."
       },
       "pro_interface": {
         "label": "Pro Interface (Experimental)",
@@ -1245,6 +1252,10 @@
       }
     },
     "email_behavior": {
+      "clear_search_on_folder_change": {
+        "label": "Clear search when switching folders",
+        "description": "Clicking a folder (Inbox, Sent, …) clears the active search and browses that folder. When off, the search stays applied and re-runs in the folder you switch to."
+      },
       "request_read_receipt": {
         "label": "Request read receipts by default",
         "description": "Pre-enable the read-receipt request when composing a new message."
@@ -1326,7 +1337,13 @@
       },
       "auto_select_reply_identity": {
         "label": "Reply From Received Address",
-        "description": "When replying, send from the address the message was originally sent to. Matches identities first; for domain catch-all deliveries, rewrites the From header to the alias while sending through your primary identity."
+        "description": "When replying, send from the address the message was originally sent to. Your configured identities always match; whether other addresses on your domains count too (catch-all) is set by “Received Address Matching” below."
+      },
+      "reply_identity_match": {
+        "label": "Received Address Matching",
+        "description": "Which received addresses count as yours. Exact address only picks one of your configured identities. Same domain also treats any other address on one of your identity domains as a catch-all alias and rewrites the From header to it. Choose exact address if those addresses are distribution lists rather than aliases.",
+        "exact": "Exact address only",
+        "domain": "Any address on my domains"
       },
       "signature_position": {
         "label": "Signature Position",
@@ -1670,7 +1687,7 @@
         "disable_tooltip": "Disable encryption",
         "enabled_success": "Encryption at rest enabled"
       },
-      "public_keys":{
+      "public_keys": {
         "name_label": "Public Key name",
         "name_placeholder": "e.g. My Key",
         "key_label": "Public Key (S/MIME or PGP ASCII-armored)",
@@ -1774,6 +1791,8 @@
       "role_trash": "Trash",
       "role_junk": "Spam / Junk",
       "role_archive": "Archive",
+      "role_scheduled": "Scheduled",
+      "role_snoozed": "Snoozed",
       "role_none": "None",
       "create_folder": "Create Folder",
       "create_subfolder": "Create Subfolder",
@@ -1847,7 +1866,7 @@
       },
       "refresh_cache": {
         "label": "Refresh cached data",
-        "description": "Reload contacts, calendars, and folders from the server. Keeps your accounts and sessions \u2014 fixes a stale or wrong view without signing out.",
+        "description": "Reload contacts, calendars, and folders from the server. Keeps your accounts and sessions — fixes a stale or wrong view without signing out.",
         "button": "Refresh"
       },
       "reset_settings": {
@@ -1884,6 +1903,8 @@
       "description": "Import and export your contacts",
       "group_by_letter_label": "Group by first letter",
       "group_by_letter_description": "Show alphabetical section headers in the contact list",
+      "sort_by_last_name_label": "Sort by last name",
+      "sort_by_last_name_description": "Order the contact list by surname so family members appear together",
       "import_label": "Import Contacts",
       "import_description": "Import contacts from a vCard (.vcf) file",
       "export_label": "Export Contacts",
@@ -2278,7 +2299,8 @@
       "search": "Focus search",
       "help": "Show shortcuts",
       "refresh": "Refresh emails",
-      "select_all": "Select all"
+      "select_all": "Select all",
+      "global_search": "Search everything"
     },
     "threads": {
       "expand_collapse": "Expand/collapse thread"
@@ -2730,7 +2752,10 @@
       "any_month": "Any month",
       "has_email": "Has email",
       "has_phone": "Has phone",
-      "has_photo": "Has photo"
+      "has_photo": "Has photo",
+      "sort_by": "Sort by",
+      "sort_first_name": "First name",
+      "sort_last_name": "Last name"
     }
   },
   "calendar": {
@@ -2766,6 +2791,10 @@
       "duplicate": "Duplicate",
       "today_header": "Today",
       "tomorrow_header": "Tomorrow",
+      "agenda_show_earlier": "Show earlier events",
+      "agenda_loading": "Loading…",
+      "agenda_range_start": "Showing events from {date}",
+      "agenda_range_end": "Showing events until {date}",
       "export_ics": "Export as .ics",
       "copy_title": "Copy title",
       "copy_link": "Copy meeting link",
@@ -2921,6 +2950,8 @@
       "show_time_in_month_view_desc": "Display event times in the month calendar view. On small screens this shows full event entries instead of dots.",
       "show_week_numbers": "Show week numbers",
       "show_week_numbers_desc": "Display week numbers in the mini-calendar",
+      "calendar_free_scroll": "Free scrolling",
+      "calendar_free_scroll_desc": "Scroll continuously through months, weeks and days instead of one period at a time",
       "enable_tasks": "Enable tasks",
       "enable_tasks_desc": "Show a tasks view in the calendar for managing to-dos",
       "show_tasks_on_calendar": "Show tasks on calendar",
@@ -3268,6 +3299,10 @@
     "hint": "Click any email on the left to get started, or take the tour below."
   },
   "files": {
+    "office_edit": "Edit document",
+    "office_loading": "Opening document editor…",
+    "office_error": "The document editor could not be opened.",
+    "office_close": "Close editor",
     "open_in_new_tab": "Open in new tab",
     "title": "Files",
     "search_placeholder": "Search files...",
@@ -3541,5 +3576,45 @@
     "copy_event": "Copy link to event",
     "copied": "Link copied",
     "copy_failed": "Couldn't copy the link"
+  },
+  "plugins": {
+    "oauth_callback": {
+      "completing": "Completing authorization…",
+      "completing_message": "Please wait while the connection is established.",
+      "received_title": "Authorization received",
+      "received_message": "You can return to the tab where you started the connection.",
+      "failed_title": "Authorization failed",
+      "denied": "Authorization was denied.",
+      "failed_detail": "Authorization failed: {error}",
+      "missing_params": "Missing authorization code or state.",
+      "delivery_failed": "The authorization result could not be delivered to the app tab. Please close this window and try again."
+    }
+  },
+  "global_search": {
+    "title": "Search everything",
+    "placeholder": "Search mail, contacts, calendar, files...",
+    "scope_label": "Search in",
+    "account_label": "Account",
+    "scope_all": "All",
+    "scope_mail": "Mail",
+    "scope_contacts": "Contacts",
+    "scope_calendar": "Calendar",
+    "scope_files": "Files",
+    "all_accounts": "All accounts",
+    "show_all": "Show all results",
+    "no_results": "No results for “{query}”",
+    "server_hint": "Complete words search the server; partial words match already-loaded items",
+    "searching": "Searching...",
+    "account_error": "Couldn't search {account}",
+    "recent_searches": "Recent searches",
+    "recurring": "Recurring",
+    "no_subject": "(no subject)",
+    "empty_hint": "Search mail, contacts, events and files across all accounts. Try from:, subject:, has:attachment, after:2026-01-01.",
+    "flat_by_date": "Flat by date",
+    "grouped": "Grouped",
+    "load_more": "Load more",
+    "preview_empty": "Select a result to preview it",
+    "open_full": "Open",
+    "view_label": "View"
   }
 }

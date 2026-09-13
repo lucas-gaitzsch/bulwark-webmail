@@ -57,6 +57,48 @@ export function createDemoFileNodes(): FileNode[] {
       modified: demoDate(-1),
     },
 
+    // Office documents (openable in a WOPI editor when one is configured, #425)
+    {
+      id: 'demo-file-project-proposal',
+      parentId: 'demo-file-documents',
+      name: 'project-proposal.odt',
+      type: 'application/vnd.oasis.opendocument.text',
+      blobId: 'demo-blob-file-7',
+      size: 24576,
+      created: demoDate(-12),
+      modified: demoDate(-4),
+    },
+    {
+      id: 'demo-file-contract-draft',
+      parentId: 'demo-file-documents',
+      name: 'contract-draft.docx',
+      type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      blobId: 'demo-blob-file-8',
+      size: 38912,
+      created: demoDate(-9),
+      modified: demoDate(-2),
+    },
+    {
+      id: 'demo-file-team-timesheet',
+      parentId: 'demo-file-documents',
+      name: 'team-timesheet.ods',
+      type: 'application/vnd.oasis.opendocument.spreadsheet',
+      blobId: 'demo-blob-file-9',
+      size: 17408,
+      created: demoDate(-6),
+      modified: demoDate(-1),
+    },
+    {
+      id: 'demo-file-roadmap-presentation',
+      parentId: 'demo-file-documents',
+      name: 'roadmap-presentation.odp',
+      type: 'application/vnd.oasis.opendocument.presentation',
+      blobId: 'demo-blob-file-10',
+      size: 245760,
+      created: demoDate(-16),
+      modified: demoDate(-8),
+    },
+
     // Photos contents
     {
       id: 'demo-file-vacation',
@@ -79,7 +121,7 @@ export function createDemoFileNodes(): FileNode[] {
       modified: demoDate(-21),
     },
 
-    // Root-level file
+    // Root-level files
     {
       id: 'demo-file-budget',
       parentId: null,
@@ -89,6 +131,16 @@ export function createDemoFileNodes(): FileNode[] {
       size: 68608,
       created: demoDate(-5),
       modified: demoDate(-1),
+    },
+    {
+      id: 'demo-file-launch-deck',
+      parentId: null,
+      name: 'product-launch.pptx',
+      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      blobId: 'demo-blob-file-11',
+      size: 512000,
+      created: demoDate(-4),
+      modified: demoDate(-3),
     },
   ];
 }

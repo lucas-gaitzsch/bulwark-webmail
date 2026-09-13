@@ -511,3 +511,13 @@ export function getUnifiedRoles(
 
   return roles;
 }
+
+/**
+ * Only growth is interesting. A shrink (sign-out, disconnect) is already driven
+ * by the flow that caused it, so refetching there would race it. See #950.
+ */
+export function connectedAccountsGrew(previous: string | null, current: string): boolean {
+  if (previous === null || previous === current) return false;
+  const before = new Set(previous ? previous.split(',').filter(Boolean) : []);
+  return current.split(',').some((id) => id !== '' && !before.has(id));
+}

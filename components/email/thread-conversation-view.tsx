@@ -4,8 +4,10 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import DOMPurify from "dompurify";
 import { Email, ThreadGroup } from "@/lib/jmap/types";
 import { EMAIL_SANITIZE_CONFIG, collapseBlockedImageContainers, plainTextToSafeHtml, restrictDataUriResourcesOnNode, sanitizePlainTextRenderedHtml } from "@/lib/email-sanitization";
-import { hasMeaningfulHtmlBody } from "@/lib/signature-utils";
+import { getRenderableHtmlBody } from "@/lib/email-body-selection";
+import { collectReferencedCids, isEmbeddedInBody } from "@/lib/attachment-visibility";
 import { collapsePlainTextQuotes, setupQuoteCollapse } from "@/lib/quote-collapse";
+import { fitEmailBodyWidth } from "@/lib/email-fit-width";
 import { transformInlineStyles, transformColorForDarkMode, transformBgColorForDarkMode } from "@/lib/color-transform";
 import { useThemeStore } from "@/stores/theme-store";
 import { Avatar } from "@/components/ui/avatar";
@@ -326,26 +328,9 @@ function EmailCard({
     if (!email) return { html: "", isHtml: false };
 
     if (email.bodyValues) {
-      let useHtmlVersion = false;
-      let htmlContent = '';
+      let htmlContent = getRenderableHtmlBody(email);
 
-      if (email.htmlBody?.[0]?.partId && email.bodyValues[email.htmlBody[0].partId]) {
-        htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
-        // Prefer textBody when HTML is auto-generated minimal wrapper (no rich formatting).
-        // Server-generated HTML from text/plain emails often lacks <br> tags, collapsing newlines.
-        // Per RFC 8621, an HTML-only email exposes the same partId in both htmlBody and textBody -
-        // in that case there is no real plain-text alternative, so always render the HTML.
-        const textPartId = email.textBody?.[0]?.partId;
-        const htmlPartId = email.htmlBody[0].partId;
-        const hasDistinctTextBody = !!textPartId && textPartId !== htmlPartId && !!email.bodyValues[textPartId];
-        if (hasDistinctTextBody && htmlContent) {
-          useHtmlVersion = hasMeaningfulHtmlBody(htmlContent);
-        } else {
-          useHtmlVersion = !!htmlContent;
-        }
-      }
-
-      if (useHtmlVersion && htmlContent) {
+      if (htmlContent) {
         // Replace cid: references with authenticated blob URLs (fetched via useEffect)
         // This prevents browser auth dialogs that occur when loading raw JMAP download URLs
         if (email.attachments) {
@@ -452,6 +437,16 @@ function EmailCard({
     return { html: "", isHtml: false };
   }, [email, allowExternal, resolvedTheme, emailAlwaysLightMode, cidBlobUrls, t]);
 
+  // Parts the body embeds via cid: stay out of the attachment row while the
+  // user hides inline images - the desktop viewer's rule, shared through
+  // lib/attachment-visibility.ts so the two views cannot drift apart.
+  const visibleAttachments = useMemo(() => {
+    const attachments = email.attachments ?? [];
+    if (!hideInlineImageAttachments) return attachments;
+    const bodyCids = collectReferencedCids(getRenderableHtmlBody(email));
+    return attachments.filter(att => !isEmbeddedInBody(att, bodyCids));
+  }, [email, hideInlineImageAttachments]);
+
   // Render the sanitized HTML body inside a sandboxed iframe so a malicious
   // (or accidentally-bypassed) email cannot inject styles/scripts/forms into
   // the host page. CSP <meta> is defense-in-depth in case the sanitizer ever
@@ -465,14 +460,23 @@ function EmailCard({
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="${csp}">
 <style>
-  html, body { overflow: hidden; }
-  body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
+  /* overflow-y hidden keeps the scrollHeight measurement below honest. overflow-x
+     is auto so intrinsically wide content can pan instead of being clipped outright;
+     on a phone fitEmailBodyWidth() shrinks it to the screen first, so the pan is
+     only left for content too wide to stay legible when scaled. */
+  html { overflow: hidden; }
+  body { overflow-x: auto; overflow-y: hidden; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; line-height: 1.6; color: #1a1a1a; background: #ffffff; word-wrap: break-word; overflow-wrap: break-word; }
   img { max-width: 100% !important; height: auto !important; }
   a { color: #1a73e8; }
-  table { max-width: 100% !important; table-layout: auto; overflow-wrap: break-word; }
+  /* Only force the cap on tables that set no width of their own: an
+     !important 100% would also override a newsletter's inline
+     max-width:600px and stretch it across the pane. (#790) */
+  table:not([style*="max-width"]) { max-width: 100% !important; }
+  table[style*="max-width"] { max-width: 100%; }
+  table { table-layout: auto; overflow-wrap: break-word; }
   td, th { word-break: break-word; padding: 0.5rem; }
   pre { white-space: pre-wrap; word-wrap: break-word; }
-</style></head><body>${emailContent.html}</body></html>`;
+</style></head><body dir="auto">${emailContent.html}</body></html>`;
   }, [emailContent.isHtml, emailContent.html]);
 
   const handleIframeLoad = useCallback(() => {
@@ -488,7 +492,11 @@ function EmailCard({
         hide: t('email_viewer.hide_quoted_text'),
       });
       const resize = () => {
-        iframe.style.height = doc.documentElement.scrollHeight + 'px';
+        // Fit desktop-width mail to the screen before measuring: the transform
+        // leaves the layout height untouched, so scale the box by hand.
+        const scale = fitEmailBodyWidth(doc);
+        const height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+        iframe.style.height = Math.ceil(height * scale) + 'px';
       };
       resize();
       const ro = new ResizeObserver(resize);
@@ -624,11 +632,7 @@ function EmailCard({
           </div>
 
           {/* Attachments */}
-          {(() => {
-            const visibleAttachments = (email.attachments ?? []).filter(
-              att => !(hideInlineImageAttachments && att.cid && att.disposition === 'inline' && (att.type || '').startsWith('image/'))
-            );
-            return visibleAttachments.length > 0 && (
+          {visibleAttachments.length > 0 && (
             <div className="px-4 pb-4">
               <div className="flex flex-wrap gap-2">
                 {visibleAttachments.map((attachment, idx) => {
@@ -660,8 +664,7 @@ function EmailCard({
                 })}
               </div>
             </div>
-            );
-          })()}
+          )}
 
           {/* Action Buttons */}
           <div className="px-4 pb-4 flex gap-2">

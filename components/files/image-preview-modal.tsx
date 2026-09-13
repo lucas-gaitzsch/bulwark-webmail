@@ -65,7 +65,10 @@ export function ImagePreviewModal({ name, onClose, onDownload, getImageUrl }: Im
       onClick={onClose}
     >
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/60 to-transparent z-10">
+      {/* Same safe-area handling as FilePreviewModal: full-screen overlay +
+          `viewport-fit=cover` puts this bar under the iOS status bar in an
+          installed PWA (#936). */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between pl-[calc(1rem+env(safe-area-inset-left))] pr-[calc(1rem+env(safe-area-inset-right))] pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 bg-gradient-to-b from-black/60 to-transparent z-10">
         <span className="text-white text-sm font-medium truncate max-w-[50%]">{name}</span>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-8 w-8 text-white hover:bg-white/20" onClick={(e) => { e.stopPropagation(); setZoom((z) => Math.min(z + 0.25, 5)); }}>
@@ -87,7 +90,7 @@ export function ImagePreviewModal({ name, onClose, onDownload, getImageUrl }: Im
       </div>
 
       {/* Image */}
-      <div className="flex items-center justify-center w-full h-full p-16" onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-center w-full h-full p-16 pt-[calc(4rem+env(safe-area-inset-top))] pb-[calc(4rem+env(safe-area-inset-bottom))]" onClick={(e) => e.stopPropagation()}>
         {loading && (
           <div className="w-10 h-10 border-2 border-white/30 border-t-white rounded-full animate-spin" />
         )}

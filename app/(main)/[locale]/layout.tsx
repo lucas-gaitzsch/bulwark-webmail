@@ -10,6 +10,7 @@ import { ProInterfaceRedirect } from "@/components/pro/pro-interface-redirect";
 import { ImpersonationReconciler } from "@/components/impersonation/impersonation-reconciler";
 import { PluginDialogHost } from "@/components/plugins/plugin-dialog-host";
 import { PluginConsentDialog } from "@/components/plugins/plugin-consent-dialog";
+import { PluginOAuthCallbackListener } from "@/components/providers/plugin-oauth-callback-listener";
 import { PWAInstallPrompt } from "@/components/pwa-install-prompt";
 import { PushNotificationPrompt } from "@/components/push-notification-prompt";
 import { PushLifecycleManager } from "@/components/push-lifecycle-manager";
@@ -46,6 +47,7 @@ export default async function LocaleLayout({
                   {children}
                   <PluginDialogHost />
                   <PluginConsentDialog />
+                  <PluginOAuthCallbackListener />
                   <PWAInstallPrompt />
                   <PushNotificationPrompt />
                   <PushLifecycleManager />

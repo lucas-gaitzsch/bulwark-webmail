@@ -295,6 +295,7 @@ export const KEYBOARD_SHORTCUTS = {
   global: [
     { key: "c", description: "shortcuts.global.compose" },
     { key: "/", description: "shortcuts.global.search" },
+    { key: "Ctrl/⌘ + K", description: "shortcuts.global.global_search" },
     { key: "?", description: "shortcuts.global.help" },
     { key: "Shift + G", description: "shortcuts.global.refresh" },
     { key: "Ctrl + A", description: "shortcuts.global.select_all" },

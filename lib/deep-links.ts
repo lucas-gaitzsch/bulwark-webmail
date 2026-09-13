@@ -238,7 +238,7 @@ export function parseMailPath(
 const CALENDAR_VIEWS: CalendarViewMode[] = ['month', 'week', 'day', 'agenda', 'tasks'];
 
 export type CalendarDeepLink =
-  | { kind: 'event'; id: string; accountId?: string }
+  | { kind: 'event'; id: string; accountId?: string; login?: string }
   | { kind: 'view'; view: CalendarViewMode; date: Date | null };
 
 export interface CalendarLinkState {
@@ -247,6 +247,8 @@ export interface CalendarLinkState {
   eventId?: string | null;
   /** JMAP account owning the event - needed for shared/secondary calendars. */
   accountId?: string | null;
+  /** Connected-account id (login) reaching the event, when not the active one (global search). */
+  login?: string | null;
 }
 
 /** `YYYY-MM-DD` in local time - the date the user sees, not a UTC shift of it. */
@@ -272,7 +274,11 @@ export function parseLinkDate(value: string): Date | null {
 export function buildCalendarPath(state: CalendarLinkState): string {
   if (state.eventId) {
     const path = `/calendar/event/${encodeSegment(state.eventId)}`;
-    return state.accountId ? `${path}?account=${encodeURIComponent(state.accountId)}` : path;
+    const params = new URLSearchParams();
+    if (state.accountId) params.set('account', state.accountId);
+    if (state.login) params.set('login', state.login);
+    const query = params.toString();
+    return query ? `${path}?${query}` : path;
   }
   if (!state.date) return `/calendar/${state.view}`;
   return `/calendar/${state.view}/${formatLinkDate(state.date)}`;
@@ -288,7 +294,7 @@ export function parseCalendarPath(
   if (first === 'event') {
     const id = second ? decodeSegment(second) : '';
     if (!id) return null;
-    return { kind: 'event', id, accountId: search?.get('account') ?? undefined };
+    return { kind: 'event', id, accountId: search?.get('account') ?? undefined, login: search?.get('login') ?? undefined };
   }
 
   if ((CALENDAR_VIEWS as string[]).includes(first)) {

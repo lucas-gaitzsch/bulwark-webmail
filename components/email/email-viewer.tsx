@@ -5,8 +5,10 @@ import { Email, ContactCard, Mailbox } from "@/lib/jmap/types";
 import { emailExportFilename, attachmentDownloadFilename, attachmentsBundleFilename, DEFAULT_EMAIL_TEMPLATE, DEFAULT_ATTACHMENT_TEMPLATE } from "@/lib/download-filename";
 import { EML_IMPORT_ACCEPT, expandImportableEmails } from "@/lib/eml-import";
 import { applyNewTabToAnchor, escapeHtml, plainTextToSafeHtml, sanitizeEmailBodyForIframe, sanitizeEmailHtml, sanitizePlainTextRenderedHtml } from "@/lib/email-sanitization";
-import { hasMeaningfulHtmlBody } from "@/lib/signature-utils";
+import { getRenderableHtmlBody } from "@/lib/email-body-selection";
+import { collectReferencedCids, isEmbeddedInBody } from "@/lib/attachment-visibility";
 import { collapsePlainTextQuotes, setupQuoteCollapse } from "@/lib/quote-collapse";
+import { fitEmailBodyWidth } from "@/lib/email-fit-width";
 import { withBasePath } from "@/lib/browser-navigation";
 import { buildContactsPath, buildMailPath } from "@/lib/deep-links";
 import { useCopyLink } from "@/hooks/use-copy-link";
@@ -1582,8 +1584,14 @@ export function EmailViewer({
 
   const effectiveAttachments = useMemo<EffectiveAttachment[]>(() => {
     if (pluginRenderedAttachments.length > 0) {
+      const pluginCids = collectReferencedCids(hideInlineImageAttachments ? pluginRenderedHtml : null);
       return pluginRenderedAttachments
-        .filter(att => !(hideInlineImageAttachments && att.contentId && (att.mimeType || '').startsWith('image/')))
+        // Any cid image counts as embedded here (as before), plus whatever the
+        // decrypted body references by cid (see lib/attachment-visibility.ts).
+        .filter(att => !(hideInlineImageAttachments && (
+          (att.contentId && (att.mimeType || '').startsWith('image/'))
+          || isEmbeddedInBody({ cid: att.contentId, type: att.mimeType, disposition: att.disposition }, pluginCids)
+        )))
         .map((attachment, index) => ({
           id: `smime-${index}-${attachment.filename || attachment.mimeType}`,
           name: attachment.filename,
@@ -1595,6 +1603,12 @@ export function EmailViewer({
     }
 
     const hasCalInvitation = calendarInvitationParsingEnabled && !!email && !!findCalendarAttachment(email);
+    // Parts the rendered body embeds via cid: must not double as chips. The
+    // scan reads the same HTML the body renders from (null when the message
+    // renders as plain text: nothing embedded, nothing hidden), so a part only
+    // recognisable by its reference - octet-stream, no disposition, no name -
+    // is caught as well (see lib/attachment-visibility.ts).
+    const bodyCids = collectReferencedCids(hideInlineImageAttachments && email ? getRenderableHtmlBody(email) : null);
     const jmapAttachments = (email?.attachments ?? [])
       // Hide winmail.dat when we have successfully extracted TNEF content or attachments
       .filter(att => !(tnefHtml || tnefText || tnefAttachments.length > 0) || !isTnefAttachment(att.name, att.type))
@@ -1604,9 +1618,9 @@ export function EmailViewer({
       // Hide calendar MIME parts (text/calendar, application/ics) when the invitation
       // banner is shown - prevents raw ICS files appearing as spurious attachments.
       .filter(att => !hasCalInvitation || !isCalendarMimeType(att.type))
-      // Hide inline cid-referenced images when the user has opted to keep them
-      // out of the attachment list (default on): these are embedded in the body.
-      .filter(att => !(hideInlineImageAttachments && att.cid && att.disposition === 'inline' && (att.type || '').startsWith('image/')))
+      // Hide body-embedded parts when the user has opted to keep them out of
+      // the attachment list (default on).
+      .filter(att => !(hideInlineImageAttachments && isEmbeddedInBody(att, bodyCids)))
       // Hide machine-readable report parts (MDN read-receipts, DSN bounce
       // reports). These are required MIME parts, not real user attachments.
       .filter(att => att.type !== 'message/disposition-notification' && att.type !== 'message/delivery-status')
@@ -1641,11 +1655,11 @@ export function EmailViewer({
 
     return [...jmapAttachments, ...tnefExtracted, ...embeddedExtracted];
     // The memo derives only from `email.attachments` (findCalendarAttachment
-    // scans that array); depending on the whole `email` object would rebuild the
-    // attachment list — and its downstream layout measurement — on every email
-    // field change.
+    // scans that array) and the body parts the cid scan reads; depending on
+    // the whole `email` object would rebuild the attachment list — and its
+    // downstream layout measurement — on every email field change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [email?.attachments, pluginRenderedAttachments, tnefHtml, tnefText, tnefAttachments, embeddedEmailAttachments, calendarInvitationParsingEnabled, hideInlineImageAttachments]);
+  }, [email?.attachments, email?.htmlBody, email?.textBody, email?.bodyValues, pluginRenderedAttachments, pluginRenderedHtml, tnefHtml, tnefText, tnefAttachments, embeddedEmailAttachments, calendarInvitationParsingEnabled, hideInlineImageAttachments]);
 
   // Measure attachment chips in the below-header row to determine how many fit
   // on a single line; the rest collapse into a "+N attachments" overflow pill.
@@ -1726,35 +1740,10 @@ export function EmailViewer({
 
     // Check if we have body values
     if (email.bodyValues) {
-      // Check if HTML content exists and if it's actually rich HTML or just plain text wrapper
-      let useHtmlVersion = false;
-      let htmlContent = '';
+      // Rich HTML, or just a plain-text wrapper the server dressed up as HTML?
+      let htmlContent = getRenderableHtmlBody(email);
 
-      if (email.htmlBody?.[0]?.partId && email.bodyValues[email.htmlBody[0].partId]) {
-        htmlContent = email.bodyValues[email.htmlBody[0].partId].value;
-        // Per RFC 8621 § 4.1.4, when a message has only one alternative the server
-        // exposes the same part in both htmlBody and textBody. The shared part may
-        // actually be text/plain (plain-text-only mail) - rendering that as HTML
-        // collapses newlines and skips linkification, so route by the part's type.
-        const htmlPart = email.htmlBody[0];
-        if (htmlPart.type && htmlPart.type.toLowerCase() !== 'text/html') {
-          useHtmlVersion = false;
-        } else {
-          // Prefer textBody when HTML is auto-generated minimal wrapper (no rich formatting).
-          // Server-generated HTML from text/plain emails often lacks <br> tags, collapsing newlines.
-          const textPartId = email.textBody?.[0]?.partId;
-          const htmlPartId = htmlPart.partId;
-          const hasDistinctTextBody = !!textPartId && textPartId !== htmlPartId && !!email.bodyValues[textPartId];
-          if (hasDistinctTextBody && htmlContent) {
-            useHtmlVersion = hasMeaningfulHtmlBody(htmlContent);
-          } else {
-            useHtmlVersion = !!htmlContent;
-          }
-        }
-      }
-
-      // If we should use HTML version and it exists
-      if (useHtmlVersion && htmlContent) {
+      if (htmlContent) {
         // Replace cid: references with authenticated blob URLs (fetched via useEffect)
         // This prevents browser auth dialogs that occur when loading raw JMAP download URLs
         if (email.attachments) {
@@ -2169,6 +2158,13 @@ export function EmailViewer({
   // Iframe for rendering HTML emails true-to-life
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // Scale-to-fit is a phone behaviour: on a desktop reading pane a wide mail is
+  // legible at 1:1 and scrolls. Held in a ref because the measurement runs from
+  // observers wired up once per document - a plain closure would keep fitting
+  // (or not) across a rotation or a pane resize that crossed the breakpoint.
+  const fitBodyToWidthRef = useRef(isMobile);
+  fitBodyToWidthRef.current = isMobile;
+
   // Detect if the email HTML has native dark mode support
   const emailHasNativeDarkMode = useMemo(() => {
     if (!effectiveEmailContent.isHtml) return false;
@@ -2289,7 +2285,10 @@ export function EmailViewer({
      overflow-x is auto on the body so an intrinsically wide table (e.g. a
      20-column data table) can scroll horizontally instead of being crushed to
      fit - the latter wraps header text to one character per line, which reads
-     as 90deg-rotated vertical headers (issue #409). */
+     as 90deg-rotated vertical headers (issue #409). On a phone that scroll is
+     the wrong answer for ordinary fixed-width mail, so fitEmailBodyWidth()
+     shrinks the whole body to the screen width after load and only content too
+     wide to stay legible when scaled keeps scrolling. */
   html { overflow: hidden; height: auto !important; }
   /* Some emails put height:100% on a full-bleed wrapper table/div (not html/body),
      which - with body's overflow:hidden - clips the content to a sliver, and the
@@ -2301,14 +2300,19 @@ export function EmailViewer({
   @media (max-width: 640px) { body { padding-left: ${mobileBodyPaddingX}; padding-right: ${mobileBodyPaddingX}; } }
   img { max-width: 100% !important; height: auto !important; }
   a { color: #1a73e8; }
-  table { max-width: 100% !important; table-layout: auto; overflow-wrap: break-word; }
+  /* Only force the cap on tables that set no width of their own: an
+     !important 100% would also override a newsletter's inline
+     max-width:600px and stretch it across the pane. (#790) */
+  table:not([style*="max-width"]) { max-width: 100% !important; }
+  table[style*="max-width"] { max-width: 100%; }
+  table { table-layout: auto; overflow-wrap: break-word; }
   /* break-word (not anywhere): break only over-long single words, and keep each
      word's min-content width so columns are not collapsed to a single char. */
   td, th { overflow-wrap: break-word; }
   pre { white-space: pre-wrap; word-wrap: break-word; }
   ${wordHtmlCSS}
   ${darkModeCSS}
-</style></head><body>${effectiveEmailContent.html}<style>html,body{height:auto!important;min-height:0!important;max-height:none!important}</style></body></html>`;
+</style></head><body dir="auto">${effectiveEmailContent.html}<style>html,body{height:auto!important;min-height:0!important;max-height:none!important}</style></body></html>`;
   }, [effectiveEmailContent.html, effectiveEmailContent.isHtml, effectiveEmailContent.hasStyleTag, effectiveEmailContent.externalBlocked, isDark, emailHasNativeDarkMode, messageSpacing]);
 
   // Unblocking external content is handled by rebuilding the iframe srcDoc:
@@ -2341,6 +2345,12 @@ export function EmailViewer({
   // be torn down. contentDocument keeps pointing at it until the browser swaps
   // the new srcDoc in, so the poll skips it to avoid wiring up stale content.
   const staleDocRef = useRef<Document | null>(null);
+  // Host-side observer on the iframe box itself: the in-document one watches
+  // body, whose width scale-to-fit pins to the content width, so a viewport
+  // change (rotation, pane resize) would otherwise never re-fit. Kept in a ref
+  // so each srcDoc replaces the previous one instead of stacking observers.
+  const frameSizeObserverRef = useRef<ResizeObserver | null>(null);
+  useEffect(() => () => frameSizeObserverRef.current?.disconnect(), []);
   useLayoutEffect(() => {
     setIframeReady(false);
     initializedDocRef.current = null;
@@ -2374,12 +2384,31 @@ export function EmailViewer({
         // documentElement.scrollHeight short while the real content lives in body.
         const applyHeight = () => {
           if (iframe.contentDocument !== doc) return; // navigated away; stale
-          const height = Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight);
+          // Shrink desktop-width mail to fit a phone screen first: it changes
+          // the layout height, and the transform doesn't shrink the measured
+          // (layout) height, so the iframe box has to be scaled by hand.
+          const scale = fitEmailBodyWidth(doc, { enabled: fitBodyToWidthRef.current });
+          const height = Math.ceil(
+            Math.max(doc.documentElement.scrollHeight, doc.body.scrollHeight) * scale
+          );
           iframe.style.height = height + 'px';
           lastBodyHeightRef.current = height;
         };
         const resizeObserver = new ResizeObserver(applyHeight);
         resizeObserver.observe(doc.body);
+        // Re-fit when the iframe itself changes width. Height-only changes are
+        // our own applyHeight writing back, so they're ignored - re-entering on
+        // those would spin the observer.
+        let lastFrameWidth = iframe.clientWidth;
+        frameSizeObserverRef.current?.disconnect();
+        const frameObserver = new ResizeObserver(() => {
+          if (iframe.contentDocument !== doc) return;
+          if (iframe.clientWidth === lastFrameWidth) return;
+          lastFrameWidth = iframe.clientWidth;
+          applyHeight();
+        });
+        frameObserver.observe(iframe);
+        frameSizeObserverRef.current = frameObserver;
         applyHeight();
         // The ResizeObserver only fires on body's border box; a content overflow
         // that grows scrollHeight without resizing that box (e.g. a height:100%
@@ -2658,7 +2687,7 @@ export function EmailViewer({
   .body { font-size: 14px; line-height: 1.6; }
   .body img { max-width: 100% !important; height: auto !important; }
   @media print { body { margin: 20px; } }
-</style></head><body>
+</style></head><body dir="auto">
 <div class="header">
   <div class="subject">${escapeHtml(subjectText)}</div>
   <div class="meta">
@@ -3202,8 +3231,10 @@ export function EmailViewer({
           <Code className="w-4 h-4" />
         </Button>
 
-        {/* Dark/light mode toggle for HTML emails */}
-        {effectiveEmailContent.isHtml && (
+        {/* Dark/light mode toggle for HTML emails. Always mounted: `isHtml`
+            flips from false to true once the body arrives, and mounting the
+            button then changes the toolbar width and re-runs the overflow
+            calculation, so the other buttons jump. Disable it instead. (#964) */}
         <Button
           variant="ghost"
           size="sm"
@@ -3212,10 +3243,11 @@ export function EmailViewer({
           data-overflow-priority="11"
           className="hidden sm:inline-flex h-8 gap-1.5"
           title={isDark ? 'View in light mode' : 'View in dark mode'}
+          disabled={!effectiveEmailContent.isHtml}
+          aria-disabled={!effectiveEmailContent.isHtml}
         >
           {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
         </Button>
-        )}
 
         {/* Fullscreen toggle - hidden on mobile (already fullscreen there).
             Never overflows into the More menu: in fullscreen this button is
@@ -3554,7 +3586,13 @@ export function EmailViewer({
         "flex flex-col",
         moreMenuOpen ? "translate-x-0" : "translate-x-full"
       )}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        {/* The fixed panel spans the full viewport height, so in the iOS PWA
+            its header would sit under the status bar without the safe-area
+            inset (same treatment as the preview modals). (#936) */}
+        <div className={cn(
+          "flex items-center justify-between px-4 border-b border-border",
+          isPaneScoped ? "py-3" : "pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))]"
+        )}>
           {moreMenuSub ? (
             <button
               ref={mobileSubBackRef}
@@ -4019,6 +4057,19 @@ export function EmailViewer({
                               <Eye className="w-3.5 h-3.5 text-foreground" />
                             </button>
                           )}
+                          <PluginSlot
+                            name="attachment-actions"
+                            className="contents"
+                            extraProps={{
+                              attachment: {
+                                name: attachment.name || '',
+                                type: attachment.type,
+                                size: attachment.size,
+                                blobId: attachment.blobId,
+                                emailId: email?.id,
+                              } satisfies AttachmentInfo,
+                            }}
+                          />
                         </div>
                       </div>
                         )}
@@ -4079,6 +4130,19 @@ export function EmailViewer({
                                     <Eye className="w-3.5 h-3.5 text-foreground" />
                                   </button>
                                 )}
+                                <PluginSlot
+                                  name="attachment-actions"
+                                  className="contents"
+                                  extraProps={{
+                                    attachment: {
+                                      name: attachment.name || '',
+                                      type: attachment.type,
+                                      size: attachment.size,
+                                      blobId: attachment.blobId,
+                                      emailId: email?.id,
+                                    } satisfies AttachmentInfo,
+                                  }}
+                                />
                               </div>
                             </div>
                               )}
@@ -4810,6 +4874,19 @@ export function EmailViewer({
                         <Eye className="w-4 h-4 text-foreground" />
                       </button>
                     )}
+                    <PluginSlot
+                      name="attachment-actions"
+                      className="contents"
+                      extraProps={{
+                        attachment: {
+                          name: attachment.name || '',
+                          type: attachment.type,
+                          size: attachment.size,
+                          blobId: attachment.blobId,
+                          emailId: email?.id,
+                        } satisfies AttachmentInfo,
+                      }}
+                    />
                   </div>
                 </div>
                   )}
@@ -4870,6 +4947,19 @@ export function EmailViewer({
                               <Eye className="w-4 h-4 text-foreground" />
                             </button>
                           )}
+                          <PluginSlot
+                            name="attachment-actions"
+                            className="contents"
+                            extraProps={{
+                              attachment: {
+                                name: attachment.name || '',
+                                type: attachment.type,
+                                size: attachment.size,
+                                blobId: attachment.blobId,
+                                emailId: email?.id,
+                              } satisfies AttachmentInfo,
+                            }}
+                          />
                         </div>
                       </div>
                         )}
@@ -4951,6 +5041,19 @@ export function EmailViewer({
                           <Eye className="w-4 h-4 text-foreground" />
                         </button>
                       )}
+                      <PluginSlot
+                        name="attachment-actions"
+                        className="contents"
+                        extraProps={{
+                          attachment: {
+                            name: attachment.name || '',
+                            type: attachment.type,
+                            size: attachment.size,
+                            blobId: attachment.blobId,
+                            emailId: email?.id,
+                          } satisfies AttachmentInfo,
+                        }}
+                      />
                     </div>
                   </div>
                     )}
@@ -5010,6 +5113,19 @@ export function EmailViewer({
                                 <Eye className="w-3.5 h-3.5 text-foreground" />
                               </button>
                             )}
+                            <PluginSlot
+                              name="attachment-actions"
+                              className="contents"
+                              extraProps={{
+                                attachment: {
+                                  name: attachment.name || '',
+                                  type: attachment.type,
+                                  size: attachment.size,
+                                  blobId: attachment.blobId,
+                                  emailId: email?.id,
+                                } satisfies AttachmentInfo,
+                              }}
+                            />
                           </div>
                         </div>
                           )}
@@ -5056,6 +5172,7 @@ export function EmailViewer({
             ) : (
               <div
                 className="email-content-text text-foreground"
+                dir="auto"
                 dangerouslySetInnerHTML={{ __html: sanitizePlainTextRenderedHtml(effectiveEmailContent.html) }}
                 style={{
                   ...(plainTextFont === 'mono' && { fontFamily: 'ui-monospace, "SF Mono", Consolas, monospace' }),
@@ -5359,9 +5476,12 @@ export function EmailViewer({
           const client = useAuthStore.getState().client;
           const contactData: Partial<ContactCard> = {
             emails: { email: { address: addr } },
+            // `full` feeds the mandatory vCard FN — strict CardDAV clients
+            // (Apple Contacts) drop cards without it (#430).
             ...(name ? { name: { components: name.includes(' ')
               ? [{ kind: 'given' as const, value: name.split(' ')[0] }, { kind: 'surname' as const, value: name.split(' ').slice(1).join(' ') }]
-              : [{ kind: 'given' as const, value: name }]
+              : [{ kind: 'given' as const, value: name }],
+              isOrdered: true, full: name,
             }} : {}),
           };
           if (client && supportsSync) {
